@@ -1,0 +1,75 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+body {
+    background-color: #f0f4f8;
+    color: #333;
+}
+
+.contenedor-inicio {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    text-align: center;
+}
+
+.contenedor-inicio h1 {
+    color: #1a365d;
+    margin-bottom: 10px;
+    font-size: 2.5rem;
+}
+
+.contenedor-inicio p {
+    color: #718096;
+    margin-bottom: 40px;
+}
+
+.lista-sucursales {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 25px;
+}
+
+.tarjeta-sucursal {
+    background: white;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.tarjeta-sucursal:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+}
+
+.tarjeta-sucursal h3 {
+    color: #2d3748;
+    margin-bottom: 10px;
+}
+
+.tarjeta-sucursal p {
+    margin-bottom: 20px;
+    font-weight: bold;
+    color: #d69e2e;
+}
+
+.tarjeta-sucursal button {
+    padding: 12px 24px;
+    background: #3182ce;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    width: 100%;
+    transition: background 0.2s;
+}
+
+.tarjeta-sucursal button:hover {
+    background: #2b6cb0;
+}

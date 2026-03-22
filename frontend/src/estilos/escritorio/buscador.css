@@ -1,0 +1,463 @@
+/* ===========================================================
+   Estilos Desktop - Módulo Buscador de Viajes
+   Paleta Boliviana: Azul profundo, Gris andino, Dorado, Verde
+   =========================================================== */
+
+/* --- Contenedor Principal --- */
+.contenedor-buscador {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 30px 20px;
+}
+
+/* --- Cabecera --- */
+.buscador-header {
+    text-align: center;
+    margin-bottom: 35px;
+}
+
+.buscador-header h1 {
+    color: #1a365d;
+    font-size: 2.2rem;
+    margin-bottom: 8px;
+    font-weight: 700;
+}
+
+.buscador-header p {
+    color: #718096;
+    font-size: 1.05rem;
+}
+
+.btn-volver {
+    position: absolute;
+    left: 20px;
+    top: 20px;
+    background: none;
+    border: 2px solid #2c5282;
+    color: #2c5282;
+    padding: 8px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+}
+
+.btn-volver:hover {
+    background: #2c5282;
+    color: white;
+}
+
+/* --- Formulario de Filtros --- */
+.buscador-filtros {
+    background: white;
+    padding: 30px;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(26, 54, 93, 0.08);
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr auto;
+    gap: 20px;
+    align-items: end;
+    margin-bottom: 35px;
+    border: 1px solid rgba(26, 54, 93, 0.06);
+}
+
+.filtro-grupo {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.filtro-grupo label {
+    font-weight: 600;
+    color: #2d3748;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.filtro-select,
+.filtro-input {
+    padding: 14px 16px;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 1rem;
+    color: #2d3748;
+    background: #f7fafc;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.filtro-select:focus,
+.filtro-input:focus {
+    border-color: #3182ce;
+    box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.15);
+    background: white;
+}
+
+.btn-buscar {
+    padding: 14px 28px;
+    background: linear-gradient(135deg, #2c5282, #3182ce);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(44, 82, 130, 0.25);
+}
+
+.btn-buscar:hover:not(:disabled) {
+    background: linear-gradient(135deg, #1a365d, #2c5282);
+    box-shadow: 0 6px 16px rgba(44, 82, 130, 0.35);
+    transform: translateY(-1px);
+}
+
+.btn-buscar:disabled {
+    background: #a0aec0;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+/* --- Estados de Carga y Vacío --- */
+.estado-carga,
+.estado-vacio {
+    text-align: center;
+    padding: 60px 20px;
+    color: #718096;
+}
+
+.spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid #e2e8f0;
+    border-top: 4px solid #3182ce;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 20px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.icono-vacio {
+    font-size: 4rem;
+    display: block;
+    margin-bottom: 15px;
+    opacity: 0.6;
+}
+
+.estado-vacio h3 {
+    color: #4a5568;
+    margin-bottom: 8px;
+}
+
+/* --- Resultados --- */
+.resultados-info {
+    margin-bottom: 20px;
+    color: #4a5568;
+    font-weight: 600;
+}
+
+.lista-viajes {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* --- Tarjeta de Viaje --- */
+.tarjeta-viaje {
+    background: white;
+    padding: 28px;
+    border-radius: 16px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(26, 54, 93, 0.06);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.tarjeta-viaje:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(26, 54, 93, 0.1);
+}
+
+/* Cabecera de viaje */
+.viaje-cabecera {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 18px;
+}
+
+.sucursal-nombre {
+    color: #1a365d;
+    font-size: 1.25rem;
+    margin-bottom: 4px;
+}
+
+.viaje-rating {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.estrella {
+    font-size: 1.1rem;
+}
+
+.estrella.llena {
+    color: #d69e2e;
+}
+
+.estrella.media {
+    color: #d69e2e;
+    opacity: 0.6;
+}
+
+.estrella.vacia {
+    color: #cbd5e0;
+}
+
+.rating-numero {
+    color: #718096;
+    font-size: 0.85rem;
+    margin-left: 6px;
+}
+
+/* Ruta */
+.viaje-ruta {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 18px;
+    background: linear-gradient(135deg, #f7fafc, #edf2f7);
+    border-radius: 12px;
+    margin-bottom: 18px;
+}
+
+.ruta-punto {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ruta-ciudad {
+    font-weight: 700;
+    color: #2d3748;
+    font-size: 1.05rem;
+}
+
+.ruta-linea {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.ruta-flecha {
+    color: #3182ce;
+    font-size: 1.4rem;
+    font-weight: bold;
+}
+
+.ruta-duracion {
+    color: #718096;
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+
+/* Detalles */
+.viaje-detalles {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 18px;
+    gap: 20px;
+}
+
+.detalle-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.detalle-label {
+    color: #a0aec0;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.detalle-valor {
+    color: #2d3748;
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.precio-valor {
+    color: #38a169;
+    font-size: 1.3rem;
+    font-weight: 800;
+}
+
+/* Tags de amenidades */
+.viaje-amenidades {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.amenidad-tag {
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+.tag-wifi {
+    background: #ebf8ff;
+    color: #2b6cb0;
+    border: 1px solid #bee3f8;
+}
+
+.tag-cama {
+    background: #faf5ff;
+    color: #6b46c1;
+    border: 1px solid #e9d8fd;
+}
+
+.tag-bano {
+    background: #f0fff4;
+    color: #276749;
+    border: 1px solid #c6f6d5;
+}
+
+.tag-tv {
+    background: #fffaf0;
+    color: #c05621;
+    border: 1px solid #feebc8;
+}
+
+.tag-aire {
+    background: #e6fffa;
+    color: #234e52;
+    border: 1px solid #b2f5ea;
+}
+
+.tag-default {
+    background: #f7fafc;
+    color: #4a5568;
+    border: 1px solid #e2e8f0;
+}
+
+/* Botón Seleccionar */
+.btn-seleccionar {
+    padding: 14px 28px;
+    background: linear-gradient(135deg, #2c5282, #3182ce);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 1rem;
+    width: 100%;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(44, 82, 130, 0.2);
+}
+
+.btn-seleccionar:hover {
+    background: linear-gradient(135deg, #1a365d, #2c5282);
+    box-shadow: 0 6px 16px rgba(44, 82, 130, 0.3);
+    transform: translateY(-1px);
+}
+
+/* --- Barra de Navegación (compartida) --- */
+.barra-nav {
+    background: linear-gradient(135deg, #1a365d, #2c5282);
+    padding: 16px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 12px rgba(26, 54, 93, 0.2);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.nav-logo {
+    color: white;
+    font-size: 1.25rem;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+}
+
+.nav-logo span {
+    color: #d69e2e;
+}
+
+.nav-links {
+    display: flex;
+    gap: 8px;
+}
+
+.nav-link {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 8px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+.nav-link:hover,
+.nav-link.activo {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* --- Tags de amenidades en Inicio --- */
+.sucursal-amenidades {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 15px;
+    justify-content: center;
+}
+
+.sucursal-amenidades .amenidad-tag {
+    font-size: 0.72rem;
+    padding: 3px 10px;
+}
+
+/* Botón buscar viajes en Inicio */
+.btn-buscar-viajes {
+    display: inline-block;
+    padding: 16px 40px;
+    background: linear-gradient(135deg, #2c5282, #3182ce);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 1.15rem;
+    margin-bottom: 40px;
+    transition: all 0.3s ease;
+    box-shadow: 0 6px 20px rgba(44, 82, 130, 0.3);
+}
+
+.btn-buscar-viajes:hover {
+    background: linear-gradient(135deg, #1a365d, #2c5282);
+    box-shadow: 0 8px 28px rgba(44, 82, 130, 0.4);
+    transform: translateY(-2px);
+}

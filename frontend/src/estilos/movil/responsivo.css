@@ -1,0 +1,24 @@
+@media (max-width: 768px) {
+    .contenedor-inicio {
+        padding: 20px 15px;
+    }
+
+    .contenedor-inicio h1 {
+        font-size: 1.8rem;
+    }
+
+    .lista-sucursales {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+
+    .tarjeta-sucursal {
+        padding: 20px;
+    }
+
+    .tarjeta-sucursal button {
+        padding: 16px;
+        /* Botón más grande para evitar toques accidentales */
+        font-size: 1.1rem;
+    }
+}
