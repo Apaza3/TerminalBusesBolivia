@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../servicios/supabase';
 import TarjetaViaje from '../componentes/TarjetaViaje';
+import PanelFiltros from '../componentes/PanelFiltros';
 import '../estilos/escritorio/buscador.css';
+import '../estilos/escritorio/filtros.css';
 import '../estilos/movil/buscador-responsivo.css';
+import '../estilos/movil/filtros-responsivo.css';
 
 /**
- * Ciudades principales de Bolivia para los selectores de Origen y Destino.
- * Ordenadas alfabéticamente para facilitar la búsqueda del usuario.
+ * Predefined Bolivian cities for origin/destination selectors.
+ * Sorted alphabetically for easy lookup.
  */
 const CIUDADES_BOLIVIA = [
     'Cobija',
@@ -21,8 +25,8 @@ const CIUDADES_BOLIVIA = [
 ];
 
 /**
- * Datos de demostración para visualizar el diseño sin conexión a Supabase.
- * NOTA: Remover cuando se conecte a la base de datos real.
+ * Demo data for visualizing the design without a Supabase connection.
+ * NOTE: Remove when connected to the real database.
  */
 const DATOS_DEMO = [
     {
@@ -72,37 +76,47 @@ const DATOS_DEMO = [
 ];
 
 /**
- * BuscadorViajes - Página principal del módulo de búsqueda de rutas.
- * Permite filtrar viajes por Origen, Destino y Fecha.
- * Muestra resultados como tarjetas con rankings y amenidades.
+ * BuscadorViajes - Global trip search page with advanced multi-scope filtering.
+ * Queries all branches (sucursales) with dynamic filters:
+ * - Origin/Destination/Date (basic)
+ * - Price range, quality stars, amenities (advanced via PanelFiltros)
+ * Uses react-router-dom useNavigate for the back button.
  */
-const BuscadorViajes = ({ onVolver }) => {
-    // Estado de los filtros de búsqueda
+const BuscadorViajes = () => {
+    const navigate = useNavigate();
+
+    // Basic search filters
     const [origen, setOrigen] = useState('');
     const [destino, setDestino] = useState('');
     const [fecha, setFecha] = useState('');
 
-    // Estado de los resultados
+    // Advanced filter state managed by PanelFiltros
+    const [filtrosAvanzados, setFiltrosAvanzados] = useState({
+        precioMin: '',
+        precioMax: '',
+        calidadMinima: 0,
+        amenidades: [],
+    });
+
+    // Results state
     const [resultados, setResultados] = useState([]);
     const [cargando, setCargando] = useState(false);
     const [buscado, setBuscado] = useState(false);
 
     /**
-     * Ejecuta la búsqueda de viajes en Supabase.
-     * Realiza un JOIN entre viajes, buses y sucursales para obtener todos los datos.
-     * Si falla la conexión a Supabase, carga datos de demostración.
+     * Executes trip search against Supabase with all active filters.
+     * Builds query dynamically: basic filters (origin, destination, date)
+     * plus advanced filters (price range, star rating, amenities).
+     * Falls back to filtered demo data if Supabase is unavailable.
      */
     const buscarViajes = async () => {
-        // Validación: al menos origen y destino son requeridos
-        if (!origen || !destino) {
-            return;
-        }
+        if (!origen || !destino) return;
 
         setCargando(true);
         setBuscado(true);
 
         try {
-            // Consulta a Supabase con relaciones (JOIN implícito)
+            // Build Supabase query with implicit JOINs
             let query = supabase
                 .from('viajes')
                 .select(`
@@ -128,25 +142,32 @@ const BuscadorViajes = ({ onVolver }) => {
                 .eq('estado', 'programado')
                 .order('salida', { ascending: true });
 
-            // Filtro opcional por fecha
+            // Optional date filter
             if (fecha) {
                 const fechaInicio = `${fecha}T00:00:00`;
                 const fechaFin = `${fecha}T23:59:59`;
                 query = query.gte('salida', fechaInicio).lte('salida', fechaFin);
             }
 
+            // Advanced filter: price range
+            if (filtrosAvanzados.precioMin !== '') {
+                query = query.gte('precio', parseFloat(filtrosAvanzados.precioMin));
+            }
+            if (filtrosAvanzados.precioMax !== '') {
+                query = query.lte('precio', parseFloat(filtrosAvanzados.precioMax));
+            }
+
             const { data, error } = await query;
 
             if (error) {
                 console.warn('Error consultando Supabase, cargando datos demo:', error.message);
-                // Fallback: usar datos de demostración filtrados
                 cargarDatosDemo();
                 return;
             }
 
             if (data && data.length > 0) {
-                // Transformar datos de Supabase al formato esperado por TarjetaViaje
-                const viajesTransformados = data.map(v => ({
+                // Transform Supabase response to the format expected by TarjetaViaje
+                let viajesTransformados = data.map(v => ({
                     id: v.id,
                     sucursal_nombre: v.buses.sucursales.nombre,
                     ranking: v.buses.sucursales.ranking,
@@ -157,9 +178,25 @@ const BuscadorViajes = ({ onVolver }) => {
                     duracion_estimada: v.duracion_estimada,
                     amenidades: v.buses.sucursales.amenidades || [],
                 }));
+
+                // Client-side filter: minimum star rating
+                if (filtrosAvanzados.calidadMinima > 0) {
+                    viajesTransformados = viajesTransformados.filter(
+                        v => v.ranking >= filtrosAvanzados.calidadMinima
+                    );
+                }
+
+                // Client-side filter: amenities (must have ALL selected amenities)
+                if (filtrosAvanzados.amenidades.length > 0) {
+                    viajesTransformados = viajesTransformados.filter(v =>
+                        filtrosAvanzados.amenidades.every(a =>
+                            v.amenidades.includes(a)
+                        )
+                    );
+                }
+
                 setResultados(viajesTransformados);
             } else {
-                // Sin resultados reales, intentar datos demo
                 cargarDatosDemo();
             }
         } catch (err) {
@@ -171,43 +208,60 @@ const BuscadorViajes = ({ onVolver }) => {
     };
 
     /**
-     * Carga datos de demostración filtrados por origen y destino seleccionados.
-     * Usado como fallback cuando Supabase no está disponible.
+     * Loads demo data filtered by selected origin, destination, and advanced filters.
+     * Fallback when Supabase is not available.
      */
     const cargarDatosDemo = () => {
-        const filtrados = DATOS_DEMO.filter(v =>
+        let filtrados = DATOS_DEMO.filter(v =>
             v.origen.toLowerCase() === origen.toLowerCase() &&
             v.destino.toLowerCase() === destino.toLowerCase()
         );
+
+        // Apply advanced filters to demo data as well
+        if (filtrosAvanzados.precioMin !== '') {
+            filtrados = filtrados.filter(v => v.precio >= parseFloat(filtrosAvanzados.precioMin));
+        }
+        if (filtrosAvanzados.precioMax !== '') {
+            filtrados = filtrados.filter(v => v.precio <= parseFloat(filtrosAvanzados.precioMax));
+        }
+        if (filtrosAvanzados.calidadMinima > 0) {
+            filtrados = filtrados.filter(v => v.ranking >= filtrosAvanzados.calidadMinima);
+        }
+        if (filtrosAvanzados.amenidades.length > 0) {
+            filtrados = filtrados.filter(v =>
+                filtrosAvanzados.amenidades.every(a => v.amenidades.includes(a))
+            );
+        }
+
         setResultados(filtrados.length > 0 ? filtrados : DATOS_DEMO);
         setCargando(false);
     };
 
     /**
-     * Handler para el botón "Seleccionar" en cada tarjeta.
-     * Preparado para futuro módulo de selección de asientos.
+     * Handler for the "Seleccionar" button on each trip card.
+     * Prepared for the future seat selection module.
      */
     const handleSeleccionar = (viaje) => {
         console.log('Viaje seleccionado:', viaje);
-        // TODO: Navegar al módulo de selección de asientos
+        // TODO: Navigate to seat selection module
         alert(`Has seleccionado el viaje de ${viaje.sucursal_nombre}\n${viaje.origen} → ${viaje.destino}\nPrecio: Bs ${viaje.precio}`);
     };
 
-    // Fecha mínima: hoy (no permitir buscar en el pasado)
+    // Minimum date: today (don't allow past date search)
     const fechaMinima = new Date().toISOString().split('T')[0];
 
     return (
         <div className="contenedor-buscador">
-            {/* Cabecera con botón de retorno */}
+            {/* Header with back button */}
             <div className="buscador-header">
-                <button className="btn-volver" onClick={onVolver} id="btn-volver">
+                <button className="btn-volver" onClick={() => navigate('/')} id="btn-volver">
                     ← Volver
                 </button>
                 <h1>Buscar Viajes</h1>
                 <p>Encuentra tu próximo destino en Bolivia</p>
             </div>
 
-            {/* Formulario de filtros */}
+            {/* Basic search form */}
             <div className="buscador-filtros" id="filtros-busqueda">
                 <div className="filtro-grupo">
                     <label htmlFor="select-origen">Origen</label>
@@ -261,7 +315,15 @@ const BuscadorViajes = ({ onVolver }) => {
                 </button>
             </div>
 
-            {/* Resultados */}
+            {/* Advanced filter panel (global scope) */}
+            <PanelFiltros
+                filtros={filtrosAvanzados}
+                onFiltrosChange={setFiltrosAvanzados}
+                modoSucursal={false}
+                onBuscar={origen && destino ? buscarViajes : null}
+            />
+
+            {/* Results */}
             <div className="buscador-resultados" id="resultados-viajes">
                 {cargando && (
                     <div className="estado-carga">
@@ -274,7 +336,7 @@ const BuscadorViajes = ({ onVolver }) => {
                     <div className="estado-vacio">
                         <span className="icono-vacio">🚌</span>
                         <h3>No encontramos viajes disponibles</h3>
-                        <p>Intenta con otra fecha o ruta diferente</p>
+                        <p>Intenta con otra fecha, ruta o ajusta los filtros</p>
                     </div>
                 )}
 

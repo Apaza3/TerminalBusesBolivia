@@ -1,15 +1,15 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '../servicios/supabase';
 import '../estilos/escritorio/principal.css';
 import '../estilos/movil/responsivo.css';
 
 /**
- * Inicio - Página principal que muestra las sucursales disponibles.
- * Incluye botón para navegar al buscador de viajes.
- * Props:
- *   - onBuscarViajes: callback para navegar al módulo de búsqueda
+ * Inicio - Main landing page displaying available branches (sucursales).
+ * Uses react-router-dom Link for navigation instead of prop callbacks.
+ * Clicking "Ver Salidas" navigates to /sucursal/:id (scoped branch view).
  */
-const Inicio = ({ onBuscarViajes }) => {
+const Inicio = () => {
     const [sucursales, setSucursales] = useState([]);
 
     useEffect(() => {
@@ -17,8 +17,8 @@ const Inicio = ({ onBuscarViajes }) => {
     }, []);
 
     /**
-     * Obtiene las sucursales desde Supabase ordenadas por ranking.
-     * Si falla, carga datos de demostración.
+     * Fetches branches from Supabase ordered by ranking (descending).
+     * Falls back to demo data if Supabase connection is unavailable.
      */
     const obtenerSucursales = async () => {
         try {
@@ -42,8 +42,8 @@ const Inicio = ({ onBuscarViajes }) => {
     };
 
     /**
-     * Datos de demostración para sucursales.
-     * NOTA: Remover cuando se conecte a la base de datos real.
+     * Demo data for branches. Fallback when Supabase is not connected.
+     * TODO: Remove once production Supabase is fully operational.
      */
     const cargarSucursalesDemo = () => {
         setSucursales([
@@ -54,7 +54,7 @@ const Inicio = ({ onBuscarViajes }) => {
         ]);
     };
 
-    // Mapeo de colores para tags de amenidades
+    // Color mapping for amenity tags
     const colorAmenidad = (amenidad) => {
         const colores = {
             'WiFi': 'tag-wifi',
@@ -71,14 +71,10 @@ const Inicio = ({ onBuscarViajes }) => {
             <h1>Terminal de Buses Bolivia</h1>
             <p>Selecciona tu empresa de transporte para comenzar</p>
 
-            {/* Botón principal para ir al buscador */}
-            <button
-                className="btn-buscar-viajes"
-                onClick={onBuscarViajes}
-                id="btn-ir-buscador"
-            >
+            {/* Main CTA button to navigate to search */}
+            <Link to="/buscar" className="btn-buscar-viajes" id="btn-ir-buscador">
                 🔍 Buscar Viajes Disponibles
-            </button>
+            </Link>
 
             <div className="lista-sucursales">
                 {sucursales.map(s => (
@@ -86,7 +82,7 @@ const Inicio = ({ onBuscarViajes }) => {
                         <h3>{s.nombre}</h3>
                         <p>Calificación: {s.ranking} ⭐</p>
 
-                        {/* Tags de amenidades */}
+                        {/* Amenity tags */}
                         {s.amenidades && s.amenidades.length > 0 && (
                             <div className="sucursal-amenidades">
                                 {s.amenidades.map((amenidad, index) => (
@@ -97,9 +93,9 @@ const Inicio = ({ onBuscarViajes }) => {
                             </div>
                         )}
 
-                        <button onClick={() => window.location.href = `/sucursal/${s.id}`}>
+                        <Link to={`/sucursal/${s.id}`} className="btn-ver-salidas">
                             Ver Salidas
-                        </button>
+                        </Link>
                     </div>
                 ))}
             </div>
