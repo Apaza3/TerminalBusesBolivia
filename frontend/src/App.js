@@ -4,6 +4,8 @@ import Inicio from './paginas/Inicio';
 import BuscadorViajes from './paginas/BuscadorViajes';
 import SucursalDetalle from './paginas/SucursalDetalle';
 import MapaAsientos from './paginas/MapaAsientos';
+import RegistroTripulacion from './paginas/admin/RegistroTripulacion';
+import RegistroBus from './paginas/admin/RegistroBus';
 import './estilos/escritorio/buscador.css';
 import './estilos/movil/buscador-responsivo.css';
 
@@ -47,6 +49,9 @@ function App() {
                 <Route path="/buscar" element={<BuscadorViajes />} />
                 <Route path="/sucursal/:id" element={<SucursalDetalle />} />
                 <Route path="/reserva/:viajeId" element={<MapaAsientos />} />
+                {/* Admin routes (no auth guard in prototype) */}
+                <Route path="/admin/tripulacion/nuevo" element={<RegistroTripulacion />} />
+                <Route path="/admin/bus/nuevo" element={<RegistroBus />} />
             </Routes>
         </div>
     );

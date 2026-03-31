@@ -7,51 +7,53 @@ import '../estilos/movil/mapa-asientos-responsivo.css';
 
 // ============================================================
 // BUS CONFIGURATION STANDARD
-// This object defines the standard bus layout until the
-// administrator module for custom bus configurations is built.
-// Fields:
-//   pisos       - number of floors (1 or 2)
-//   columnas    - seat columns per row (3 or 4)
-//   filasPiso1  - rows on floor 1
-//   filasPiso2  - rows on floor 2 (only when pisos === 2)
-//   tieneBano   - bathroom present on floor 1 (rear)
-//   columnasDer - right-side column count (default 2, can be 1 for cols-3)
+// Fallback when buses table does not have layout data yet.
+// The admin Bus Creator writes these fields to the DB;
+// this object is only used for new trips without a bus config.
 // ============================================================
 const CONFIG_BUS_ESTANDAR = {
     pisos: 1,
-    columnas: 4,        // 4 columnas: 2 izq + pasillo + 2 der
-    filasPiso1: 10,     // 10 filas × 4 asientos = 40 asientos totales
+    columnas: 4,        // 4 cols: 2 left + aisle + 2 right
+    filasPiso1: 10,     // 10 rows × 4 seats = 40 total
     filasPiso2: 0,
     tieneBano: false,
 };
 
 // =================== DEMO DATA ===================
 /**
- * generateDemoSeats - Generates mock seat data for demo trips.
- * Uses the standard config above to produce a realistic layout.
+ * generarAsientosDemo - Generates mock seat data for demo trips.
+ * Uses the provided config to produce a realistic layout.
+ * Supports 1 or 2 floors and 3 or 4 column configs.
  */
 const generarAsientosDemo = (viajeId, config) => {
     const asientos = [];
-    const estadosRandom = ['disponible', 'disponible', 'disponible', 'disponible', 'ocupado', 'pendiente'];
+    // Weighted random: more 'disponible' than 'ocupado'/'pendiente'
+    const pesos = ['disponible', 'disponible', 'disponible', 'disponible', 'ocupado', 'pendiente'];
+    const tipos = ['normal', 'normal', 'normal', 'semicama'];  // 75% normal, 25% semicama
 
     const agregarPiso = (piso, filas) => {
         for (let fila = 1; fila <= filas; fila++) {
             const colsDer = config.columnas === 4 ? 2 : 1;
             const colsIzq = 2;
             for (let col = 1; col <= colsIzq + colsDer; col++) {
+                const letra  = String.fromCharCode(64 + col);
                 const numero = piso === 1
-                    ? `${fila}${String.fromCharCode(64 + col)}`
-                    : `P2-${fila}${String.fromCharCode(64 + col)}`;
-                const estadoRand = estadosRandom[Math.floor(Math.random() * estadosRandom.length)];
+                    ? `${fila}${letra}`
+                    : `P2-${fila}${letra}`;
+                const estado     = pesos[Math.floor(Math.random() * pesos.length)];
+                const tipoAsiento = tipos[Math.floor(Math.random() * tipos.length)];
                 asientos.push({
-                    id: `${viajeId}-p${piso}-${numero}`,
-                    viaje_id: viajeId,
+                    id:             `${viajeId}-p${piso}-${numero}`,
+                    viaje_id:       viajeId,
                     numero_asiento: numero,
                     piso,
                     fila,
-                    columna: col,
-                    estado: estadoRand,
-                    bloqueado_hasta: estadoRand === 'pendiente' ? new Date(Date.now() + 8 * 60000).toISOString() : null,
+                    columna:        col,
+                    estado,
+                    tipo_asiento:   tipoAsiento,
+                    bloqueado_hasta: estado === 'pendiente'
+                        ? new Date(Date.now() + 8 * 60000).toISOString()
+                        : null,
                     datos_pasajero: null,
                 });
             }
@@ -74,20 +76,21 @@ const MapaAsientos = () => {
     const navigate = useNavigate();
 
     // ---- State ----
-    const [viaje, setViaje]                     = useState(null);
-    const [asientos, setAsientos]               = useState([]);
-    const [seleccionados, setSeleccionados]     = useState([]); // IDs seleccionados localmente
-    const [propios, setPropios]                 = useState([]);  // IDs bloqueados por este usuario
-    const [cargando, setCargando]               = useState(true);
-    const [error, setError]                     = useState(null);
-    const [segundosRestantes, setSegundosRestantes] = useState(null); // null = sin timer activo
-    const [mostrarModal, setMostrarModal]       = useState(false);
-    const [configBus, setConfigBus]             = useState(CONFIG_BUS_ESTANDAR);
+    const [viaje, setViaje]                         = useState(null);
+    const [asientos, setAsientos]                   = useState([]);
+    const [seleccionados, setSeleccionados]         = useState([]);
+    const [propios, setPropios]                     = useState([]);
+    const [cargando, setCargando]                   = useState(true);
+    const [error, setError]                         = useState(null);
+    const [segundosRestantes, setSegundosRestantes] = useState(null);
+    const [mostrarModal, setMostrarModal]           = useState(false);
+    const [configBus, setConfigBus]                 = useState(CONFIG_BUS_ESTANDAR);
+    const [pisoActivo, setPisoActivo]               = useState(1); // active floor for 2-floor buses
 
     // Refs for cleanup
     const countdownRef  = useRef(null);
     const realtimeRef   = useRef(null);
-    const revertirRef   = useRef(null); // holds latest revertirAsientos to avoid stale closure
+    const revertirRef   = useRef(null);
     const esDemo        = viajeId?.startsWith('demo-') || (viajeId?.length < 5);
 
     // ============================================================
@@ -98,7 +101,7 @@ const MapaAsientos = () => {
         setError(null);
 
         if (esDemo) {
-            // Use deterministic demo data (no Supabase call)
+            // Generate deterministic demo data without Supabase
             setViaje({
                 id: viajeId,
                 origen: 'La Paz',
@@ -114,21 +117,37 @@ const MapaAsientos = () => {
         }
 
         try {
-            // Fetch trip info
+            // Fetch trip info + bus layout from the new v2.1 columns
             const { data: viajeData, error: viajeErr } = await supabase
                 .from('viajes')
-                .select('id, origen, destino, salida, precio, duracion_estimada, buses(config_layout)')
+                .select(`
+                    id, origen, destino, salida, precio, duracion_estimada,
+                    buses (
+                        id, placa, capacidad,
+                        pisos, columnas, filas_piso_1, filas_piso_2,
+                        tiene_bano, amenidades
+                    )
+                `)
                 .eq('id', viajeId)
                 .single();
 
             if (viajeErr) throw viajeErr;
             setViaje(viajeData);
 
-            // Use bus config from DB if available, else use standard config
-            const config = viajeData?.buses?.config_layout || CONFIG_BUS_ESTANDAR;
+            // Build config from DB bus layout (v2.1) or fall back to standard
+            const bus = viajeData?.buses;
+            const config = bus
+                ? {
+                    pisos:      bus.pisos        ?? CONFIG_BUS_ESTANDAR.pisos,
+                    columnas:   bus.columnas      ?? CONFIG_BUS_ESTANDAR.columnas,
+                    filasPiso1: bus.filas_piso_1  ?? CONFIG_BUS_ESTANDAR.filasPiso1,
+                    filasPiso2: bus.filas_piso_2  ?? CONFIG_BUS_ESTANDAR.filasPiso2,
+                    tieneBano:  bus.tiene_bano    ?? CONFIG_BUS_ESTANDAR.tieneBano,
+                }
+                : CONFIG_BUS_ESTANDAR;
             setConfigBus(config);
 
-            // Fetch seats for this trip
+            // Fetch seats — if none exist yet, generate them from bus layout
             const { data: asientosData, error: asientosErr } = await supabase
                 .from('asientos_viaje')
                 .select('*')
@@ -136,7 +155,9 @@ const MapaAsientos = () => {
                 .order('piso').order('fila').order('columna');
 
             if (asientosErr) throw asientosErr;
-            setAsientos(asientosData || []);
+
+            // If seats don't exist yet for this trip, use generated demo layout
+            setAsientos(asientosData?.length ? asientosData : generarAsientosDemo(viajeId, config));
         } catch (err) {
             console.error('MapaAsientos - Error cargando datos:', err);
             setError('No se pudo cargar el mapa de asientos. Intente nuevamente.');
@@ -144,6 +165,7 @@ const MapaAsientos = () => {
             setCargando(false);
         }
     }, [viajeId, esDemo]);
+
 
     // ============================================================
     // SUPABASE REALTIME — Seat updates from other users
@@ -385,20 +407,27 @@ const MapaAsientos = () => {
 
 
     const renderAsiento = (asiento) => {
-        const estado  = resolverEstado(asiento);
-        const esPropio = propios.includes(asiento.id);
-        const deshabilitado = estado === 'ocupado' || (estado === 'pendiente' && !esPropio) || propios.length > 0;
+        const estado      = resolverEstado(asiento);
+        const esPropio    = propios.includes(asiento.id);
+        const esSemicama  = asiento.tipo_asiento === 'semicama';
+        const deshabilitado = estado === 'ocupado'
+            || (estado === 'pendiente' && !esPropio)
+            || propios.length > 0;
 
         return (
             <button
                 key={asiento.id}
-                className={`asiento-btn ${estado} ${esPropio ? 'propio' : ''}`}
+                className={`asiento-btn ${estado} ${esPropio ? 'propio' : ''} ${esSemicama ? 'semicama' : ''}`}
                 onClick={() => toggleAsiento(asiento)}
                 disabled={deshabilitado}
-                title={`Asiento ${asiento.numero_asiento} — ${estado}`}
-                aria-label={`Asiento ${asiento.numero_asiento}, ${estado}`}
+                title={`Asiento ${asiento.numero_asiento} — ${esSemicama ? 'Semicama ' : ''}${estado}`}
+                aria-label={`Asiento ${asiento.numero_asiento}, ${estado}${esSemicama ? ', semicama' : ''}`}
                 id={`asiento-${asiento.id}`}
             >
+                {/* Semicama indicator: small icon overlay */}
+                {esSemicama && (
+                    <span className="asiento-tipo-icon" aria-hidden="true">🛏️</span>
+                )}
                 <span className="asiento-numero">{asiento.numero_asiento}</span>
             </button>
         );
@@ -508,6 +537,35 @@ const MapaAsientos = () => {
 
                 {/* CENTER: Bus cenital view */}
                 <main className="bus-contenedor" aria-label="Mapa cenital del bus">
+
+                    {/* ── 2-FLOOR SELECTOR: side-view diagram ─────── */}
+                    {configBus.pisos === 2 && (
+                        <div className="selector-pisos" role="group" aria-label="Seleccionar piso">
+                            <div className="selector-pisos-titulo">Seleccionar Piso</div>
+                            <div className="selector-pisos-opciones">
+                                {[1, 2].map(p => (
+                                    <button
+                                        key={p}
+                                        className={`selector-piso-btn ${pisoActivo === p ? 'activo' : ''}`}
+                                        onClick={() => setPisoActivo(p)}
+                                        id={`btn-piso-${p}`}
+                                        aria-pressed={pisoActivo === p}
+                                    >
+                                        {/* Side-view partial rectangle for each floor */}
+                                        <span className="piso-sidebar-icon">
+                                            {p === 2 ? '🟦' : '👤'}
+                                        </span>
+                                        Piso {p}
+                                        <span className="piso-asientos-count">
+                                            {asientos.filter(a => a.piso === p && a.estado === 'disponible').length} disp.
+                                        </span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ── BUS BODY ─────────────────────────────────── */}
                     <div className="bus-cuerpo">
                         {/* Front windshield + driver cabin */}
                         <div className="bus-frente">
@@ -515,33 +573,24 @@ const MapaAsientos = () => {
                             <span className="bus-puerta-etiqueta">🚪 Puerta</span>
                         </div>
 
-                        {/* Passenger interior */}
+                        {/* Passenger interior — shows only pisoActivo for 2-floor buses */}
                         <div className="bus-interior">
-                            {/* Floor 1 */}
                             <div className="bus-piso">
                                 {configBus.pisos === 2 && (
-                                    <div className="bus-piso-label">Piso 1</div>
+                                    <div className="bus-piso-label">Piso {pisoActivo}</div>
                                 )}
-                                {renderPiso(1, configBus.filasPiso1, configBus)}
-
-                                {/* Bathroom at rear of floor 1 */}
-                                {configBus.tieneBano && (
+                                {renderPiso(
+                                    pisoActivo,
+                                    pisoActivo === 1 ? configBus.filasPiso1 : configBus.filasPiso2,
+                                    configBus
+                                )}
+                                {/* Bathroom — only floor 1, at rear */}
+                                {configBus.tieneBano && pisoActivo === 1 && (
                                     <div className="bus-zona-bano" aria-label="Zona de baño">
                                         🚿 Baño
                                     </div>
                                 )}
                             </div>
-
-                            {/* Floor 2 (if applicable) */}
-                            {configBus.pisos === 2 && configBus.filasPiso2 > 0 && (
-                                <>
-                                    <hr className="bus-separador-piso" />
-                                    <div className="bus-piso">
-                                        <div className="bus-piso-label">Piso 2</div>
-                                        {renderPiso(2, configBus.filasPiso2, configBus)}
-                                    </div>
-                                </>
-                            )}
                         </div>
 
                         {/* Rear bumper */}

@@ -1,0 +1,26 @@
+/* ============================================================
+   admin-responsivo.css — Mobile-first para módulos admin
+   Target: Redmi Note 11S (360px+), touch-friendly 44px+
+   ============================================================ */
+
+@media (max-width: 768px) {
+    .admin-header { padding: .65rem 1rem; flex-wrap: wrap; }
+    .admin-header h1 { font-size: 1rem; }
+    .admin-contenido { padding: 0 .85rem; margin: 1rem auto; gap: 1rem; }
+    .admin-seccion-cuerpo { padding: 1rem; }
+
+    .campos-grid-2 { grid-template-columns: 1fr; }
+    .campos-grid-3 { grid-template-columns: 1fr 1fr; }
+
+    .toggle-grupo { flex-direction: column; }
+    .admin-footer { flex-direction: column-reverse; padding: 1rem; }
+    .btn-admin-cancelar,
+    .btn-admin-guardar { width: 100%; text-align: center; }
+
+    .bus-preview-contenedor { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+}
+
+@media (max-width: 359px) {
+    .campos-grid-3 { grid-template-columns: 1fr; }
+    .amenidad-tag { font-size: .75rem; padding: .35rem .6rem; }
+}

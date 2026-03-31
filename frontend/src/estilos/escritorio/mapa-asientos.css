@@ -579,3 +579,105 @@
     box-shadow: 0 6px 16px rgba(34,197,94,.4);
 }
 .btn-modal-confirmar:disabled { background: #334155; color: #64748b; cursor: not-allowed; box-shadow: none; }
+
+/* ── SELECTOR DE PISO (2-floor buses) v2.1 ────────────────── */
+.selector-pisos {
+    background: #162032;
+    border: 1px solid #1e3a5f;
+    border-radius: 12px;
+    padding: .75rem 1rem;
+    margin-bottom: .75rem;
+    width: 100%;
+}
+.selector-pisos-titulo {
+    font-size: .68rem;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    font-weight: 600;
+    margin-bottom: .5rem;
+}
+.selector-pisos-opciones {
+    display: flex;
+    gap: .5rem;
+}
+.selector-piso-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .4rem;
+    background: #0f172a;
+    border: 1.5px solid #334155;
+    border-radius: 9px;
+    color: #64748b;
+    font-size: .82rem;
+    font-family: inherit;
+    cursor: pointer;
+    padding: .55rem .6rem;
+    min-height: 48px;
+    transition: all .18s;
+    flex-direction: column;
+    line-height: 1.2;
+}
+.selector-piso-btn:hover  { border-color: #3b82f6; color: #93c5fd; }
+.selector-piso-btn.activo {
+    background: rgba(59,130,246,.15);
+    border-color: #3b82f6;
+    color: #bfdbfe;
+    font-weight: 600;
+    box-shadow: 0 0 0 2px rgba(59,130,246,.25);
+}
+.piso-sidebar-icon { font-size: 1rem; }
+.piso-asientos-count {
+    font-size: .62rem;
+    color: #22c55e;
+    font-weight: 700;
+    margin-top: .1rem;
+}
+
+/* ── TIPO DE ASIENTO: SEMICAMA v2.1 ──────────────────────── */
+/* Semicama seat: amber/gold tint on top of state color, plus bed icon overlay */
+.asiento-btn.semicama {
+    box-shadow:
+        inset 0 0 0 2px rgba(251,191,36,.4),
+        0 4px 12px rgba(0,0,0,.35);
+}
+.asiento-btn.semicama::after {
+    /* Override normal texture with diagonal lines for semicama */
+    background: repeating-linear-gradient(
+        -45deg,
+        transparent,
+        transparent 3px,
+        rgba(251,191,36,.08) 3px,
+        rgba(251,191,36,.08) 6px
+    );
+}
+.asiento-tipo-icon {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    font-size: .48rem;
+    line-height: 1;
+    z-index: 2;
+    pointer-events: none;
+    opacity: .85;
+}
+
+/* Semicama in leyenda */
+.leyenda-item-tipos {
+    display: flex;
+    gap: .75rem;
+    margin-top: .5rem;
+    padding-top: .5rem;
+    border-top: 1px solid #1e293b;
+    flex-wrap: wrap;
+}
+.leyenda-item-tipo {
+    display: flex;
+    align-items: center;
+    gap: .35rem;
+    font-size: .72rem;
+    color: #64748b;
+}
+.leyenda-tipo-icono { font-size: .75rem; }
