@@ -238,78 +238,14 @@ const BuscadorViajes = () => {
         setCargando(false);
     };
 
-    const { sesion, login } = useAuth();
-    const [viajeSeleccionado, setViajeSeleccionado] = useState(null);
-    const [mostrarAuthModal, setMostrarAuthModal] = useState(false);
-    
-    // Auth Modal Forms
-    const [authEmail, setAuthEmail] = useState('');
-    const [authPass, setAuthPass] = useState('');
-    const [authModo, setAuthModo] = useState('login'); // 'login' | 'registro'
-    const [authLoading, setAuthLoading] = useState(false);
-    const [authError, setAuthError] = useState('');
-
     /**
-     * Handler for the "Seleccionar" button on each trip card.
-     * Starts the simulated seat selection module.
+     * Lleva al usuario al Mapa de Asientos para continuar la reserva.
      */
     const handleSeleccionar = (viaje) => {
-        setViajeSeleccionado(viaje);
-        // Resetea auth forms
-        setAuthError('');
-        setAuthEmail('');
-        setAuthPass('');
+        navigate('/reserva/' + viaje.id);
     };
 
-    /**
-     * Handler for "Pagar/Confirmar" inside the simulated seat map.
-     */
-    const handleConfirmarReserva = () => {
-        if (!sesion) {
-            // Usuario no autenticado -> mostrar popup no intrusivo
-            setMostrarAuthModal(true);
-        } else {
-            // Usuario autenticado -> Simular éxito
-            alert(`¡Reserva Confirmada Exitosamente!\nViaje: ${viajeSeleccionado.origen} → ${viajeSeleccionado.destino}\nUsuario: ${sesion.user.email}`);
-            setViajeSeleccionado(null);
-        }
-    };
 
-    /**
-     * Maneja el login/registro del cliente desde el modal.
-     */
-    const handleAuthSubmit = async (e) => {
-        e.preventDefault();
-        setAuthLoading(true);
-        setAuthError('');
-        
-        if (authModo === 'login') {
-            const { exito, error } = await login(authEmail, authPass);
-            if (exito) {
-                setMostrarAuthModal(false);
-                // Auto-confirmar
-                alert(`¡Login Exitoso! Reserva Confirmada ✅\nViaje: ${viajeSeleccionado.origen} → ${viajeSeleccionado.destino}`);
-                setViajeSeleccionado(null);
-            } else {
-                setAuthError(error || 'Credenciales inválidas.');
-            }
-        } else {
-            // Simulación de registro super rápida con Supabase SignUp
-            try {
-                const { error } = await supabase.auth.signUp({
-                    email: authEmail,
-                    password: authPass
-                });
-                if (error) throw error;
-                // Si el signUp requiere confirmación de email, en dev mode a veces auto-inicia
-                alert('Registro exitoso. Verifique su email o inicie sesión.');
-                setAuthModo('login');
-            } catch (err) {
-                setAuthError(err.message);
-            }
-        }
-        setAuthLoading(false);
-    };
 
     // Minimum date: today (don't allow past date search)
     const fechaMinima = new Date().toISOString().split('T')[0];
@@ -421,73 +357,6 @@ const BuscadorViajes = () => {
                     </>
                 )}
             </div>
-            {/* ======== MODAL MOCK DE ASIENTOS ======== */}
-            {viajeSeleccionado && !mostrarAuthModal && (
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15,23,42,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '1rem' }}>
-                    <div style={{ background: '#1e293b', width: '100%', maxWidth: '500px', borderRadius: '12px', padding: '2rem', border: '1px solid #334155' }}>
-                        <h2 style={{ margin: '0 0 1rem 0', color: '#f1f5f9' }}>Reserva Rápida (Test Mode)</h2>
-                        <p style={{ color: '#94a3b8', marginBottom: '1.5rem', lineHeight: 1.5 }}>
-                            Simulando el módulo de Mapa de Asientos.<br/>
-                            Viaje: {viajeSeleccionado.origen} → {viajeSeleccionado.destino}<br/>
-                            Precio Total: Bs {viajeSeleccionado.precio}
-                        </p>
-                        
-                        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
-                            <button onClick={() => setViajeSeleccionado(null)} style={{ padding: '0.8rem 1.5rem', border: 'none', borderRadius: '8px', background: 'transparent', color: '#94a3b8', cursor: 'pointer' }}>
-                                Cancelar
-                            </button>
-                            <button onClick={handleConfirmarReserva} style={{ padding: '0.8rem 1.5rem', border: 'none', borderRadius: '8px', background: '#3b82f6', color: 'white', cursor: 'pointer', fontWeight: 600 }}>
-                                Pagar / Confirmar Asiento
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* ======== MODAL AUTH NO INTRUSIVO (CLIENTE) ======== */}
-            {mostrarAuthModal && (
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15,23,42,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60, padding: '1rem', backdropFilter: 'blur(4px)' }}>
-                    <div style={{ background: '#1e293b', width: '100%', maxWidth: '400px', borderRadius: '12px', padding: '2rem', border: '1px solid #334155', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5)' }}>
-                        
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                            <h2 style={{ margin: 0, color: '#f1f5f9', fontSize: '1.25rem' }}>
-                                {authModo === 'login' ? 'Iniciar Sesión' : 'Crear Cuenta'}
-                            </h2>
-                            <button onClick={() => setMostrarAuthModal(false)} style={{ background:'transparent', border:'none', color:'#94a3b8', fontSize:'1.5rem', cursor:'pointer' }}>×</button>
-                        </div>
-
-                        <p style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-                            Solo necesitas una cuenta rápida para finalizar el pago o guardar tu pasaje.
-                        </p>
-
-                        <form onSubmit={handleAuthSubmit}>
-                            {authError && <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', padding: '0.75rem', borderRadius: '6px', fontSize: '0.85rem', marginBottom: '1rem' }}>{authError}</div>}
-                            
-                            <div style={{ marginBottom: '1rem' }}>
-                                <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.5rem' }}>Email</label>
-                                <input type="email" value={authEmail} onChange={e=>setAuthEmail(e.target.value)} required style={{ width: '100%', boxSizing: 'border-box', background: '#0f172a', border: '1px solid #334155', color: '#f1f5f9', padding: '0.8rem', borderRadius: '8px' }} />
-                            </div>
-                            
-                            <div style={{ marginBottom: '1.5rem' }}>
-                                <label style={{ display: 'block', fontSize: '0.85rem', color: '#94a3b8', marginBottom: '0.5rem' }}>Contraseña</label>
-                                <input type="password" value={authPass} onChange={e=>setAuthPass(e.target.value)} required style={{ width: '100%', boxSizing: 'border-box', background: '#0f172a', border: '1px solid #334155', color: '#f1f5f9', padding: '0.8rem', borderRadius: '8px' }} />
-                            </div>
-
-                            <button type="submit" disabled={authLoading} style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: 'none', background: '#3b82f6', color: 'white', fontWeight: 600, cursor: authLoading ? 'wait' : 'pointer' }}>
-                                {authLoading ? 'Procesando...' : (authModo === 'login' ? 'Ingresar y Continuar' : 'Registrarse y Continuar')}
-                            </button>
-                        </form>
-
-                        <div style={{ marginTop: '1.5rem', textAlign: 'center', fontSize: '0.85rem', color: '#94a3b8' }}>
-                            {authModo === 'login' ? '¿No tienes cuenta? ' : '¿Ya tienes cuenta? '}
-                            <button type="button" onClick={() => { setAuthModo(m => m==='login'?'registro':'login'); setAuthError(''); }} style={{ background:'transparent', border:'none', color:'#3b82f6', cursor:'pointer', textDecoration:'underline', padding:0 }}>
-                                {authModo === 'login' ? 'Regístrate aquí' : 'Inicia Sesión'}
-                            </button>
-                        </div>
-
-                    </div>
-                </div>
-            )}
         </div>
     );
 };

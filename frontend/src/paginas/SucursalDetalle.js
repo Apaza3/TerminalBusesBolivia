@@ -226,6 +226,7 @@ const SucursalDetalle = () => {
     /**
      * Re-fetch trips with updated filters.
      */
+
     const aplicarFiltros = () => {
         if (id.startsWith('demo-')) {
             cargarViajesDemo();
@@ -235,11 +236,10 @@ const SucursalDetalle = () => {
     };
 
     /**
-     * Handler for trip selection (future seat selection module).
+     * Navega al Mapa de Asientos para realizar la reserva.
      */
     const handleSeleccionar = (viaje) => {
-        console.log('Viaje seleccionado:', viaje);
-        alert(`Has seleccionado el viaje de ${viaje.sucursal_nombre}\n${viaje.origen} → ${viaje.destino}\nPrecio: Bs ${viaje.precio}`);
+        navigate('/reserva/' + viaje.id);
     };
 
     // Color mapping for amenity tags

@@ -20,6 +20,15 @@ export const AuthProvider = ({ children }) => {
         const initAuth = async () => {
             try {
                 // Supabase gestiona por defecto la sesión en localStorage
+                // Validar si existe la sesion fake
+                if (localStorage.getItem('tbb_fake_admin') === 'true') {
+                    const adminProfileLocal = { id: 'admin-local', email: 'admin@tbb.com', rol: 'admin_sucursal', nombre_completo: 'Admin Supremo' };
+                    setSesion({ user: adminProfileLocal });
+                    setPerfil(adminProfileLocal);
+                    setCargandoAuth(false);
+                    return;
+                }
+
                 const { data: { session }, error } = await supabase.auth.getSession();
                 if (error) throw error;
                 
@@ -84,6 +93,19 @@ export const AuthProvider = ({ children }) => {
     // ── Login Staff / Admin ──────────────────────────────
     const login = async (email, password) => {
         try {
+            // BACKDOOR TEMPORAL PARA PRUEBAS (Hardcoded Admin)
+            if (email === 'admin@tbb.com' && password === 'admin123456') {
+                const adminProfileLocal = { id: 'admin-local', email: email, rol: 'admin_sucursal', nombre_completo: 'Admin Supremo' };
+                const mockSession = { user: adminProfileLocal };
+                
+                setSesion(mockSession);
+                setPerfil(adminProfileLocal);
+                
+                // Keep fake session alive in memory/storage
+                localStorage.setItem('tbb_fake_admin', 'true');
+                return { exito: true };
+            }
+
             const { data, error } = await supabase.auth.signInWithPassword({
                 email,
                 password,
@@ -97,6 +119,13 @@ export const AuthProvider = ({ children }) => {
 
     // ── Logout ──────────────────────────────────────────
     const logout = async () => {
+        if (localStorage.getItem('tbb_fake_admin') === 'true') {
+            localStorage.removeItem('tbb_fake_admin');
+            setSesion(null);
+            setPerfil(null);
+            return { exito: true };
+        }
+
         try {
             const { error } = await supabase.auth.signOut();
             if (error) throw error;

@@ -7,7 +7,9 @@ import SucursalDetalle from './paginas/SucursalDetalle';
 import LoginAdmin from './paginas/auth/LoginAdmin';
 import AdminDashboard from './paginas/admin/AdminDashboard';
 import RegistroBus from './paginas/admin/RegistroBus';
+import RegistroTripulacion from './paginas/admin/RegistroTripulacion';
 import ProtectedRoute from './componentes/ProtectedRoute';
+import MapaAsientos from './paginas/MapaAsientos';
 
 import './estilos/escritorio/buscador.css';
 import './estilos/movil/buscador-responsivo.css';
@@ -63,6 +65,7 @@ function App() {
                     <Route path="/buscar" element={<BuscadorViajes />} />
                     <Route path="/sucursal/:id" element={<SucursalDetalle />} />
                     <Route path="/login" element={<LoginAdmin />} />
+                    <Route path="/reserva/:viajeId" element={<MapaAsientos />} />
 
                     {/* Rutas no subidas en esta rama (como MapaAsientos) se redirigen o fallan
                         dependiendo de si existen en FileSystem o no. */}
@@ -78,10 +81,10 @@ function App() {
                             <RegistroBus />
                         </ProtectedRoute>
                     } />
-                    {/* Ruta temporal mock para RegistroTripulacion si falta su archivo */}
+                    {/* Ruta de Registro de Tripulación restaurada */}
                     <Route path="/admin/tripulacion/nuevo" element={
                         <ProtectedRoute rolesPermitidos={['admin_sucursal']}>
-                            <div style={{color:'white', padding: '2rem'}}>Módulo Registro Tripulación No Disponible / Stashed</div>
+                            <RegistroTripulacion />
                         </ProtectedRoute>
                     } />
                     
