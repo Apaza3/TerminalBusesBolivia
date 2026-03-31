@@ -242,10 +242,10 @@ const BuscadorViajes = () => {
      * Prepared for the future seat selection module.
      */
     const handleSeleccionar = (viaje) => {
-        console.log('Viaje seleccionado:', viaje);
-        // TODO: Navigate to seat selection module
-        alert(`Has seleccionado el viaje de ${viaje.sucursal_nombre}\n${viaje.origen} → ${viaje.destino}\nPrecio: Bs ${viaje.precio}`);
+        // Navigate to the seat map for the selected trip
+        navigate(`/reserva/${viaje.id}`);
     };
+
 
     // Minimum date: today (don't allow past date search)
     const fechaMinima = new Date().toISOString().split('T')[0];

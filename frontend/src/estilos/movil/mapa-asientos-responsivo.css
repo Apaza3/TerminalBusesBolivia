@@ -1,0 +1,81 @@
+/* ============================================================
+   mapa-asientos-responsivo.css — Mobile-first para MapaAsientos
+   Target: Redmi Note 11S (360px+), touch-friendly
+   ============================================================ */
+
+@media (max-width: 768px) {
+
+    /* Header compacto */
+    .mapa-header { padding: .65rem 1rem; gap: .65rem; }
+    .mapa-header-info h2 { font-size: .92rem; }
+    .mapa-header-ruta { font-size: .72rem; }
+    .countdown-tiempo { font-size: .95rem; }
+    .countdown-container { padding: .38rem .7rem; }
+
+    /* Layout vertical en móvil: Bus → Panel → Leyenda */
+    .mapa-layout {
+        grid-template-columns: 1fr;
+        gap: .85rem;
+        padding: 0 .75rem;
+        margin: .85rem auto;
+    }
+    .bus-contenedor   { order: 1; }
+    .mapa-panel-accion { order: 2; min-width: unset; width: 100%; }
+    .mapa-leyenda     { order: 3; flex-direction: row; flex-wrap: wrap; gap: .5rem 1rem; padding: .7rem; }
+    .leyenda-titulo   { width: 100%; }
+
+    /* Botón confirmar más grande en móvil */
+    .btn-confirmar { font-size: .96rem; min-height: 52px; }
+
+    /* Bus cuerpo: permitir scroll horizontal si hay overflow */
+    .bus-cuerpo {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    .bus-interior { min-width: fit-content; }
+
+    /* Asientos en móvil — mínimo 44px estricto */
+    .asiento-btn {
+        width: 44px;
+        height: 44px;
+        margin-top: 7px;
+    }
+    .asiento-btn::before {
+        top: -8px;
+        left: 4px;
+        right: 4px;
+        height: 9px;
+    }
+
+    /* Grid de asientos: columnas fijas en px para móvil */
+    .bus-grid-asientos.cols-4 {
+        grid-template-columns: 44px 44px 14px 44px 44px 18px;
+        gap: 5px;
+    }
+    .bus-grid-asientos.cols-3 {
+        grid-template-columns: 44px 44px 14px 44px 18px;
+        gap: 5px;
+    }
+    .bus-pasillo-visual { width: 14px; }
+
+    /* Asiento frente más compacto */
+    .bus-frente { min-height: 36px; padding: .4rem .8rem; }
+    .bus-volante { font-size: 1.2rem; }
+
+    /* Modal full-width en móvil */
+    .modal-contenido { max-width: 100%; border-radius: 12px; }
+    .pasajero-campos { grid-template-columns: 1fr; }
+    .pasajero-campos .campo-grupo:nth-child(1),
+    .pasajero-campos .campo-grupo:nth-child(2) { grid-column: 1; }
+    .modal-footer { flex-direction: column-reverse; }
+    .btn-modal-cancelar,
+    .btn-modal-confirmar { width: 100%; text-align: center; }
+}
+
+/* Pantalla muy pequeña (<360px): 40px mínimo absoluto */
+@media (max-width: 359px) {
+    .asiento-btn { width: 40px; height: 40px; min-width: 40px; min-height: 40px; }
+    .bus-grid-asientos { gap: 4px; }
+    .bus-grid-asientos.cols-4 { grid-template-columns: 40px 40px 12px 40px 40px 16px; }
+    .bus-grid-asientos.cols-3 { grid-template-columns: 40px 40px 12px 40px 16px; }
+}

@@ -3,6 +3,7 @@ import { Routes, Route, NavLink } from 'react-router-dom';
 import Inicio from './paginas/Inicio';
 import BuscadorViajes from './paginas/BuscadorViajes';
 import SucursalDetalle from './paginas/SucursalDetalle';
+import MapaAsientos from './paginas/MapaAsientos';
 import './estilos/escritorio/buscador.css';
 import './estilos/movil/buscador-responsivo.css';
 
@@ -45,6 +46,7 @@ function App() {
                 <Route path="/" element={<Inicio />} />
                 <Route path="/buscar" element={<BuscadorViajes />} />
                 <Route path="/sucursal/:id" element={<SucursalDetalle />} />
+                <Route path="/reserva/:viajeId" element={<MapaAsientos />} />
             </Routes>
         </div>
     );

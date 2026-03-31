@@ -235,11 +235,10 @@ const SucursalDetalle = () => {
     };
 
     /**
-     * Handler for trip selection (future seat selection module).
+     * Handler for trip selection — navigates to the seat selection map.
      */
     const handleSeleccionar = (viaje) => {
-        console.log('Viaje seleccionado:', viaje);
-        alert(`Has seleccionado el viaje de ${viaje.sucursal_nombre}\n${viaje.origen} → ${viaje.destino}\nPrecio: Bs ${viaje.precio}`);
+        navigate(`/reserva/${viaje.id}`);
     };
 
     // Color mapping for amenity tags

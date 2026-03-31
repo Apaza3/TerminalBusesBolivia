@@ -1,0 +1,581 @@
+/* ============================================================
+   mapa-asientos.css — Estilos del mapa cenital de asientos
+   Sprint 1 · feature/mapa-asientos-v2
+   Diseño: Bus visto desde arriba con asientos con forma de sillón
+   ============================================================ */
+
+/* ── PÁGINA ───────────────────────────────────────────────── */
+.pagina-mapa {
+    min-height: 100vh;
+    background: #0f172a;
+    color: #f1f5f9;
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    padding-bottom: 3rem;
+}
+
+/* ── HEADER ───────────────────────────────────────────────── */
+.mapa-header {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    border-bottom: 1px solid #334155;
+    padding: 0.85rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.btn-volver-mapa {
+    background: #1e293b;
+    color: #94a3b8;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    font-size: 0.88rem;
+    transition: all 0.2s ease;
+    min-height: 44px;
+    white-space: nowrap;
+}
+.btn-volver-mapa:hover { background: #334155; color: #f1f5f9; }
+
+.mapa-header-info { flex: 1; }
+.mapa-header-info h2 { margin: 0; font-size: 1.05rem; color: #e2e8f0; }
+.mapa-header-ruta { font-size: 0.8rem; color: #64748b; margin-top: 0.15rem; }
+
+/* ── COUNTDOWN ────────────────────────────────────────────── */
+.countdown-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 10px;
+    padding: 0.45rem 0.9rem;
+    transition: border-color 0.3s;
+}
+.countdown-container.urgente {
+    border-color: #ef4444;
+    animation: pulso-rojo 1s infinite;
+}
+@keyframes pulso-rojo {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
+    50%       { box-shadow: 0 0 0 6px rgba(239,68,68,0); }
+}
+.countdown-label { font-size: 0.7rem; color: #64748b; text-transform: uppercase; letter-spacing: .05em; }
+.countdown-tiempo { font-size: 1.15rem; font-weight: 700; font-variant-numeric: tabular-nums; color: #f59e0b; }
+.countdown-container.urgente .countdown-tiempo { color: #ef4444; }
+
+/* ── LAYOUT PRINCIPAL: leyenda | bus | panel ──────────────── */
+.mapa-layout {
+    display: grid;
+    grid-template-columns: 140px 1fr 175px;
+    gap: 1.5rem;
+    max-width: 980px;
+    margin: 2rem auto;
+    padding: 0 1.5rem;
+    align-items: start;
+}
+
+/* ── LEYENDA ──────────────────────────────────────────────── */
+.mapa-leyenda {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+}
+.leyenda-titulo {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: #475569;
+    font-weight: 600;
+    margin-bottom: .1rem;
+}
+.leyenda-item { display: flex; align-items: center; gap: 0.6rem; font-size: 0.78rem; color: #94a3b8; }
+/* Mini seat shape in legend */
+.leyenda-asiento {
+    width: 22px;
+    height: 26px;
+    border-radius: 3px 3px 5px 5px;
+    border: 1.5px solid rgba(255,255,255,.15);
+    flex-shrink: 0;
+    position: relative;
+}
+.leyenda-asiento::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    left: 2px;
+    right: 2px;
+    height: 7px;
+    border-radius: 4px 4px 1px 1px;
+    background: inherit;
+    border: inherit;
+}
+.leyenda-asiento.disponible  { background: #d1d5db; border-color: #9ca3af; }
+.leyenda-asiento.disponible::before  { background: #d1d5db; border-color: #9ca3af; }
+.leyenda-asiento.seleccionado { background: #3b82f6; border-color: #60a5fa; }
+.leyenda-asiento.seleccionado::before { background: #3b82f6; border-color: #60a5fa; }
+.leyenda-asiento.pendiente   { background: #f97316; border-color: #fb923c; }
+.leyenda-asiento.pendiente::before   { background: #f97316; border-color: #fb923c; }
+.leyenda-asiento.ocupado     { background: #ef4444; border-color: #f87171; }
+.leyenda-asiento.ocupado::before     { background: #ef4444; border-color: #f87171; }
+
+/* ── PANEL DE ACCIÓN ──────────────────────────────────────── */
+.mapa-panel-accion {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 1.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+}
+.panel-seleccion-titulo {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: #475569;
+    font-weight: 600;
+}
+.panel-asientos-lista { display: flex; flex-direction: column; gap: 0.3rem; min-height: 44px; }
+.panel-asiento-item { font-size: 0.8rem; color: #94a3b8; background: #0f172a; border-radius: 6px; padding: .25rem .5rem; }
+.panel-vacio { font-size: 0.78rem; color: #475569; font-style: italic; }
+.panel-precio-total { border-top: 1px solid #334155; padding-top: .75rem; font-size: 0.82rem; color: #94a3b8; }
+.panel-precio-total strong { display: block; font-size: 1.05rem; color: #f1f5f9; margin-top: .2rem; }
+
+.btn-confirmar {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: .7rem 1rem;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    width: 100%;
+    min-height: 44px;
+    transition: all .2s;
+    box-shadow: 0 4px 12px rgba(59,130,246,.3);
+}
+.btn-confirmar:hover:not(:disabled) {
+    background: linear-gradient(135deg, #60a5fa, #3b82f6);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(59,130,246,.4);
+}
+.btn-confirmar:disabled { background: #334155; color: #64748b; cursor: not-allowed; box-shadow: none; }
+
+/* ════════════════════════════════════════════════════════════
+   BUS — VISTA CENITAL (TOP-DOWN)
+   El bus se ve como si flotáramos sobre él mirando hacia abajo.
+   ════════════════════════════════════════════════════════════ */
+.bus-contenedor {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Carrocería exterior del bus */
+.bus-cuerpo {
+    background: #1e3a5f;            /* color metálico azul-grisáceo del bus */
+    border: 3px solid #2d5a8e;      /* borde de la carrocería */
+    border-radius: 28px 28px 20px 20px;
+    padding: 8px;
+    box-shadow:
+        0 0 0 2px #0f172a,          /* espacio interior negro */
+        0 0 0 4px #1e3a5f,
+        0 8px 32px rgba(0,0,0,.5);
+    position: relative;
+    width: fit-content;
+}
+
+/* ── FRENTE DEL BUS (PARABRISAS + CABINA) ─────────────────── */
+.bus-frente {
+    background: linear-gradient(to bottom, #0ea5e9 0%, #0284c7 100%);  /* parabrisas */
+    border-radius: 20px 20px 4px 4px;
+    margin-bottom: 6px;
+    padding: 6px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border: 2px solid #0284c7;
+    box-shadow: inset 0 2px 8px rgba(255,255,255,.25);
+    min-height: 42px;
+    position: relative;
+}
+/* Reflejo del parabrisas */
+.bus-frente::after {
+    content: '';
+    position: absolute;
+    top: 4px;
+    left: 10%;
+    width: 30%;
+    height: 40%;
+    background: rgba(255,255,255,.18);
+    border-radius: 6px;
+}
+.bus-volante { font-size: 1.4rem; filter: drop-shadow(0 1px 2px rgba(0,0,0,.5)); z-index: 1; }
+.bus-puerta-etiqueta {
+    font-size: 0.62rem;
+    color: #bae6fd;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    display: flex;
+    align-items: center;
+    gap: .25rem;
+    z-index: 1;
+}
+
+/* ── INTERIOR DEL BUS (ZONA DE PASAJEROS) ────────────────── */
+.bus-interior {
+    background: #111827;
+    border-radius: 4px;
+    padding: 6px;
+    border: 1px solid #1e3a5f;
+}
+
+/* ── PISO ─────────────────────────────────────────────────── */
+.bus-piso { margin-bottom: 4px; }
+.bus-piso-label {
+    text-align: center;
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    color: #334155;
+    padding: .2rem 0 .4rem;
+    font-weight: 600;
+}
+
+/* ── GRID DE ASIENTOS ─────────────────────────────────────── */
+/* layout: colIzq colIzq  pasillo  colDer colDer  número_fila */
+.bus-grid-asientos {
+    display: grid;
+    gap: 6px;
+    align-items: center;
+}
+.bus-grid-asientos.cols-4 {
+    grid-template-columns: 50px 50px 18px 50px 50px 22px;
+}
+.bus-grid-asientos.cols-3 {
+    grid-template-columns: 50px 50px 18px 50px 22px;
+}
+
+/* ── PASILLO ──────────────────────────────────────────────── */
+.bus-pasillo-visual {
+    width: 18px;
+    border-left: 1px dashed #243654;
+    border-right: 1px dashed #243654;
+    align-self: stretch;
+    background: repeating-linear-gradient(
+        to bottom,
+        transparent 0px,
+        transparent 8px,
+        #1a2e4a 8px,
+        #1a2e4a 9px
+    );
+    border-radius: 2px;
+}
+
+/* ── NÚMERO DE FILA (columna final) ─────────────────────────── */
+.fila-numero {
+    font-size: 0.6rem;
+    color: #334155;
+    text-align: center;
+    font-weight: 600;
+    line-height: 1;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   ASIENTO — FORMA DE SILLÓN VISTO DESDE ARRIBA
+   ::before  = respaldo/apoyacabeza (la parte de atrás, visible arriba)
+   El cuerpo  = el asiento en sí (parte donde se sienta)
+   ══════════════════════════════════════════════════════════════ */
+.asiento-btn {
+    position: relative;
+    width: 50px;
+    height: 50px;
+    margin-top: 8px;        /* espacio para el respaldo */
+    border-radius: 4px 4px 8px 8px;
+    border: 1.5px solid transparent;
+    cursor: pointer;
+    font-size: 0;           /* ocultar número hasta hover */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+    user-select: none;
+    outline: none;
+}
+
+/* Respaldo / Apoyacabeza */
+.asiento-btn::before {
+    content: '';
+    position: absolute;
+    top: -9px;
+    left: 5px;
+    right: 5px;
+    height: 11px;
+    border-radius: 6px 6px 2px 2px;
+    background: inherit;
+    border: inherit;
+    transition: background .12s, border-color .12s;
+}
+
+/* Acanalado del asiento (textura visual) */
+.asiento-btn::after {
+    content: '';
+    position: absolute;
+    top: 12px;
+    bottom: 10px;
+    left: 7px;
+    right: 7px;
+    border-top: 1.5px solid rgba(255,255,255,.12);
+    border-bottom: 1.5px solid rgba(255,255,255,.08);
+    border-radius: 2px;
+}
+
+/* Número sobre hover / focus */
+.asiento-numero {
+    font-size: 0.6rem;
+    font-weight: 700;
+    color: inherit;
+    position: absolute;
+    bottom: 5px;
+    left: 0; right: 0;
+    text-align: center;
+    opacity: 0;
+    transition: opacity .15s;
+    pointer-events: none;
+}
+.asiento-btn:hover .asiento-numero,
+.asiento-btn:focus .asiento-numero,
+.asiento-btn.seleccionado .asiento-numero,
+.asiento-btn.propio .asiento-numero {
+    opacity: 1;
+}
+.asiento-btn:focus { outline: 2px solid #60a5fa; outline-offset: 3px; }
+
+/* ── ESTADO: disponible ────────────────────────────────────── */
+.asiento-btn.disponible {
+    background: #d1d5db;
+    border-color: #9ca3af;
+    color: #1e293b;
+}
+.asiento-btn.disponible::before { background: #c0c4cc; border-color: #9ca3af; }
+.asiento-btn.disponible:hover {
+    background: #bfdbfe;
+    border-color: #3b82f6;
+    transform: scale(1.08) translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59,130,246,.35);
+}
+.asiento-btn.disponible:hover::before { background: #93c5fd; border-color: #3b82f6; }
+
+/* ── ESTADO: seleccionado (propio, pre-bloqueo) ─────────────── */
+.asiento-btn.seleccionado {
+    background: #3b82f6;
+    border-color: #60a5fa;
+    color: #fff;
+    transform: scale(1.05) translateY(-2px);
+    box-shadow: 0 4px 14px rgba(59,130,246,.55);
+}
+.asiento-btn.seleccionado::before { background: #2563eb; border-color: #60a5fa; }
+.asiento-btn.seleccionado .asiento-numero { color: #fff; }
+
+/* ── ESTADO: pendiente (reservado 15 min) ──────────────────── */
+.asiento-btn.pendiente {
+    background: #f97316;
+    border-color: #fb923c;
+    color: #fff;
+    cursor: not-allowed;
+}
+.asiento-btn.pendiente::before { background: #ea6d0c; border-color: #fb923c; }
+
+/* Asiento propio bloqueado (borde dorado) */
+.asiento-btn.propio {
+    border-color: #fbbf24 !important;
+    box-shadow: 0 0 0 2px rgba(251,191,36,.35);
+}
+.asiento-btn.propio::before { border-color: #fbbf24 !important; }
+
+/* ── ESTADO: ocupado (pagado) ───────────────────────────────── */
+.asiento-btn.ocupado {
+    background: #ef4444;
+    border-color: #f87171;
+    color: #fff;
+    cursor: not-allowed;
+    filter: brightness(.85);
+}
+.asiento-btn.ocupado::before { background: #dc2626; border-color: #f87171; }
+
+/* ── ZONA DE BAÑO ──────────────────────────────────────────── */
+.bus-zona-bano {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .5rem;
+    background: #0f172a;
+    border: 1px dashed #334155;
+    border-radius: 6px;
+    padding: .45rem;
+    margin-top: 4px;
+    color: #475569;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+/* ── SEPARADOR DE PISO ─────────────────────────────────────── */
+.bus-separador-piso {
+    border: none;
+    border-top: 2px dashed #1e3a5f;
+    margin: 0.6rem 0;
+}
+
+/* ── PARTE TRASERA DEL BUS ─────────────────────────────────── */
+.bus-trasera {
+    background: linear-gradient(to top, #1e3a5f 0%, #16304f 100%);
+    border-radius: 2px 2px 18px 18px;
+    height: 12px;
+    margin-top: 6px;
+    border: 1px solid #2d5a8e;
+    opacity: .7;
+}
+
+/* ── ESTADOS DE CARGA / ERROR ─────────────────────────────── */
+.mapa-estado { text-align: center; padding: 4rem 2rem; color: #64748b; }
+.mapa-estado-spinner { font-size: 2rem; animation: giro 1s linear infinite; display: block; margin-bottom: 1rem; }
+@keyframes giro { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* ════════════════════════════════════════════════════════════
+   MODAL DE PASAJERO
+   ════════════════════════════════════════════════════════════ */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.75);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1rem;
+    animation: fadeIn .2s ease;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.modal-contenido {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 580px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 25px 60px rgba(0,0,0,.6);
+    animation: slideUp .25s cubic-bezier(.22,1,.36,1);
+}
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(24px) scale(.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.modal-header { display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 1.5rem 0; }
+.modal-titulo { margin: 0; font-size: 1.1rem; color: #e2e8f0; font-weight: 700; }
+.modal-btn-cerrar {
+    background: transparent;
+    border: 1px solid #334155;
+    color: #64748b;
+    border-radius: 6px;
+    width: 32px; height: 32px;
+    cursor: pointer;
+    font-size: .9rem;
+    display: flex; align-items: center; justify-content: center;
+    transition: all .15s;
+}
+.modal-btn-cerrar:hover { background: #334155; color: #f1f5f9; }
+
+.modal-descripcion {
+    font-size: .82rem;
+    color: #64748b;
+    padding: .5rem 1.5rem 1rem;
+    margin: 0;
+    border-bottom: 1px solid #334155;
+}
+.modal-error-general {
+    margin: .75rem 1.5rem;
+    padding: .75rem 1rem;
+    background: rgba(239,68,68,.1);
+    border: 1px solid #ef4444;
+    border-radius: 8px;
+    color: #fca5a5;
+    font-size: .82rem;
+}
+.modal-pasajeros-lista { padding: 1rem 1.5rem; display: flex; flex-direction: column; gap: 1.2rem; }
+
+.pasajero-seccion { background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 1rem; }
+.pasajero-titulo { font-size: .82rem; color: #94a3b8; margin-bottom: .8rem; }
+.pasajero-campos { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; }
+.pasajero-campos .campo-grupo:nth-child(1),
+.pasajero-campos .campo-grupo:nth-child(2) { grid-column: 1 / -1; }
+
+.campo-grupo { display: flex; flex-direction: column; gap: .28rem; }
+.campo-label { font-size: .72rem; color: #64748b; font-weight: 500; text-transform: uppercase; letter-spacing: .04em; }
+.campo-input {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    color: #e2e8f0;
+    padding: .55rem .75rem;
+    font-size: .88rem;
+    min-height: 44px;
+    transition: border-color .15s;
+    outline: none;
+}
+.campo-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,.2); }
+.campo-input.campo-error { border-color: #ef4444; }
+.campo-input.campo-autollenado { border-color: #22c55e; background: rgba(34,197,94,.05); }
+.campo-error-msg { font-size: .72rem; color: #f87171; }
+
+.campo-ci-wrapper { position: relative; display: flex; align-items: center; }
+.campo-ci-wrapper .campo-input { width: 100%; padding-right: 2.5rem; }
+.ci-spinner, .ci-encontrado { position: absolute; right: .75rem; font-size: .88rem; }
+
+.modal-footer { display: flex; gap: .75rem; padding: 1rem 1.5rem 1.2rem; border-top: 1px solid #334155; justify-content: flex-end; }
+.btn-modal-cancelar {
+    background: transparent;
+    border: 1px solid #334155;
+    color: #94a3b8;
+    border-radius: 9px;
+    padding: .6rem 1.2rem;
+    cursor: pointer;
+    font-size: .88rem;
+    min-height: 44px;
+    transition: all .15s;
+}
+.btn-modal-cancelar:hover:not(:disabled) { background: #334155; color: #f1f5f9; }
+.btn-modal-confirmar {
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    border: none;
+    color: #fff;
+    border-radius: 9px;
+    padding: .6rem 1.4rem;
+    cursor: pointer;
+    font-size: .88rem;
+    font-weight: 600;
+    min-height: 44px;
+    transition: all .2s;
+    box-shadow: 0 4px 12px rgba(34,197,94,.3);
+}
+.btn-modal-confirmar:hover:not(:disabled) {
+    background: linear-gradient(135deg, #4ade80, #22c55e);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(34,197,94,.4);
+}
+.btn-modal-confirmar:disabled { background: #334155; color: #64748b; cursor: not-allowed; box-shadow: none; }
