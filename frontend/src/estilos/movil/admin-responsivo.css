@@ -1,0 +1,44 @@
+/* ==========================================================================
+   Admin CSS (Mobile)
+   Estilos responsivos para el panel de administración
+   ========================================================================== */
+
+   @media (max-width: 768px) {
+    .campos-grid-2 {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-header {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 1.5rem;
+        gap: 1rem;
+    }
+
+    .admin-contenido {
+        margin: 1rem auto;
+        padding: 0 0.5rem;
+    }
+
+    .toggle-grupo {
+        flex-direction: column;
+    }
+
+    .amenidades-grid {
+        justify-content: space-between;
+    }
+
+    .amenidad-tag {
+        flex: 1 1 calc(50% - 0.5rem);
+        text-align: center;
+    }
+
+    .admin-footer {
+        flex-direction: column;
+    }
+
+    .btn-admin-guardar, .btn-admin-cancelar {
+        width: 100%;
+        text-align: center;
+    }
+}
