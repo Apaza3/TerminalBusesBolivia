@@ -3,22 +3,33 @@
         padding: 20px 15px;
     }
 
-    .contenedor-inicio h1 {
+    .cabecera-inicio h1 {
         font-size: 1.8rem;
     }
 
-    .lista-sucursales {
-        grid-template-columns: 1fr;
+    .btn-buscar-viajes {
+        width: 100%;
+        display: block;
+        /* Ocupa todo el ancho en móvil */
+        margin-bottom: 20px;
+    }
+
+    /* Convertimos la matriz a múltiples columnas pequeñas (140px min) */
+    .matriz-sucursales {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
         gap: 15px;
     }
 
-    .tarjeta-sucursal {
-        padding: 20px;
+    .tarjeta-matriz {
+        padding: 15px;
     }
 
-    .tarjeta-sucursal button {
-        padding: 16px;
-        /* Botón más grande para evitar toques accidentales */
-        font-size: 1.1rem;
+    .logo-contenedor {
+        width: 60px;
+        height: 60px;
+    }
+
+    .logo-placeholder {
+        font-size: 24px;
     }
 }

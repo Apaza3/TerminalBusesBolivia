@@ -17,59 +17,94 @@ body {
     text-align: center;
 }
 
-.contenedor-inicio h1 {
+.cabecera-inicio h1 {
     color: #1a365d;
     margin-bottom: 10px;
     font-size: 2.5rem;
 }
 
-.contenedor-inicio p {
+.cabecera-inicio p {
     color: #718096;
     margin-bottom: 40px;
 }
 
-.lista-sucursales {
+.acciones-globales {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 40px;
+}
+
+.btn-buscar-viajes {
+    background-color: #d69e2e;
+    color: #1a365d;
+    padding: 15px 30px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 1.1rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.3s ease;
+}
+
+.btn-buscar-viajes:hover {
+    background-color: #b7791f;
+    color: white;
+}
+
+/* --- Matriz de Sucursales --- */
+.matriz-sucursales {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    /* Tarjetas de 200px en PC para que parezcan íconos grandes */
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 25px;
 }
 
-.tarjeta-sucursal {
-    background: white;
-    padding: 25px;
+.tarjeta-matriz {
+    background-color: #ffffff;
     border-radius: 12px;
+    padding: 25px;
+    text-align: center;
+    text-decoration: none;
+    /* Quitamos subrayado del Link */
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e2e8f0;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
-.tarjeta-sucursal:hover {
+.tarjeta-matriz:hover {
     transform: translateY(-5px);
     box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
 }
 
-.tarjeta-sucursal h3 {
-    color: #2d3748;
-    margin-bottom: 10px;
+.logo-contenedor {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background-color: #edf2f7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 15px;
+    overflow: hidden;
 }
 
-.tarjeta-sucursal p {
-    margin-bottom: 20px;
+.logo-placeholder {
+    font-size: 32px;
+    font-weight: bold;
+    color: #2b6cb0;
+}
+
+.sucursal-nombre {
+    font-size: 1.1rem;
+    color: #2d3748;
+    margin-bottom: 8px;
+}
+
+.sucursal-ranking {
+    font-size: 1rem;
     font-weight: bold;
     color: #d69e2e;
-}
-
-.tarjeta-sucursal button {
-    padding: 12px 24px;
-    background: #3182ce;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: bold;
-    width: 100%;
-    transition: background 0.2s;
-}
-
-.tarjeta-sucursal button:hover {
-    background: #2b6cb0;
 }
