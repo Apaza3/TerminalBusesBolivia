@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../servicios/supabase';
+import { loginCliente as mockLoginCliente } from '../data/mockClientDB';
 
 // ──────────────────────────────────────────────────────
 // AuthContext
@@ -27,6 +28,27 @@ export const AuthProvider = ({ children }) => {
                     setPerfil(adminProfileLocal);
                     setCargandoAuth(false);
                     return;
+                }
+
+                // Validar sesion fake de conductor
+                if (localStorage.getItem('tbb_fake_conductor') === 'true') {
+                    const conductorProfile = { id: 'conductor-local', email: 'conductor@tbb.com', rol: 'conductor', nombre_completo: 'Pedro Chofer' };
+                    setSesion({ user: conductorProfile });
+                    setPerfil(conductorProfile);
+                    setCargandoAuth(false);
+                    return;
+                }
+
+                // Validar sesion fake de cliente
+                const clienteGuardado = localStorage.getItem('tbb_fake_cliente');
+                if (clienteGuardado) {
+                    try {
+                        const clientePerfil = JSON.parse(clienteGuardado);
+                        setSesion({ user: clientePerfil });
+                        setPerfil(clientePerfil);
+                        setCargandoAuth(false);
+                        return;
+                    } catch { /* corrupted, continue */ }
                 }
 
                 const { data: { session }, error } = await supabase.auth.getSession();
@@ -106,6 +128,18 @@ export const AuthProvider = ({ children }) => {
                 return { exito: true };
             }
 
+            // BACKDOOR TEMPORAL: Conductor de prueba
+            if (email === 'conductor@tbb.com' && password === 'conductor123456') {
+                const conductorProfile = { id: 'conductor-local', email: email, rol: 'conductor', nombre_completo: 'Pedro Chofer' };
+                const mockSession = { user: conductorProfile };
+                
+                setSesion(mockSession);
+                setPerfil(conductorProfile);
+                
+                localStorage.setItem('tbb_fake_conductor', 'true');
+                return { exito: true };
+            }
+
             const { data, error } = await supabase.auth.signInWithPassword({
                 email,
                 password,
@@ -126,6 +160,20 @@ export const AuthProvider = ({ children }) => {
             return { exito: true };
         }
 
+        if (localStorage.getItem('tbb_fake_conductor') === 'true') {
+            localStorage.removeItem('tbb_fake_conductor');
+            setSesion(null);
+            setPerfil(null);
+            return { exito: true };
+        }
+
+        if (localStorage.getItem('tbb_fake_cliente')) {
+            localStorage.removeItem('tbb_fake_cliente');
+            setSesion(null);
+            setPerfil(null);
+            return { exito: true };
+        }
+
         try {
             const { error } = await supabase.auth.signOut();
             if (error) throw error;
@@ -136,8 +184,20 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    // ── Login Cliente (CI + password via mockClientDB) ──
+    const loginComoCliente = (ci, password) => {
+        const resultado = mockLoginCliente(ci, password);
+        if (resultado.exito) {
+            const clientePerfil = { ...resultado.cliente, rol: 'cliente' };
+            setSesion({ user: clientePerfil });
+            setPerfil(clientePerfil);
+            localStorage.setItem('tbb_fake_cliente', JSON.stringify(clientePerfil));
+        }
+        return resultado;
+    };
+
     return (
-        <AuthContext.Provider value={{ sesion, perfil, cargandoAuth, login, logout }}>
+        <AuthContext.Provider value={{ sesion, perfil, cargandoAuth, login, loginComoCliente, logout }}>
             {children}
         </AuthContext.Provider>
     );

@@ -1,15 +1,20 @@
 import React from 'react';
 import { Routes, Route, NavLink, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contextos/AuthContext';
+import { ToastProvider } from './componentes/ToastNotifications';
 import Inicio from './paginas/Inicio';
 import BuscadorViajes from './paginas/BuscadorViajes';
 import SucursalDetalle from './paginas/SucursalDetalle';
 import LoginAdmin from './paginas/auth/LoginAdmin';
+import LoginCliente from './paginas/auth/LoginCliente';
+import RegistroCliente from './paginas/auth/RegistroCliente';
 import AdminDashboard from './paginas/admin/AdminDashboard';
+import DashboardAnalitico from './paginas/admin/DashboardAnalitico';
 import RegistroBus from './paginas/admin/RegistroBus';
 import RegistroTripulacion from './paginas/admin/RegistroTripulacion';
 import ProtectedRoute from './componentes/ProtectedRoute';
 import MapaAsientos from './paginas/MapaAsientos';
+import PanelConductor from './paginas/conductor/PanelConductor';
 
 import './estilos/escritorio/buscador.css';
 import './estilos/movil/buscador-responsivo.css';
@@ -21,6 +26,7 @@ import './estilos/movil/buscador-responsivo.css';
  */
 function App() {
     return (
+        <ToastProvider>
         <AuthProvider>
             <div className="App">
                 {/* Barra de navegación superior */}
@@ -55,6 +61,14 @@ function App() {
                         >
                             Login Staff
                         </NavLink>
+                        <NavLink
+                            to="/registro"
+                            className={({ isActive }) => `nav-link ${isActive ? 'activo' : ''}`}
+                            style={{ background: '#10b981', color: '#fff', borderRadius: '8px' }}
+                            id="nav-registro"
+                        >
+                            Registrarse
+                        </NavLink>
                     </div>
                 </nav>
 
@@ -65,6 +79,8 @@ function App() {
                     <Route path="/buscar" element={<BuscadorViajes />} />
                     <Route path="/sucursal/:id" element={<SucursalDetalle />} />
                     <Route path="/login" element={<LoginAdmin />} />
+                    <Route path="/login-cliente" element={<LoginCliente />} />
+                    <Route path="/registro" element={<RegistroCliente />} />
                     <Route path="/reserva/:viajeId" element={<MapaAsientos />} />
 
                     {/* Rutas no subidas en esta rama (como MapaAsientos) se redirigen o fallan
@@ -90,9 +106,24 @@ function App() {
                     
                     {/* Redirect root admin to dashboard */}
                     <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+
+                    {/* ─── Analytics Dashboard (Admin) ─── */}
+                    <Route path="/admin/analitica" element={
+                        <ProtectedRoute rolesPermitidos={['admin_sucursal']}>
+                            <DashboardAnalitico />
+                        </ProtectedRoute>
+                    } />
+
+                    {/* ─── Conductor Protected Route ─── */}
+                    <Route path="/conductor/panel" element={
+                        <ProtectedRoute rolesPermitidos={['conductor', 'admin_sucursal']}>
+                            <PanelConductor />
+                        </ProtectedRoute>
+                    } />
                 </Routes>
             </div>
         </AuthProvider>
+        </ToastProvider>
     );
 }
 
