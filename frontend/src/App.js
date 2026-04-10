@@ -15,6 +15,7 @@ import RegistroTripulacion from './paginas/admin/RegistroTripulacion';
 import ProtectedRoute from './componentes/ProtectedRoute';
 import MapaAsientos from './paginas/MapaAsientos';
 import PanelConductor from './paginas/conductor/PanelConductor';
+import PerfilIndicador from './componentes/PerfilIndicador';
 
 import './estilos/escritorio/buscador.css';
 import './estilos/movil/buscador-responsivo.css';
@@ -52,23 +53,7 @@ function App() {
                         >
                             Buscar Viajes
                         </NavLink>
-                        {/* El enlace de "Ingresar Admin" puede estar aquí temporalmente para testing.
-                            Lo ideal es no exponerlo si es un staff portal, pero lo facilitamos. */}
-                        <NavLink
-                            to="/login"
-                            className={({ isActive }) => `nav-link ${isActive ? 'activo' : ''}`}
-                            style={{ marginLeft: 'auto', background: '#3b82f6', color: '#fff' }}
-                        >
-                            Login Staff
-                        </NavLink>
-                        <NavLink
-                            to="/registro"
-                            className={({ isActive }) => `nav-link ${isActive ? 'activo' : ''}`}
-                            style={{ background: '#10b981', color: '#fff', borderRadius: '8px' }}
-                            id="nav-registro"
-                        >
-                            Registrarse
-                        </NavLink>
+                        <PerfilIndicador />
                     </div>
                 </nav>
 

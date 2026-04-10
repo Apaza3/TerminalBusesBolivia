@@ -1,0 +1,21 @@
+//Recuperar la propiedad de los archivos:
+
+➡️sudo chown -R $USER:$USER 
+
+//(Esto le dice a Fedora: "Todos estos archivos pertenecen a agente_potasio, no a root").
+
+//Dar permisos de ejecución a los scripts:
+
+➡️chmod +x node_modules/.bin/react-scripts
+
+//Iniciar sin sudo:
+
+➡️npm start
+
+
+chmod +x node_modules/.bin/react-scripts
+sudo chown -R $USER:$USER .
+
+Administración
+-admin@tbb.com
+-admin123456

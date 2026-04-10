@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contextos/AuthContext';
 import '../../estilos/escritorio/admin.css';
 import '../../estilos/movil/admin-responsivo.css';
@@ -7,9 +7,12 @@ import '../../estilos/movil/admin-responsivo.css';
 /**
  * LoginCliente — Dedicated client login page.
  * Authenticates via CI + Password against mockClientDB.
+ * Fix #6: supports ?redirect= param to return user to their original page.
  */
 const LoginCliente = () => {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const redirectTo = searchParams.get('redirect') || '/';
     const { loginComoCliente } = useAuth();
 
     const [ci, setCi] = useState('');
@@ -26,12 +29,13 @@ const LoginCliente = () => {
         const resultado = loginComoCliente(ci, password);
 
         if (resultado.exito) {
-            navigate('/', { replace: true });
+            navigate(redirectTo, { replace: true });
         } else {
             setError(resultado.error);
             setLoading(false);
         }
     };
+
 
     const inputStyle = {
         width: '100%', boxSizing: 'border-box',

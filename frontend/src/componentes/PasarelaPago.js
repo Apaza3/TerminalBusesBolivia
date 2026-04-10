@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
 
 /**
@@ -12,6 +12,9 @@ const PasarelaPago = ({ monto, onPagoConfirmado, onCancelar }) => {
     const [metodo, setMetodo] = useState(null); // 'qr' | 'tarjeta'
     const [procesando, setProcesando] = useState(false);
     const [tiempoRestante, setTiempoRestante] = useState(15 * 60); // 15 minutes in seconds
+
+    // Fix #2: Static payment ID — generated once, QR never changes
+    const pagoId = useMemo(() => 'pago-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6), []);
 
     // Countdown timer
     useEffect(() => {
@@ -39,6 +42,27 @@ const PasarelaPago = ({ monto, onPagoConfirmado, onCancelar }) => {
     const [cardExp, setCardExp] = useState('');
     const [cardCVV, setCardCVV] = useState('');
     const [cardNombre, setCardNombre] = useState('');
+
+    // Fix #3: Professional card field formatters
+    const handleCardNumChange = (val) => {
+        const digits = val.replace(/\D/g, '').slice(0, 16);
+        const formatted = digits.replace(/(\d{4})(?=\d)/g, '$1 ');
+        setCardNum(formatted);
+    };
+    const handleCardExpChange = (val) => {
+        const digits = val.replace(/\D/g, '').slice(0, 4);
+        if (digits.length >= 3) {
+            setCardExp(digits.slice(0, 2) + '/' + digits.slice(2));
+        } else {
+            setCardExp(digits);
+        }
+    };
+    const handleCardCVVChange = (val) => {
+        setCardCVV(val.replace(/\D/g, '').slice(0, 4));
+    };
+    const handleCardNombreChange = (val) => {
+        setCardNombre(val.replace(/[^a-zA-ZáéíóúñÁÉÍÓÚÑ ]/g, '').toUpperCase());
+    };
 
     const handlePagar = () => {
         if (metodo === 'tarjeta') {
@@ -133,21 +157,26 @@ const PasarelaPago = ({ monto, onPagoConfirmado, onCancelar }) => {
                             <QRCodeCanvas
                                 value={JSON.stringify({
                                     tipo: 'pago_tbb', monto, moneda: 'BOB',
-                                    ref: 'pago-' + Date.now(),
+                                    ref: pagoId,
                                     entidad: 'Terminal Buses Bolivia',
+                                    instruccion: 'Escanea y confirma el pago en tu celular',
                                 })}
                                 size={180} level="M" includeMargin={true}
                             />
                         </div>
-                        <p style={{ color: '#64748b', fontSize: '0.75rem' }}>
-                            Una vez realizado el pago, presiona confirmar
+                        <p style={{ color: '#64748b', fontSize: '0.75rem', marginBottom: '0.5rem' }}>
+                            Escanea con tu app bancaria y confirma desde tu celular.
+                            Esta pantalla se actualizará automáticamente.
                         </p>
+                        <div style={{ background: '#0f172a', borderRadius: '8px', padding: '0.6rem', fontSize: '0.7rem', color: '#475569', marginBottom: '0.75rem' }}>
+                            Ref: {pagoId}
+                        </div>
                         <button onClick={handlePagar} style={{
                             width: '100%', padding: '0.9rem', background: '#10b981',
                             color: 'white', border: 'none', borderRadius: '10px',
-                            fontWeight: 600, cursor: 'pointer', fontSize: '0.95rem', marginTop: '0.5rem',
+                            fontWeight: 600, cursor: 'pointer', fontSize: '0.95rem', marginTop: '0.25rem',
                         }}>
-                            ✅ Confirmar Pago
+                            ✅ Ya pagué — Confirmar
                         </button>
                     </div>
                 )}
@@ -159,30 +188,46 @@ const PasarelaPago = ({ monto, onPagoConfirmado, onCancelar }) => {
                             <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.8rem', marginBottom: '0.3rem' }}>
                                 Nombre en la tarjeta
                             </label>
-                            <input type="text" value={cardNombre} onChange={e => setCardNombre(e.target.value)}
-                                placeholder="Nombre completo" style={inputStyle} />
+                            <input
+                                type="text" value={cardNombre}
+                                onChange={e => handleCardNombreChange(e.target.value)}
+                                placeholder="JUAN CARLOS PEREZ"
+                                autoComplete="cc-name" style={inputStyle}
+                            />
                         </div>
                         <div>
                             <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.8rem', marginBottom: '0.3rem' }}>
                                 Número de tarjeta
                             </label>
-                            <input type="text" value={cardNum} onChange={e => setCardNum(e.target.value)}
-                                placeholder="4242 4242 4242 4242" maxLength={19} style={inputStyle} />
+                            <input
+                                type="text" value={cardNum}
+                                onChange={e => handleCardNumChange(e.target.value)}
+                                placeholder="1234 5678 9012 3456"
+                                inputMode="numeric" maxLength={19} style={inputStyle}
+                            />
                         </div>
                         <div style={{ display: 'flex', gap: '0.75rem' }}>
                             <div style={{ flex: 1 }}>
                                 <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.8rem', marginBottom: '0.3rem' }}>
                                     Vencimiento
                                 </label>
-                                <input type="text" value={cardExp} onChange={e => setCardExp(e.target.value)}
-                                    placeholder="MM/AA" maxLength={5} style={inputStyle} />
+                                <input
+                                    type="text" value={cardExp}
+                                    onChange={e => handleCardExpChange(e.target.value)}
+                                    placeholder="MM/AA" maxLength={5}
+                                    inputMode="numeric" style={inputStyle}
+                                />
                             </div>
                             <div style={{ flex: 1 }}>
                                 <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.8rem', marginBottom: '0.3rem' }}>
                                     CVV
                                 </label>
-                                <input type="password" value={cardCVV} onChange={e => setCardCVV(e.target.value)}
-                                    placeholder="***" maxLength={4} style={inputStyle} />
+                                <input
+                                    type="password" value={cardCVV}
+                                    onChange={e => handleCardCVVChange(e.target.value)}
+                                    placeholder="•••" maxLength={4}
+                                    inputMode="numeric" style={inputStyle}
+                                />
                             </div>
                         </div>
                         <button onClick={handlePagar}

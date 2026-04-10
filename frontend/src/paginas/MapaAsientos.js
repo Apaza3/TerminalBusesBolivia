@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contextos/AuthContext';
-import { crearReserva } from '../data/mockStorage';
+import { crearReserva, obtenerReservas } from '../data/mockStorage';
 import { obtenerTripulacionViaje } from '../data/mockStaffDB';
 import { obtenerCliente } from '../data/mockClientDB';
 import { useToast } from '../componentes/ToastNotifications';
@@ -22,7 +22,7 @@ const MapaAsientos = () => {
 
     // Seat state
     const [cargando, setCargando] = useState(true);
-    const [asientosReservados] = useState(['1A', '2B', '5C']); // Hardcoded mock occupied seats
+    const [asientosReservados, setAsientosReservados] = useState([]);
     const [asientosSeleccionados, setAsientosSeleccionados] = useState([]);
 
     // Flow state: 'mapa' → 'formulario' → 'ticket'
@@ -42,6 +42,12 @@ const MapaAsientos = () => {
         // Load crew info for this trip
         const crew = obtenerTripulacionViaje(viajeId);
         setTripulacion(crew);
+        // Load real occupied seats from storage (fix #5)
+        const reservas = obtenerReservas(viajeId);
+        const ocupados = reservas
+            .filter(r => r.estado === 'confirmada')
+            .flatMap(r => r.asientos);
+        setAsientosReservados(ocupados);
     }, [viajeId]);
 
     const toggleAsiento = (id) => {
@@ -59,7 +65,8 @@ const MapaAsientos = () => {
         }
         if (!sesion || (perfil?.rol !== 'cliente')) {
             toast.mostrar('Debe iniciar sesión como cliente para comprar boletos.', 'error');
-            setTimeout(() => navigate('/login-cliente'), 1500);
+            // Fix #6: redirect back to this page after login
+            setTimeout(() => navigate(`/login-cliente?redirect=/reserva/${viajeId}`), 1500);
             return;
         }
         // Initialize forms: first seat = buyer data auto-filled
@@ -402,18 +409,35 @@ const MapaAsientos = () => {
                                                     </div>
                                                 )}
 
-                                                {/* Infant checkbox */}
-                                                <label style={{
-                                                    display: 'flex', alignItems: 'center', gap: '0.5rem',
-                                                    color: '#94a3b8', fontSize: '0.85rem', cursor: 'pointer',
-                                                    marginBottom: '0.5rem', padding: '0.4rem 0',
-                                                }}>
-                                                    <input type="checkbox" checked={isInfante}
-                                                        onChange={e => handlePasajeroChange(seat, 'esInfante', e.target.checked)}
-                                                        style={{ accentColor: '#f59e0b', width: '18px', height: '18px' }}
-                                                    />
-                                                    👶 Infante / Menor de edad
-                                                </label>
+                                                {/* Infant checkbox — fix #1: only show when multiple seats */}
+                                                {asientosSeleccionados.length > 1 && (
+                                                    <>
+                                                        <label style={{
+                                                            display: 'flex', alignItems: 'center', gap: '0.5rem',
+                                                            color: '#94a3b8', fontSize: '0.85rem', cursor: 'pointer',
+                                                            marginBottom: '0.5rem', padding: '0.4rem 0',
+                                                        }}>
+                                                            <input type="checkbox" checked={isInfante}
+                                                                onChange={e => handlePasajeroChange(seat, 'esInfante', e.target.checked)}
+                                                                style={{ accentColor: '#f59e0b', width: '18px', height: '18px' }}
+                                                            />
+                                                            👶 Este pasajero es un infante (menor de edad)
+                                                        </label>
+                                                        {isInfante && (
+                                                            <div style={{
+                                                                background: 'rgba(245,158,11,0.1)', border: '1px solid #f59e0b60',
+                                                                borderRadius: '10px', padding: '0.85rem', marginBottom: '0.5rem',
+                                                            }}>
+                                                                <p style={{ color: '#fbbf24', fontSize: '0.8rem', margin: 0, fontWeight: 600 }}>⚠️ Advertencia sobre infantes</p>
+                                                                <p style={{ color: '#fcd34d', fontSize: '0.75rem', margin: '0.4rem 0 0' }}>
+                                                                    El menor debe presentar documentación vigente (certificado de nacimiento o CI) en la sucursal antes del viaje.
+                                                                    Sin validación presencial, los boletos serán <strong>cancelados automáticamente</strong>.
+                                                                    Las devoluciones se realizan únicamente de forma física en la sucursal donde se realizó la reserva.
+                                                                </p>
+                                                            </div>
+                                                        )}
+                                                    </>
+                                                )}
 
                                                 {/* Declarations (buyer only) */}
                                                 {esComprador && (

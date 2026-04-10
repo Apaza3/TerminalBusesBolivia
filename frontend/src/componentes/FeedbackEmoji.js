@@ -14,6 +14,10 @@ const FeedbackEmoji = ({ sucursalId }) => {
     const [enviando, setEnviando] = useState(false);
     const [enviado, setEnviado] = useState(false);
     const [reviews, setReviews] = useState([]);
+    // Fix #10: individual evaluations
+    const [evaluarIndividual, setEvaluarIndividual] = useState(false);
+    const [moodBus, setMoodBus] = useState(0);
+    const [moodTripulacion, setMoodTripulacion] = useState(0);
 
     useEffect(() => {
         setReviews(obtenerFeedback(sucursalId));
@@ -37,6 +41,7 @@ const FeedbackEmoji = ({ sucursalId }) => {
 
     const handleSubmit = () => {
         if (mood === 0) return;
+        if (evaluarIndividual && (moodBus === 0 || moodTripulacion === 0)) return;
         setEnviando(true);
 
         setTimeout(() => {
@@ -46,10 +51,12 @@ const FeedbackEmoji = ({ sucursalId }) => {
                 mood,
                 labelsSeleccionados,
                 comentario: '',
+                moodBus: evaluarIndividual ? moodBus : mood,
+                moodTripulacion: evaluarIndividual ? moodTripulacion : mood,
             });
 
             setReviews(prev => [nuevo, ...prev]);
-            setMood(0);
+            setMood(0); setMoodBus(0); setMoodTripulacion(0);
             setLabelsSeleccionados([]);
             setEnviando(false);
             setEnviado(true);
@@ -139,8 +146,68 @@ const FeedbackEmoji = ({ sucursalId }) => {
                 </div>
             )}
 
+            {/* Fix #10: Toggle individual evaluation */}
+            {mood > 0 && (
+                <div style={{ marginBottom: '1rem' }}>
+                    <label style={{
+                        display: 'flex', alignItems: 'center', gap: '0.5rem',
+                        color: '#94a3b8', fontSize: '0.82rem', cursor: 'pointer',
+                        padding: '0.6rem', background: '#0f172a', borderRadius: '8px', border: '1px solid #334155',
+                    }}>
+                        <input type="checkbox" checked={evaluarIndividual}
+                            onChange={e => { setEvaluarIndividual(e.target.checked); setMoodBus(0); setMoodTripulacion(0); }}
+                            style={{ accentColor: '#3b82f6', width: '16px', height: '16px' }}
+                        />
+                        🎯 Evaluar bus y tripulación por separado
+                    </label>
+
+                    {evaluarIndividual && (
+                        <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                            {/* Bus rating */}
+                            <div style={{ background: '#0f172a', borderRadius: '10px', padding: '0.85rem', border: '1px solid #334155' }}>
+                                <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0 0 0.5rem', fontWeight: 600 }}>🚌 Evaluación del Bus</p>
+                                <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center' }}>
+                                    {emojis.map(e => (
+                                        <button key={e.valor} onClick={() => setMoodBus(e.valor)}
+                                            style={{
+                                                width: '42px', height: '42px', borderRadius: '10px',
+                                                border: moodBus === e.valor ? '2px solid #3b82f6' : '1px solid #334155',
+                                                background: moodBus === e.valor ? 'rgba(59,130,246,0.15)' : '#1e293b',
+                                                cursor: 'pointer', fontSize: '1.3rem',
+                                                transform: moodBus === e.valor ? 'scale(1.15)' : 'scale(1)', transition: 'all 0.15s',
+                                            }}>
+                                            {e.emoji}
+                                        </button>
+                                    ))}
+                                </div>
+                                {moodBus > 0 && <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem', marginTop: '0.4rem' }}>{emojis.find(e => e.valor === moodBus)?.label}</div>}
+                            </div>
+                            {/* Tripulación rating */}
+                            <div style={{ background: '#0f172a', borderRadius: '10px', padding: '0.85rem', border: '1px solid #334155' }}>
+                                <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0 0 0.5rem', fontWeight: 600 }}>👨‍✈️ Evaluación de la Tripulación</p>
+                                <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center' }}>
+                                    {emojis.map(e => (
+                                        <button key={e.valor} onClick={() => setMoodTripulacion(e.valor)}
+                                            style={{
+                                                width: '42px', height: '42px', borderRadius: '10px',
+                                                border: moodTripulacion === e.valor ? '2px solid #10b981' : '1px solid #334155',
+                                                background: moodTripulacion === e.valor ? 'rgba(16,185,129,0.15)' : '#1e293b',
+                                                cursor: 'pointer', fontSize: '1.3rem',
+                                                transform: moodTripulacion === e.valor ? 'scale(1.15)' : 'scale(1)', transition: 'all 0.15s',
+                                            }}>
+                                            {e.emoji}
+                                        </button>
+                                    ))}
+                                </div>
+                                {moodTripulacion > 0 && <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '0.75rem', marginTop: '0.4rem' }}>{emojis.find(e => e.valor === moodTripulacion)?.label}</div>}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
             {/* Submit */}
-            {mood > 0 && labelsSeleccionados.length > 0 && (
+            {mood > 0 && (!evaluarIndividual || (moodBus > 0 && moodTripulacion > 0)) && (
                 <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.25rem' }}>
                     <button onClick={handleSubmit} disabled={enviando}
                         style={{

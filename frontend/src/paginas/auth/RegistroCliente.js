@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { registrarCliente, calcularEdad, esMayorDeEdad, existeCI } from '../../data/mockClientDB';
 import '../../estilos/escritorio/admin.css';
 import '../../estilos/movil/admin-responsivo.css';
@@ -7,9 +7,13 @@ import '../../estilos/movil/admin-responsivo.css';
 /**
  * RegistroCliente — Client registration form with 18+ age validation,
  * CI document upload (front/back), and profile photo.
+ * Fix #6: passes ?redirect= to login after successful registration.
  */
 const RegistroCliente = () => {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const redirectTo = searchParams.get('redirect') || '/';
+
 
     // Form fields
     const [nombre, setNombre] = useState('');
@@ -125,7 +129,8 @@ const RegistroCliente = () => {
 
             if (resultado.exito) {
                 mostrarToast('exito', '¡Registro exitoso! Redirigiendo al login...');
-                setTimeout(() => navigate('/login-cliente'), 2000);
+                const loginUrl = redirectTo !== '/' ? `/login-cliente?redirect=${encodeURIComponent(redirectTo)}` : '/login-cliente';
+                setTimeout(() => navigate(loginUrl), 2000);
             } else {
                 mostrarToast('error', resultado.error);
             }
