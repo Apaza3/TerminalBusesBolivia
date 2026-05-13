@@ -15,6 +15,7 @@ import RegistroTripulacion from './paginas/admin/RegistroTripulacion';
 import ProtectedRoute from './componentes/ProtectedRoute';
 import MapaAsientos from './paginas/MapaAsientos';
 import PanelConductor from './paginas/conductor/PanelConductor';
+import PanelCajero from './paginas/cajero/PanelCajero';
 import PerfilIndicador from './componentes/PerfilIndicador';
 
 import './estilos/escritorio/buscador.css';
@@ -96,6 +97,13 @@ function App() {
                     <Route path="/admin/analitica" element={
                         <ProtectedRoute rolesPermitidos={['admin_sucursal']}>
                             <DashboardAnalitico />
+                        </ProtectedRoute>
+                    } />
+
+                    {/* ─── Cajero Protected Route ─── */}
+                    <Route path="/cajero/panel" element={
+                        <ProtectedRoute rolesPermitidos={['cajero', 'admin_sucursal']}>
+                            <PanelCajero />
                         </ProtectedRoute>
                     } />
 

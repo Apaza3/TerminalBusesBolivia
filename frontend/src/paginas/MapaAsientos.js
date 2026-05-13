@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contextos/AuthContext';
-import { crearReserva, obtenerReservas } from '../data/mockStorage';
+import { crearReserva, obtenerReservas, obtenerAsientosPendientes, marcarAsientosPendientes, liberarAsientosExpirados } from '../data/mockStorage';
 import { obtenerTripulacionViaje } from '../data/mockStaffDB';
 import { obtenerCliente } from '../data/mockClientDB';
 import { useToast } from '../componentes/ToastNotifications';
@@ -23,41 +23,53 @@ const MapaAsientos = () => {
     // Seat state
     const [cargando, setCargando] = useState(true);
     const [asientosReservados, setAsientosReservados] = useState([]);
+    const [asientosBloqueados, setAsientosBloqueados] = useState([]); // temporalmente por otros
     const [asientosSeleccionados, setAsientosSeleccionados] = useState([]);
+    const [timerBloqueo, setTimerBloqueo] = useState(null); // countdown del bloqueo propio
 
-    // Flow state: 'mapa' → 'formulario' → 'ticket'
+    // Flow state: 'mapa' → 'formulario' → 'pago' → 'ticket'
     const [paso, setPaso] = useState('mapa');
 
-    // Multi-passenger data: { seatId: { nombre, ci, telefono, esInfante, lleva1000, llevaAnimales, llevaProductos } }
+    // Multi-passenger data
     const [datosPasajeros, setDatosPasajeros] = useState({});
-
-    // Generated reservation
     const [reservaGenerada, setReservaGenerada] = useState(null);
-
-    // Crew info
     const [tripulacion, setTripulacion] = useState(null);
 
-    useEffect(() => {
-        setTimeout(() => setCargando(false), 500);
-        // Load crew info for this trip
-        const crew = obtenerTripulacionViaje(viajeId);
-        setTripulacion(crew);
-        // Load real occupied seats from storage (fix #5)
+    const cargarEstadoAsientos = useCallback(() => {
+        liberarAsientosExpirados();
         const reservas = obtenerReservas(viajeId);
         const ocupados = reservas
             .filter(r => r.estado === 'confirmada')
             .flatMap(r => r.asientos);
         setAsientosReservados(ocupados);
+
+        const pendientes = obtenerAsientosPendientes(viajeId);
+        const ahora = Date.now();
+        const bloqueados = pendientes
+            .filter(p => p.expiraEn > ahora)
+            .map(p => p.asiento);
+        setAsientosBloqueados(bloqueados);
     }, [viajeId]);
+
+    useEffect(() => {
+        setTimeout(() => setCargando(false), 500);
+        const crew = obtenerTripulacionViaje(viajeId);
+        setTripulacion(crew);
+        cargarEstadoAsientos();
+
+        // Polling cada 15s para sincronizar con otros usuarios
+        const intervalo = setInterval(cargarEstadoAsientos, 15000);
+        return () => clearInterval(intervalo);
+    }, [viajeId, cargarEstadoAsientos]);
 
     const toggleAsiento = (id) => {
         if (asientosReservados.includes(id)) return;
+        if (asientosBloqueados.includes(id)) return; // bloqueado por otro
         setAsientosSeleccionados(prev =>
             prev.includes(id) ? prev.filter(a => a !== id) : [...prev, id]
         );
     };
 
-    // Init passenger forms when moving to form step
     const handleContinuar = () => {
         if (asientosSeleccionados.length === 0) {
             toast.mostrar('Seleccione al menos un asiento.', 'alerta');
@@ -65,11 +77,15 @@ const MapaAsientos = () => {
         }
         if (!sesion || (perfil?.rol !== 'cliente')) {
             toast.mostrar('Debe iniciar sesión como cliente para comprar boletos.', 'error');
-            // Fix #6: redirect back to this page after login
             setTimeout(() => navigate(`/login-cliente?redirect=/reserva/${viajeId}`), 1500);
             return;
         }
-        // Initialize forms: first seat = buyer data auto-filled
+        // Bloquear asientos temporalmente (10 min)
+        marcarAsientosPendientes(viajeId, asientosSeleccionados);
+        // Countdown 10 min
+        const expira = Date.now() + 10 * 60 * 1000;
+        setTimerBloqueo(expira);
+
         const initial = {};
         asientosSeleccionados.forEach((seat, i) => {
             if (i === 0 && perfil) {
@@ -270,14 +286,17 @@ const MapaAsientos = () => {
                                                     }
                                                     const id = `${fila}${col}`;
                                                     const reservado = asientosReservados.includes(id);
+                                                    const bloqueado = asientosBloqueados.includes(id) && !asientosSeleccionados.includes(id);
                                                     const seleccionado = asientosSeleccionados.includes(id);
                                                     let cls = 'disponible';
                                                     if (reservado) cls = 'ocupado';
-                                                    if (seleccionado) cls = 'pendiente';
+                                                    else if (bloqueado) cls = 'bloqueado';
+                                                    else if (seleccionado) cls = 'pendiente';
                                                     return (
                                                         <button key={col} className={`asiento-btn ${cls}`}
-                                                            style={{ width: '38px', height: '38px', fontSize: '0.7rem', cursor: reservado ? 'not-allowed' : 'pointer', fontWeight: 'bold' }}
+                                                            style={{ width: '38px', height: '38px', fontSize: '0.7rem', cursor: (reservado || bloqueado) ? 'not-allowed' : 'pointer', fontWeight: 'bold' }}
                                                             onClick={() => toggleAsiento(id)}
+                                                            title={bloqueado ? 'Bloqueado temporalmente' : id}
                                                         >
                                                             {id}
                                                         </button>

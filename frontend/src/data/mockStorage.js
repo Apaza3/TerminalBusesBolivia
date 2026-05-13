@@ -48,7 +48,7 @@ export const validarDisponibilidad = (viajeId, asientos) => {
     return { disponible: conflictos.length === 0, conflictos };
 };
 
-export const crearReserva = ({ viajeId, pasajeroNombre, pasajeroCI, pasajeroTelefono, asientos, busPlaca, origen, destino, precio, fechaSalida }) => {
+export const crearReserva = ({ viajeId, pasajeroNombre, pasajeroCI, pasajeroTelefono, asientos, busPlaca, origen, destino, precio, fechaSalida, pasajeros, metodoPago }) => {
     // Double-booking validation
     const { disponible, conflictos } = validarDisponibilidad(viajeId, asientos);
     if (!disponible) {
@@ -56,7 +56,7 @@ export const crearReserva = ({ viajeId, pasajeroNombre, pasajeroCI, pasajeroTele
     }
 
     const reservas = leer(STORAGE_KEYS.RESERVAS) || [];
-    
+
     const nueva = {
         id: generarId(),
         viajeId,
@@ -64,17 +64,22 @@ export const crearReserva = ({ viajeId, pasajeroNombre, pasajeroCI, pasajeroTele
         pasajeroCI,
         pasajeroTelefono: pasajeroTelefono || '',
         asientos,
+        pasajeros: pasajeros || {},
         busPlaca: busPlaca || 'ABC-1234',
         origen: origen || 'La Paz',
         destino: destino || 'Cochabamba',
         precio: precio || asientos.length * 45,
         fechaSalida: fechaSalida || new Date().toISOString(),
+        metodoPago: metodoPago || 'efectivo',
         estado: 'confirmada',
         creadoEn: new Date().toISOString(),
     };
 
     reservas.push(nueva);
     guardar(STORAGE_KEYS.RESERVAS, reservas);
+
+    // Liberar bloqueo temporal de esos asientos
+    liberarAsientosBloqueados(viajeId, asientos);
 
     // Register sale for analytics
     registrarVenta(nueva);
@@ -135,22 +140,29 @@ export const actualizarEstadoViaje = (viajeId, nuevoEstado) => {
 export const marcarAsientosPendientes = (viajeId, asientos) => {
     const pendientes = leer(STORAGE_KEYS.ASIENTOS_PENDIENTES) || [];
     const ahora = Date.now();
-    
+
     asientos.forEach(asiento => {
-        // Remove existing entry for this seat if any
         const idx = pendientes.findIndex(p => p.viajeId === viajeId && p.asiento === asiento);
         if (idx !== -1) pendientes.splice(idx, 1);
-        
+
         pendientes.push({
             viajeId,
             asiento,
             marcadoEn: ahora,
-            expiraEn: ahora + (15 * 60 * 1000), // 15 minutes
+            expiraEn: ahora + (10 * 60 * 1000), // 10 minutos (RN)
         });
     });
-    
+
     guardar(STORAGE_KEYS.ASIENTOS_PENDIENTES, pendientes);
     return pendientes;
+};
+
+export const liberarAsientosBloqueados = (viajeId, asientos) => {
+    const pendientes = leer(STORAGE_KEYS.ASIENTOS_PENDIENTES) || [];
+    const filtrados = pendientes.filter(
+        p => !(p.viajeId === viajeId && asientos.includes(p.asiento))
+    );
+    guardar(STORAGE_KEYS.ASIENTOS_PENDIENTES, filtrados);
 };
 
 export const obtenerAsientosPendientes = (viajeId = null) => {
@@ -208,6 +220,7 @@ export default {
     obtenerEstadoViaje,
     actualizarEstadoViaje,
     marcarAsientosPendientes,
+    liberarAsientosBloqueados,
     obtenerAsientosPendientes,
     liberarAsientosExpirados,
     VIAJES_CONDUCTOR_MOCK,

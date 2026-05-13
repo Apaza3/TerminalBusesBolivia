@@ -19,3 +19,18 @@ sudo chown -R $USER:$USER .
 Administración
 -admin@tbb.com
 -admin123456
+
+//Solución a error ERR_INVALID_PACKAGE_CONFIG en react-scripts (FEDORA):
+➡️cd frontend
+➡️rm -rf node_modules package-lock.json
+➡️npm cache clean --force
+➡️npm install
+
+//Comandos para arrancar el proyecto en pestañas separadas (FEDORA):
+//Pestaña 1 (Frontend):
+➡️cd frontend
+➡️npm start
+
+//Pestaña 2 (Backend):
+➡️cd backend
+➡️npm start

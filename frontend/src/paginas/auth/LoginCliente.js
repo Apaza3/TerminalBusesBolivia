@@ -17,6 +17,7 @@ const LoginCliente = () => {
 
     const [ci, setCi] = useState('');
     const [password, setPassword] = useState('');
+    const [recordar, setRecordar] = useState(false);
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
     const [mostrarPassword, setMostrarPassword] = useState(false);
@@ -26,7 +27,7 @@ const LoginCliente = () => {
         setError(null);
         setLoading(true);
 
-        const resultado = loginComoCliente(ci, password);
+        const resultado = loginComoCliente(ci, password, recordar);
 
         if (resultado.exito) {
             navigate(redirectTo, { replace: true });
@@ -81,7 +82,7 @@ const LoginCliente = () => {
                         </div>
 
                         {/* Password Input */}
-                        <div style={{ marginBottom: '1.5rem' }}>
+                        <div style={{ marginBottom: '1rem' }}>
                             <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.85rem', marginBottom: '0.4rem', fontWeight: 500 }}>
                                 Contraseña
                             </label>
@@ -101,6 +102,22 @@ const LoginCliente = () => {
                                 </button>
                             </div>
                         </div>
+
+                        {/* Recordar sesión */}
+                        <label style={{
+                            display: 'flex', alignItems: 'center', gap: '0.5rem',
+                            color: '#94a3b8', fontSize: '0.85rem', cursor: 'pointer',
+                            marginBottom: '1.25rem',
+                        }}>
+                            <input
+                                type="checkbox"
+                                checked={recordar}
+                                onChange={e => setRecordar(e.target.checked)}
+                                style={{ accentColor: '#3b82f6', width: '16px', height: '16px' }}
+                                id="check-recordar-cliente"
+                            />
+                            Recordar sesión
+                        </label>
 
                         {/* Submit */}
                         <button type="submit" disabled={loading || !ci || !password}

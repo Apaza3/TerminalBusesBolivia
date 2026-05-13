@@ -79,8 +79,9 @@
 }
 
 .asiento-btn.disponible { background: #334155; }
-.asiento-btn.ocupado    { background: #7f1d1d; border-color: #991b1b; color: #fca5a5; }
+.asiento-btn.ocupado    { background: #7f1d1d; border-color: #991b1b; color: #fca5a5; cursor: not-allowed; }
 .asiento-btn.pendiente  { background: #b45309; border-color: #d97706; color: #fcd34d; }
+.asiento-btn.bloqueado  { background: #4c1d95; border-color: #6d28d9; color: #c4b5fd; cursor: not-allowed; }
 
 .bus-pasillo-visual {
     background: repeating-linear-gradient(0deg, #334155, #334155 4px, transparent 4px, transparent 8px);

@@ -1,207 +1,127 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '../servicios/supabase';
+import { loginStaff, inicializarStaff, actualizarPerfilStaff } from '../data/mockAuthDB';
 import { loginCliente as mockLoginCliente } from '../data/mockClientDB';
 
 // ──────────────────────────────────────────────────────
 // AuthContext
-// Maneja el estado global de autenticación interactuando
-// con Supabase Auth y la tabla 'usuarios' (RBAC).
+// Maneja el estado global de autenticación con localStorage.
+// Roles: admin_sucursal, cajero, conductor, cliente
 // ──────────────────────────────────────────────────────
 
 const AuthContext = createContext();
 
+const SESSION_KEY = 'tbb_session';
+const SESSION_REMEMBER_KEY = 'tbb_session_remember';
+
 export const AuthProvider = ({ children }) => {
     const [sesion, setSesion] = useState(null);
-    const [perfil, setPerfil] = useState(null); // Data desde la tabla `usuarios` (email, rol, sucursal_id)
+    const [perfil, setPerfil] = useState(null);
     const [cargandoAuth, setCargandoAuth] = useState(true);
 
     useEffect(() => {
-        let subscription;
-        
-        const initAuth = async () => {
-            try {
-                // Supabase gestiona por defecto la sesión en localStorage
-                // Validar si existe la sesion fake
-                if (localStorage.getItem('tbb_fake_admin') === 'true') {
-                    const adminProfileLocal = { id: 'admin-local', email: 'admin@tbb.com', rol: 'admin_sucursal', nombre_completo: 'Admin Supremo' };
-                    setSesion({ user: adminProfileLocal });
-                    setPerfil(adminProfileLocal);
-                    setCargandoAuth(false);
-                    return;
-                }
+        inicializarStaff();
 
-                // Validar sesion fake de conductor
-                if (localStorage.getItem('tbb_fake_conductor') === 'true') {
-                    const conductorProfile = { id: 'conductor-local', email: 'conductor@tbb.com', rol: 'conductor', nombre_completo: 'Pedro Chofer' };
-                    setSesion({ user: conductorProfile });
-                    setPerfil(conductorProfile);
-                    setCargandoAuth(false);
-                    return;
-                }
-
-                // Validar sesion fake de cliente
-                const clienteGuardado = localStorage.getItem('tbb_fake_cliente');
-                if (clienteGuardado) {
-                    try {
-                        const clientePerfil = JSON.parse(clienteGuardado);
-                        setSesion({ user: clientePerfil });
-                        setPerfil(clientePerfil);
-                        setCargandoAuth(false);
-                        return;
-                    } catch { /* corrupted, continue */ }
-                }
-
-                const { data: { session }, error } = await supabase.auth.getSession();
-                if (error) throw error;
-                
-                await manejarSesion(session);
-                
-                // Suscribirse a cambios (Login/Logout dinámicos)
-                const { data } = supabase.auth.onAuthStateChange(async (_event, sessionObj) => {
-                    await manejarSesion(sessionObj);
-                });
-                
-                subscription = data.subscription;
-            } catch (err) {
-                console.error('Error inicializando AuthContext:', err);
-                setCargandoAuth(false);
+        // Restaurar sesión desde localStorage
+        try {
+            const guardada = localStorage.getItem(SESSION_KEY);
+            if (guardada) {
+                const parsed = JSON.parse(guardada);
+                setSesion({ user: parsed });
+                setPerfil(parsed);
             }
-        };
+        } catch {
+            localStorage.removeItem(SESSION_KEY);
+        }
 
-        initAuth();
-
-        return () => {
-            if (subscription) subscription.unsubscribe();
-        };
+        setCargandoAuth(false);
     }, []);
 
-    // Helper para actualizar estado local y cargar del perfil RBAC
-    const manejarSesion = async (nuevaSesion) => {
-        setSesion(nuevaSesion);
-        
-        if (nuevaSesion?.user) {
-            try {
-                // Evitamos un fetch si el perfil ya está cargado y coincide el ID
-                const { data, error } = await supabase
-                    .from('usuarios')
-                    .select('id, email, rol, sucursal_id, nombre_completo')
-                    .eq('id', nuevaSesion.user.id)
-                    .maybeSingle();
-                
-                if (error) console.error('Error cargando perfil usuario:', error);
-                
-                if (data) {
-                    setPerfil(data);
-                } else {
-                    // Fallback: Si no hay registro en tabla usuarios, creamos rol base 'cliente' local
-                    // En producción un Trigger de BD debería auto-insertar.
-                    setPerfil({ 
-                        id: nuevaSesion.user.id, 
-                        email: nuevaSesion.user.email, 
-                        rol: 'cliente' 
-                    });
-                }
-            } catch (err) {
-                console.error('Error en manejarSesion - profile fetch:', err);
-                setPerfil(null);
-            }
+    const _guardarSesion = (perfil, recordar) => {
+        setSesion({ user: perfil });
+        setPerfil(perfil);
+        if (recordar) {
+            localStorage.setItem(SESSION_KEY, JSON.stringify(perfil));
+            localStorage.setItem(SESSION_REMEMBER_KEY, 'true');
         } else {
-            setPerfil(null);
-        }
-        
-        setCargandoAuth(false);
-    };
-
-    // ── Login Staff / Admin ──────────────────────────────
-    const login = async (email, password) => {
-        try {
-            // BACKDOOR TEMPORAL PARA PRUEBAS (Hardcoded Admin)
-            if (email === 'admin@tbb.com' && password === 'admin123456') {
-                const adminProfileLocal = { id: 'admin-local', email: email, rol: 'admin_sucursal', nombre_completo: 'Admin Supremo' };
-                const mockSession = { user: adminProfileLocal };
-                
-                setSesion(mockSession);
-                setPerfil(adminProfileLocal);
-                
-                // Keep fake session alive in memory/storage
-                localStorage.setItem('tbb_fake_admin', 'true');
-                return { exito: true };
-            }
-
-            // BACKDOOR TEMPORAL: Conductor de prueba
-            if (email === 'conductor@tbb.com' && password === 'conductor123456') {
-                const conductorProfile = { id: 'conductor-local', email: email, rol: 'conductor', nombre_completo: 'Pedro Chofer' };
-                const mockSession = { user: conductorProfile };
-                
-                setSesion(mockSession);
-                setPerfil(conductorProfile);
-                
-                localStorage.setItem('tbb_fake_conductor', 'true');
-                return { exito: true };
-            }
-
-            const { data, error } = await supabase.auth.signInWithPassword({
-                email,
-                password,
-            });
-            if (error) throw error;
-            return { exito: true, user: data.user };
-        } catch (error) {
-            return { exito: false, error: error.message };
+            // Solo sesión en memoria (se borra al cerrar); pero guardamos para SPA
+            sessionStorage.setItem(SESSION_KEY, JSON.stringify(perfil));
+            localStorage.removeItem(SESSION_KEY);
         }
     };
 
-    // ── Logout ──────────────────────────────────────────
-    const logout = async () => {
-        if (localStorage.getItem('tbb_fake_admin') === 'true') {
-            localStorage.removeItem('tbb_fake_admin');
-            setSesion(null);
-            setPerfil(null);
+    // ── Login Staff / Admin / Cajero / Conductor ──────
+    const login = async (email, password, recordar = false) => {
+        const resultado = loginStaff(email, password);
+        if (resultado.exito) {
+            _guardarSesion(resultado.usuario, recordar);
             return { exito: true };
         }
-
-        if (localStorage.getItem('tbb_fake_conductor') === 'true') {
-            localStorage.removeItem('tbb_fake_conductor');
-            setSesion(null);
-            setPerfil(null);
-            return { exito: true };
-        }
-
-        if (localStorage.getItem('tbb_fake_cliente')) {
-            localStorage.removeItem('tbb_fake_cliente');
-            setSesion(null);
-            setPerfil(null);
-            return { exito: true };
-        }
-
-        try {
-            const { error } = await supabase.auth.signOut();
-            if (error) throw error;
-            setSesion(null);
-            setPerfil(null);
-        } catch (error) {
-            console.error('Error durante el logout:', error);
-        }
+        return { exito: false, error: resultado.error };
     };
 
-    // ── Login Cliente (CI + password via mockClientDB) ──
-    const loginComoCliente = (ci, password) => {
+    // ── Login Cliente (CI + password) ─────────────────
+    const loginComoCliente = (ci, password, recordar = false) => {
         const resultado = mockLoginCliente(ci, password);
         if (resultado.exito) {
             const clientePerfil = { ...resultado.cliente, rol: 'cliente' };
-            setSesion({ user: clientePerfil });
-            setPerfil(clientePerfil);
-            localStorage.setItem('tbb_fake_cliente', JSON.stringify(clientePerfil));
+            _guardarSesion(clientePerfil, recordar);
         }
         return resultado;
     };
 
+    // ── Logout ────────────────────────────────────────
+    const logout = async () => {
+        setSesion(null);
+        setPerfil(null);
+        localStorage.removeItem(SESSION_KEY);
+        localStorage.removeItem(SESSION_REMEMBER_KEY);
+        sessionStorage.removeItem(SESSION_KEY);
+        return { exito: true };
+    };
+
+    // ── Actualizar perfil ─────────────────────────────
+    const actualizarPerfil = (datos) => {
+        if (!perfil) return { exito: false, error: 'Sin sesión.' };
+
+        let perfilActualizado;
+
+        if (perfil.rol === 'cliente') {
+            // Para clientes actualizamos en localStorage de clientes
+            perfilActualizado = { ...perfil, ...datos };
+        } else {
+            // Para staff usamos mockAuthDB
+            const resultado = actualizarPerfilStaff(perfil.id, datos);
+            if (!resultado.exito) return resultado;
+            perfilActualizado = resultado.usuario;
+        }
+
+        setSesion({ user: perfilActualizado });
+        setPerfil(perfilActualizado);
+
+        // Actualizar sesión persistida
+        if (localStorage.getItem(SESSION_KEY)) {
+            localStorage.setItem(SESSION_KEY, JSON.stringify(perfilActualizado));
+        }
+        if (sessionStorage.getItem(SESSION_KEY)) {
+            sessionStorage.setItem(SESSION_KEY, JSON.stringify(perfilActualizado));
+        }
+
+        return { exito: true, usuario: perfilActualizado };
+    };
+
     return (
-        <AuthContext.Provider value={{ sesion, perfil, cargandoAuth, login, loginComoCliente, logout }}>
+        <AuthContext.Provider value={{
+            sesion,
+            perfil,
+            cargandoAuth,
+            login,
+            loginComoCliente,
+            logout,
+            actualizarPerfil,
+        }}>
             {children}
         </AuthContext.Provider>
     );
 };
 
-// Custom hook helper
 export const useAuth = () => useContext(AuthContext);

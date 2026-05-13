@@ -11,7 +11,9 @@ import { QRCodeCanvas } from 'qrcode.react';
 const PasarelaPago = ({ monto, onPagoConfirmado, onCancelar }) => {
     const [metodo, setMetodo] = useState(null); // 'qr' | 'tarjeta'
     const [procesando, setProcesando] = useState(false);
-    const [tiempoRestante, setTiempoRestante] = useState(15 * 60); // 15 minutes in seconds
+    const [tiempoRestante, setTiempoRestante] = useState(15 * 60);
+    const [webhookStatus, setWebhookStatus] = useState('pendiente'); // pendiente | verificando | confirmado
+    const [contadorWebhook, setContadorWebhook] = useState(null);
 
     // Fix #2: Static payment ID — generated once, QR never changes
     const pagoId = useMemo(() => 'pago-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6), []);
@@ -30,6 +32,25 @@ const PasarelaPago = ({ monto, onPagoConfirmado, onCancelar }) => {
         }, 1000);
         return () => clearInterval(timer);
     }, [onCancelar]);
+
+    // Simulated webhook polling for QR payments
+    useEffect(() => {
+        if (metodo !== 'qr' || webhookStatus !== 'pendiente') return;
+
+        // Simular que el banco confirmó el pago después de 18-30 segundos
+        const delay = 18000 + Math.random() * 12000;
+        const wh = setTimeout(() => {
+            setWebhookStatus('verificando');
+            setTimeout(() => {
+                setWebhookStatus('confirmado');
+                onPagoConfirmado('qr');
+            }, 2000);
+        }, delay);
+
+        setContadorWebhook(wh);
+        return () => clearTimeout(wh);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [metodo]);
 
     const formatTime = (s) => {
         const m = Math.floor(s / 60);
@@ -164,19 +185,32 @@ const PasarelaPago = ({ monto, onPagoConfirmado, onCancelar }) => {
                                 size={180} level="M" includeMargin={true}
                             />
                         </div>
+
+                        {/* Webhook status */}
+                        {webhookStatus === 'pendiente' && (
+                            <div style={{ background: '#0f172a', borderRadius: '8px', padding: '0.75rem', marginBottom: '0.75rem', fontSize: '0.8rem', color: '#94a3b8' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'center' }}>
+                                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#f59e0b', animation: 'pulse 1.2s infinite' }} />
+                                    Esperando confirmación del banco...
+                                </div>
+                                <div style={{ color: '#475569', fontSize: '0.7rem', marginTop: '0.3rem' }}>Ref: {pagoId}</div>
+                            </div>
+                        )}
+                        {webhookStatus === 'verificando' && (
+                            <div style={{ background: 'rgba(59,130,246,0.1)', borderRadius: '8px', padding: '0.75rem', marginBottom: '0.75rem', fontSize: '0.8rem', color: '#93c5fd', border: '1px solid #1e40af' }}>
+                                🔄 Verificando pago con el banco...
+                            </div>
+                        )}
+
                         <p style={{ color: '#64748b', fontSize: '0.75rem', marginBottom: '0.5rem' }}>
-                            Escanea con tu app bancaria y confirma desde tu celular.
-                            Esta pantalla se actualizará automáticamente.
+                            Escanea con tu app bancaria. La pantalla se actualizará automáticamente.
                         </p>
-                        <div style={{ background: '#0f172a', borderRadius: '8px', padding: '0.6rem', fontSize: '0.7rem', color: '#475569', marginBottom: '0.75rem' }}>
-                            Ref: {pagoId}
-                        </div>
                         <button onClick={handlePagar} style={{
                             width: '100%', padding: '0.9rem', background: '#10b981',
                             color: 'white', border: 'none', borderRadius: '10px',
                             fontWeight: 600, cursor: 'pointer', fontSize: '0.95rem', marginTop: '0.25rem',
                         }}>
-                            ✅ Ya pagué — Confirmar
+                            ✅ Ya pagué — Confirmar manualmente
                         </button>
                     </div>
                 )}

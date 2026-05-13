@@ -99,6 +99,9 @@ const BuscadorViajes = () => {
         amenidades: [],
     });
 
+    // Cantidad de boletos
+    const [cantidadBoletos, setCantidadBoletos] = useState(1);
+
     // Results state
     const [resultados, setResultados] = useState([]);
     const [cargando, setCargando] = useState(false);
@@ -240,9 +243,10 @@ const BuscadorViajes = () => {
 
     /**
      * Lleva al usuario al Mapa de Asientos para continuar la reserva.
+     * Pasa la cantidad de boletos como state para pre-seleccionar asientos.
      */
     const handleSeleccionar = (viaje) => {
-        navigate('/reserva/' + viaje.id);
+        navigate('/reserva/' + viaje.id, { state: { cantidadBoletos } });
     };
 
 
@@ -302,6 +306,20 @@ const BuscadorViajes = () => {
                         onChange={(e) => setFecha(e.target.value)}
                         min={fechaMinima}
                         className="filtro-input"
+                    />
+                </div>
+
+                <div className="filtro-grupo">
+                    <label htmlFor="input-boletos">Boletos</label>
+                    <input
+                        type="number"
+                        id="input-boletos"
+                        value={cantidadBoletos}
+                        onChange={(e) => setCantidadBoletos(Math.max(1, Math.min(10, Number(e.target.value))))}
+                        min={1}
+                        max={10}
+                        className="filtro-input"
+                        style={{ maxWidth: '80px' }}
                     />
                 </div>
 
