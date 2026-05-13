@@ -25,22 +25,22 @@ const LoginAdmin = () => {
         setError(null);
         setLoading(true);
 
-        const { exito, error: loginError, usuario } = await login(email, password, recordar);
+        // loginStaff retorna el usuario; AuthContext.login lo guarda y retorna {exito, error}
+        // Necesitamos el rol: lo leemos directamente de mockAuthDB
+        const { loginStaff } = await import('../../data/mockAuthDB');
+        const resultado = loginStaff(email, password);
 
-        if (exito) {
-            // Obtener el perfil actualizado del contexto para saber el rol
-            // login ya guarda el perfil en contexto; obtenemos rol del resultado
-            const perfil = JSON.parse(
-                localStorage.getItem('tbb_session') ||
-                sessionStorage.getItem('tbb_session') ||
-                '{}'
-            );
-            const destino = ROL_REDIRECT[perfil.rol] || '/admin/dashboard';
-            navigate(destino, { replace: true });
-        } else {
-            setError(loginError || 'Credenciales inválidas.');
+        if (!resultado.exito) {
+            setError(resultado.error || 'Credenciales inválidas.');
             setLoading(false);
+            return;
         }
+
+        await login(email, password, recordar);
+
+        const rol = resultado.usuario?.rol;
+        const destino = ROL_REDIRECT[rol] || '/admin/dashboard';
+        navigate(destino, { replace: true });
     };
 
     return (
