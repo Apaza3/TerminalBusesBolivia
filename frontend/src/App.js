@@ -8,6 +8,7 @@ import SucursalDetalle from './paginas/SucursalDetalle';
 import LoginAdmin from './paginas/auth/LoginAdmin';
 import LoginCliente from './paginas/auth/LoginCliente';
 import RegistroCliente from './paginas/auth/RegistroCliente';
+import RecuperarPassword from './paginas/auth/RecuperarPassword';
 import AdminDashboard from './paginas/admin/AdminDashboard';
 import DashboardAnalitico from './paginas/admin/DashboardAnalitico';
 import RegistroBus from './paginas/admin/RegistroBus';
@@ -68,6 +69,7 @@ function App() {
                     <Route path="/login" element={<LoginAdmin />} />
                     <Route path="/login-cliente" element={<LoginCliente />} />
                     <Route path="/registro" element={<RegistroCliente />} />
+                    <Route path="/recuperar-password" element={<RecuperarPassword />} />
                     <Route path="/reserva/:viajeId" element={<MapaAsientos />} />
                     <Route path="/mis-viajes" element={<MisViajes />} />
 

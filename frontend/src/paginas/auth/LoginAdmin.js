@@ -131,6 +131,10 @@ const LoginAdmin = () => {
                 </form>
 
                 <div style={{ marginTop: '1.5rem', textAlign: 'center', fontSize: '0.8rem', color: '#64748b' }}>
+                    <Link to="/recuperar-password" style={{ color: '#60a5fa', textDecoration: 'none' }}>
+                        ¿Olvidaste tu contraseña?
+                    </Link>
+                    <br />
                     ¿Eres pasajero?{' '}
                     <Link to="/login-cliente" style={{ color: '#60a5fa', textDecoration: 'none' }}>
                         Acceso Cliente →
