@@ -165,9 +165,9 @@ const PerfilIndicador = () => {
                             🗺️ Mis Viajes
                         </button>
                     )}
-                    <button onClick={() => { setAbierto(false); }}
+                    <button onClick={() => { navigate('/perfil/editar'); setAbierto(false); }}
                         style={{ ...menuItemStyle }}>
-                        👤 Mi Cuenta
+                        👤 Mi Cuenta / Editar Perfil
                     </button>
                     <div style={{ height: '1px', background: '#334155' }} />
                     <button onClick={handleLogout} style={{ ...menuItemStyle, color: '#ef4444' }}>
