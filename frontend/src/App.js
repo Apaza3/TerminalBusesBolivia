@@ -16,6 +16,7 @@ import ProtectedRoute from './componentes/ProtectedRoute';
 import MapaAsientos from './paginas/MapaAsientos';
 import PanelConductor from './paginas/conductor/PanelConductor';
 import PanelCajero from './paginas/cajero/PanelCajero';
+import MisViajes from './paginas/cliente/MisViajes';
 import PerfilIndicador from './componentes/PerfilIndicador';
 
 import './estilos/escritorio/buscador.css';
@@ -68,6 +69,7 @@ function App() {
                     <Route path="/login-cliente" element={<LoginCliente />} />
                     <Route path="/registro" element={<RegistroCliente />} />
                     <Route path="/reserva/:viajeId" element={<MapaAsientos />} />
+                    <Route path="/mis-viajes" element={<MisViajes />} />
 
                     {/* Rutas no subidas en esta rama (como MapaAsientos) se redirigen o fallan
                         dependiendo de si existen en FileSystem o no. */}

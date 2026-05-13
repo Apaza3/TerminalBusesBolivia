@@ -159,6 +159,12 @@ const PerfilIndicador = () => {
                             🚌 Panel Conductor
                         </button>
                     )}
+                    {perfil?.rol === 'cliente' && (
+                        <button onClick={() => { navigate('/mis-viajes'); setAbierto(false); }}
+                            style={{ ...menuItemStyle }}>
+                            🗺️ Mis Viajes
+                        </button>
+                    )}
                     <button onClick={() => { setAbierto(false); }}
                         style={{ ...menuItemStyle }}>
                         👤 Mi Cuenta
