@@ -23,7 +23,7 @@ export const AuthProvider = ({ children }) => {
 
         // Restaurar sesión desde localStorage
         try {
-            const guardada = localStorage.getItem(SESSION_KEY);
+            const guardada = localStorage.getItem(SESSION_KEY) || sessionStorage.getItem(SESSION_KEY);
             if (guardada) {
                 const parsed = JSON.parse(guardada);
                 setSesion({ user: parsed });
@@ -31,6 +31,7 @@ export const AuthProvider = ({ children }) => {
             }
         } catch {
             localStorage.removeItem(SESSION_KEY);
+            sessionStorage.removeItem(SESSION_KEY);
         }
 
         setCargandoAuth(false);
