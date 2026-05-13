@@ -35,12 +35,14 @@ const PerfilIndicador = () => {
     const inicial = nombreMostrado.charAt(0).toUpperCase();
     const rolLabel = {
         admin_sucursal: '🛡️ Admin',
+        cajero: '🏷️ Cajero',
         conductor: '🚌 Conductor',
         cliente: '👤 Cliente',
     }[perfil?.rol] || '👤';
 
     const colorAvatar = {
         admin_sucursal: '#3b82f6',
+        cajero: '#f59e0b',
         conductor: '#10b981',
         cliente: '#8b5cf6',
     }[perfil?.rol] || '#8b5cf6';
@@ -143,6 +145,12 @@ const PerfilIndicador = () => {
                         <button onClick={() => { navigate('/admin/dashboard'); setAbierto(false); }}
                             style={{ ...menuItemStyle }}>
                             🛡️ Panel Admin
+                        </button>
+                    )}
+                    {perfil?.rol === 'cajero' && (
+                        <button onClick={() => { navigate('/cajero/panel'); setAbierto(false); }}
+                            style={{ ...menuItemStyle }}>
+                            🏷️ Panel Cajero
                         </button>
                     )}
                     {perfil?.rol === 'conductor' && (

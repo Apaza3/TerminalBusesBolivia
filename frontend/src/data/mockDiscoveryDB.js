@@ -157,14 +157,16 @@ const AVATARES_GENERICOS = ['🧑', '👩', '👨', '🧔', '👩‍🦱', '👨
 /**
  * Submit a feedback/review for a sucursal.
  */
-export const enviarFeedback = ({ sucursalId, nombreUsuario, mood, labelsSeleccionados, comentario }) => {
+export const enviarFeedback = ({ sucursalId, nombreUsuario, mood, labelsSeleccionados, comentario, moodBus, moodTripulacion }) => {
     const feedbacks = leer(STORAGE_KEYS.FEEDBACK);
     const nuevo = {
         id: 'fb-' + Date.now(),
         sucursalId,
         nombreUsuario: nombreUsuario || 'Anónimo',
         avatarGenerico: AVATARES_GENERICOS[Math.floor(Math.random() * AVATARES_GENERICOS.length)],
-        mood, // 1-5
+        mood, // 1-5 general
+        moodBus: moodBus || mood,
+        moodTripulacion: moodTripulacion || mood,
         labelsSeleccionados: labelsSeleccionados || [],
         comentario: comentario || '',
         fecha: new Date().toISOString(),
