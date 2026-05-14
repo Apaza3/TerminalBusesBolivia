@@ -331,6 +331,31 @@ const PanelConductor = () => {
                                     Viaje completado ✅
                                 </div>
                             )}
+                            {/* R31: Reportar incidencia disponible en cualquier estado activo */}
+                            {viaje.estado !== 'finalizado' && (
+                                <button
+                                    onClick={() => navigate(`/conductor/incidencia/${viaje.id}`)}
+                                    style={{
+                                        padding: '0.75rem 1rem',
+                                        background: 'rgba(220,38,38,0.1)',
+                                        border: '1px solid #7f1d1d',
+                                        color: '#fca5a5', borderRadius: '8px',
+                                        fontWeight: 600, cursor: 'pointer',
+                                        fontSize: '0.85rem', whiteSpace: 'nowrap',
+                                        transition: 'all 0.2s',
+                                    }}
+                                    onMouseEnter={e => {
+                                        e.currentTarget.style.background = 'rgba(220,38,38,0.2)';
+                                        e.currentTarget.style.borderColor = '#dc2626';
+                                    }}
+                                    onMouseLeave={e => {
+                                        e.currentTarget.style.background = 'rgba(220,38,38,0.1)';
+                                        e.currentTarget.style.borderColor = '#7f1d1d';
+                                    }}
+                                >
+                                    🚨 Reportar Incidencia
+                                </button>
+                            )}
                         </div>
                     </div>
                 ))}

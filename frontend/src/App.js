@@ -16,6 +16,7 @@ import RegistroTripulacion from './paginas/admin/RegistroTripulacion';
 import ProtectedRoute from './componentes/ProtectedRoute';
 import MapaAsientos from './paginas/MapaAsientos';
 import PanelConductor from './paginas/conductor/PanelConductor';
+import RegistrarIncidencia from './paginas/conductor/RegistrarIncidencia';
 import PanelCajero from './paginas/cajero/PanelCajero';
 import MisViajes from './paginas/cliente/MisViajes';
 import EditarPerfil from './paginas/perfil/EditarPerfil';
@@ -113,10 +114,15 @@ function App() {
                         </ProtectedRoute>
                     } />
 
-                    {/* ─── Conductor Protected Route ─── */}
+                    {/* ─── Conductor Protected Routes ─── */}
                     <Route path="/conductor/panel" element={
                         <ProtectedRoute rolesPermitidos={['conductor', 'admin_sucursal']}>
                             <PanelConductor />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/conductor/incidencia/:viajeId" element={
+                        <ProtectedRoute rolesPermitidos={['conductor', 'admin_sucursal']}>
+                            <RegistrarIncidencia />
                         </ProtectedRoute>
                     } />
                 </Routes>
