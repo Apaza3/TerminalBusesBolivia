@@ -17,6 +17,8 @@ import ProtectedRoute from './componentes/ProtectedRoute';
 import MapaAsientos from './paginas/MapaAsientos';
 import PanelConductor from './paginas/conductor/PanelConductor';
 import RegistrarIncidencia from './paginas/conductor/RegistrarIncidencia';
+import ReporteMantenimiento from './paginas/conductor/ReporteMantenimiento';
+import RecuperarBoleto from './paginas/RecuperarBoleto';
 import PanelCajero from './paginas/cajero/PanelCajero';
 import MisViajes from './paginas/cliente/MisViajes';
 import EditarPerfil from './paginas/perfil/EditarPerfil';
@@ -75,6 +77,7 @@ function App() {
                     <Route path="/reserva/:viajeId" element={<MapaAsientos />} />
                     <Route path="/mis-viajes" element={<MisViajes />} />
                     <Route path="/perfil/editar" element={<EditarPerfil />} />
+                    <Route path="/recuperar-boleto" element={<RecuperarBoleto />} />
 
                     {/* Rutas no subidas en esta rama (como MapaAsientos) se redirigen o fallan
                         dependiendo de si existen en FileSystem o no. */}
@@ -123,6 +126,11 @@ function App() {
                     <Route path="/conductor/incidencia/:viajeId" element={
                         <ProtectedRoute rolesPermitidos={['conductor', 'admin_sucursal']}>
                             <RegistrarIncidencia />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/conductor/mantenimiento" element={
+                        <ProtectedRoute rolesPermitidos={['conductor', 'admin_sucursal']}>
+                            <ReporteMantenimiento />
                         </ProtectedRoute>
                     } />
                 </Routes>

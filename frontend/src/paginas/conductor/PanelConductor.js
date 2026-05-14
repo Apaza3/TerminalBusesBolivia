@@ -331,6 +331,25 @@ const PanelConductor = () => {
                                     Viaje completado ✅
                                 </div>
                             )}
+                            {/* R29: Reporte de mantenimiento */}
+                            {viaje.estado !== 'finalizado' && (
+                                <button
+                                    onClick={() => navigate('/conductor/mantenimiento')}
+                                    style={{
+                                        padding: '0.75rem 1rem',
+                                        background: 'rgba(99,102,241,0.1)',
+                                        border: '1px solid #312e81',
+                                        color: '#a5b4fc', borderRadius: '8px',
+                                        fontWeight: 600, cursor: 'pointer',
+                                        fontSize: '0.85rem', whiteSpace: 'nowrap',
+                                        transition: 'all 0.2s',
+                                    }}
+                                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(99,102,241,0.2)'; e.currentTarget.style.borderColor = '#6366f1'; }}
+                                    onMouseLeave={e => { e.currentTarget.style.background = 'rgba(99,102,241,0.1)'; e.currentTarget.style.borderColor = '#312e81'; }}
+                                >
+                                    🔧 Mantenimiento
+                                </button>
+                            )}
                             {/* R31: Reportar incidencia disponible en cualquier estado activo */}
                             {viaje.estado !== 'finalizado' && (
                                 <button
