@@ -49,8 +49,7 @@ const PasarelaPago = ({ monto, onPagoConfirmado, onCancelar }) => {
 
         setContadorWebhook(wh);
         return () => clearTimeout(wh);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [metodo]);
+    }, [metodo]); // eslint-disable-line
 
     const formatTime = (s) => {
         const m = Math.floor(s / 60);
