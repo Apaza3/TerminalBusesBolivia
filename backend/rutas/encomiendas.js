@@ -16,11 +16,11 @@ router.get('/seguimiento/:codigo', async (req, res) => {
     const { data, error } = await supabaseAdmin
         .from('encomiendas')
         .select(`
-            codigo_seguimiento, estado, descripcion, peso_kg,
+            codigo_seguimiento, estado, descripcion, peso_kg, precio,
             remitente_nombre, ciudad_origen,
             destinatario_nombre, ciudad_destino,
             creado_en, entregada_en,
-            itinerario:itinerarios(salida_programada, estado, ruta:rutas(nombre))
+            viaje:viajes(fecha_salida, estado, origen, destino)
         `)
         .eq('codigo_seguimiento', req.params.codigo.toUpperCase())
         .single();
@@ -35,7 +35,7 @@ router.get('/', requireAuth, requireRol('cajero', 'admin_sucursal'), async (req,
 
     let query = supabaseAdmin
         .from('encomiendas')
-        .select('*, itinerario:itinerarios(salida_programada, ruta:rutas(nombre))')
+        .select('*, viaje:viajes(fecha_salida, origen, destino)')
         .order('creado_en', { ascending: false });
 
     if (estado) query = query.eq('estado', estado);
@@ -52,7 +52,7 @@ router.post('/', requireAuth, requireRol('cajero', 'admin_sucursal'), async (req
     const {
         remitente_nombre, remitente_ci, remitente_telefono, ciudad_origen,
         destinatario_nombre, destinatario_ci, destinatario_telefono, ciudad_destino,
-        descripcion, peso_kg, precio, itinerario_id
+        descripcion, peso_kg, precio, viaje_id
     } = req.body;
 
     if (!remitente_nombre || !destinatario_nombre || !ciudad_origen || !ciudad_destino) {
@@ -74,7 +74,7 @@ router.post('/', requireAuth, requireRol('cajero', 'admin_sucursal'), async (req
         .from('encomiendas')
         .insert({
             codigo_seguimiento: codigo,
-            itinerario_id: itinerario_id || null,
+            viaje_id: viaje_id || null,
             remitente_nombre, remitente_ci, remitente_telefono, ciudad_origen,
             destinatario_nombre, destinatario_ci, destinatario_telefono, ciudad_destino,
             descripcion, peso_kg, precio,

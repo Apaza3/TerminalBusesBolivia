@@ -12,7 +12,7 @@ router.get('/usuarios', requireAuth, SOLO_ADMIN, async (req, res) => {
     const { rol, activo } = req.query;
     let query = supabaseAdmin
         .from('usuarios')
-        .select('id, email, nombre_completo, ci, telefono, rol, activo, sucursal_id, creado_en, sucursales(nombre)')
+        .select('id, email, nombre_completo, ci, telefono, rol, activo, verificado, sucursal_id, creado_en, sucursales(nombre)')
         .neq('rol', 'cliente')
         .order('creado_en', { ascending: false });
 
@@ -43,7 +43,7 @@ router.post('/usuarios', requireAuth, SOLO_ADMIN, async (req, res) => {
 
     const { data, error } = await supabaseAdmin
         .from('usuarios')
-        .insert({ id: authData.user.id, email, nombre_completo, ci, telefono, rol, sucursal_id })
+        .insert({ id: authData.user.id, email, nombre_completo, ci, telefono, rol, sucursal_id, activo: true })
         .select()
         .single();
 
@@ -68,7 +68,6 @@ router.put('/usuarios/:id/suspender', requireAuth, SOLO_ADMIN, async (req, res) 
 
     if (error) return res.status(500).json({ error: error.message });
 
-    // Si se suspende, revocar sesiones activas
     if (!activo) {
         await supabaseAdmin.auth.admin.signOut(req.params.id, 'global').catch(() => {});
     }
@@ -91,12 +90,16 @@ router.get('/sucursales', requireAuth, SOLO_ADMIN, async (req, res) => {
 
 // POST /api/admin/sucursales
 router.post('/sucursales', requireAuth, SOLO_ADMIN, async (req, res) => {
-    const { nombre, departamento_id, ciudad, direccion, telefono, logo_emoji, amenidades } = req.body;
-    if (!nombre || !departamento_id) return res.status(400).json({ error: 'nombre y departamento_id son requeridos.' });
+    const { nombre, departamento_id, ciudad, direccion, telefono, email,
+            logo_emoji, logo_url, amenidades } = req.body;
+    if (!nombre || !departamento_id) {
+        return res.status(400).json({ error: 'nombre y departamento_id son requeridos.' });
+    }
 
     const { data, error } = await supabaseAdmin
         .from('sucursales')
-        .insert({ nombre, departamento_id, ciudad, direccion, telefono, logo_emoji, amenidades, activa: true })
+        .insert({ nombre, departamento_id, ciudad, direccion, telefono, email,
+                  logo_emoji, logo_url, amenidades: amenidades || [], activo: true })
         .select()
         .single();
 
@@ -106,7 +109,8 @@ router.post('/sucursales', requireAuth, SOLO_ADMIN, async (req, res) => {
 
 // PUT /api/admin/sucursales/:id
 router.put('/sucursales/:id', requireAuth, SOLO_ADMIN, async (req, res) => {
-    const campos = ['nombre', 'ciudad', 'direccion', 'telefono', 'logo_emoji', 'amenidades', 'activa', 'ranking'];
+    const campos = ['nombre', 'ciudad', 'direccion', 'telefono', 'email',
+                    'logo_emoji', 'logo_url', 'amenidades', 'activo', 'ranking'];
     const actualizacion = {};
     campos.forEach(c => { if (req.body[c] !== undefined) actualizacion[c] = req.body[c]; });
 
@@ -121,59 +125,50 @@ router.put('/sucursales/:id', requireAuth, SOLO_ADMIN, async (req, res) => {
     res.json(data);
 });
 
-// ── Rutas (R15) ──────────────────────────────────────────────────────────────
+// ── Calendario de Salidas (plantillas de rutas) ───────────────────────────────
 
-// GET /api/admin/rutas
+// GET /api/admin/rutas — listar calendarios de salida
 router.get('/rutas', requireAuth, SOLO_ADMIN, async (req, res) => {
     const { data, error } = await supabaseAdmin
-        .from('rutas')
-        .select('*, paradas_ruta(* ORDER BY orden)')
-        .order('nombre');
+        .from('calendario_salidas')
+        .select(`
+            *,
+            origen_departamento:departamentos!origen_departamento_id(nombre, color_primario),
+            destino_departamento:departamentos!destino_departamento_id(nombre, color_primario),
+            sucursal:sucursales(nombre)
+        `)
+        .eq('activo', true)
+        .order('hora_salida');
 
     if (error) return res.status(500).json({ error: error.message });
     res.json(data || []);
 });
 
-// POST /api/admin/rutas
+// POST /api/admin/rutas — crear plantilla de salida
 router.post('/rutas', requireAuth, SOLO_ADMIN, async (req, res) => {
-    const { nombre, departamento_origen, origen, departamento_destino, destino,
-            distancia_km, duracion_estimada, paradas } = req.body;
+    const { origen_departamento_id, destino_departamento_id, hora_salida,
+            dias_semana, precio, duracion_estimada, sucursal_id } = req.body;
 
-    if (!nombre || !origen || !destino || !departamento_origen || !departamento_destino) {
-        return res.status(400).json({ error: 'nombre, origen, destino y departamentos son requeridos.' });
+    if (!origen_departamento_id || !destino_departamento_id || !hora_salida || !precio) {
+        return res.status(400).json({
+            error: 'origen_departamento_id, destino_departamento_id, hora_salida y precio son requeridos.'
+        });
     }
 
-    const { data: ruta, error } = await supabaseAdmin
-        .from('rutas')
-        .insert({ nombre, departamento_origen, origen, departamento_destino, destino, distancia_km, duracion_estimada })
+    const { data, error } = await supabaseAdmin
+        .from('calendario_salidas')
+        .insert({
+            origen_departamento_id, destino_departamento_id,
+            hora_salida, precio, duracion_estimada,
+            dias_semana: dias_semana || [1,2,3,4,5,6,7],
+            sucursal_id: sucursal_id || req.usuario.perfil?.sucursal_id,
+            activo: true
+        })
         .select()
         .single();
 
     if (error) return res.status(500).json({ error: error.message });
-
-    // Insertar paradas intermedias si se enviaron
-    if (paradas?.length > 0) {
-        const paradasInsert = paradas.map((p, idx) => ({
-            ruta_id: ruta.id,
-            orden: idx + 1,
-            ciudad: p.ciudad,
-            departamento_id: p.departamento_id,
-            distancia_desde_origen_km: p.distancia_desde_origen_km || 0,
-            tiempo_desde_origen_min: p.tiempo_desde_origen_min || 0,
-            precio_desde_origen: p.precio_desde_origen || 0,
-            es_parada_intermedia: true
-        }));
-
-        await supabaseAdmin.from('paradas_ruta').insert(paradasInsert);
-    }
-
-    const { data: rutaCompleta } = await supabaseAdmin
-        .from('rutas')
-        .select('*, paradas_ruta(*)')
-        .eq('id', ruta.id)
-        .single();
-
-    res.status(201).json(rutaCompleta);
+    res.status(201).json(data);
 });
 
 // ── Stats / Dashboard ─────────────────────────────────────────────────────────
@@ -182,27 +177,29 @@ router.post('/rutas', requireAuth, SOLO_ADMIN, async (req, res) => {
 router.get('/stats', requireAuth, SOLO_ADMIN, async (req, res) => {
     const hoy = new Date().toISOString().split('T')[0];
 
-    const [reservas, itinerarios, buses, incidencias] = await Promise.all([
-        supabaseAdmin.from('reservas').select('id, monto_total, estado, creado_en'),
-        supabaseAdmin.from('itinerarios').select('id, estado').gte('salida_programada', `${hoy}T00:00:00Z`),
+    const [reservasRes, viajesRes, busesRes, incidenciasRes] = await Promise.all([
+        supabaseAdmin.from('reservas').select('id, monto, estado, creado_en'),
+        supabaseAdmin.from('viajes').select('id, estado')
+            .gte('fecha_salida', `${hoy}T00:00:00Z`)
+            .lte('fecha_salida', `${hoy}T23:59:59Z`),
         supabaseAdmin.from('buses').select('id, estado'),
         supabaseAdmin.from('incidencias').select('id, severidad').eq('estado', 'abierta')
     ]);
 
-    const reservasData = reservas.data || [];
+    const reservasData = reservasRes.data || [];
     const ingresos = reservasData
-        .filter(r => r.estado === 'confirmada')
-        .reduce((sum, r) => sum + Number(r.monto_total), 0);
+        .filter(r => r.estado === 'pagado' || r.estado === 'autorizado')
+        .reduce((sum, r) => sum + Number(r.monto), 0);
 
     res.json({
         total_reservas: reservasData.length,
         reservas_hoy: reservasData.filter(r => r.creado_en?.startsWith(hoy)).length,
         ingresos_total: ingresos,
-        viajes_hoy: (itinerarios.data || []).length,
-        viajes_en_ruta: (itinerarios.data || []).filter(i => i.estado === 'en_ruta').length,
-        buses_disponibles: (buses.data || []).filter(b => b.estado === 'disponible').length,
-        buses_en_ruta: (buses.data || []).filter(b => b.estado === 'en_ruta').length,
-        incidencias_abiertas: (incidencias.data || []).length,
+        viajes_hoy: (viajesRes.data || []).length,
+        viajes_en_ruta: (viajesRes.data || []).filter(i => i.estado === 'en_viaje').length,
+        buses_disponibles: (busesRes.data || []).filter(b => b.estado === 'disponible').length,
+        buses_en_ruta: (busesRes.data || []).filter(b => b.estado === 'en_viaje').length,
+        incidencias_abiertas: (incidenciasRes.data || []).length,
     });
 });
 
@@ -216,17 +213,30 @@ router.get('/disponibilidad', requireAuth, SOLO_ADMIN, async (req, res) => {
     }
 
     const { data, error } = await supabaseAdmin
-        .from('itinerarios')
+        .from('viajes')
         .select(`
-            id, salida_programada, llegada_estimada, estado,
+            id, fecha_salida, duracion_estimada, estado, origen, destino,
             bus:buses(placa, capacidad),
-            conductor:tripulacion!conductor_id(nombre_completo, ci),
-            ruta:rutas(nombre, origen, destino)
+            conductor:tripulacion!conductor_id(nombre, ci)
         `)
-        .gte('salida_programada', `${fecha_inicio}T00:00:00Z`)
-        .lte('salida_programada', `${fecha_fin}T23:59:59Z`)
-        .in('estado', ['programado', 'en_ruta'])
-        .order('salida_programada');
+        .gte('fecha_salida', `${fecha_inicio}T00:00:00Z`)
+        .lte('fecha_salida', `${fecha_fin}T23:59:59Z`)
+        .in('estado', ['programado', 'autorizado', 'en_viaje'])
+        .order('fecha_salida');
+
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data || []);
+});
+
+// ── Departamentos ─────────────────────────────────────────────────────────────
+
+// GET /api/admin/departamentos
+router.get('/departamentos', requireAuth, async (req, res) => {
+    const { data, error } = await supabaseAdmin
+        .from('departamentos')
+        .select('*')
+        .eq('activo', true)
+        .order('nombre');
 
     if (error) return res.status(500).json({ error: error.message });
     res.json(data || []);

@@ -4,98 +4,96 @@ const { requireAuth, requireRol, optionalAuth } = require('../middleware/auth');
 
 const router = Router();
 
-// GET /api/viajes — buscar itinerarios disponibles
-// Query params: origen, destino, fecha (YYYY-MM-DD), departamento_origen, departamento_destino
+// GET /api/viajes — buscar viajes disponibles
+// Query params: origen, destino, fecha (YYYY-MM-DD), origen_departamento_id, destino_departamento_id
 router.get('/', optionalAuth, async (req, res) => {
-    const { origen, destino, fecha, departamento_origen, departamento_destino } = req.query;
+    const { origen, destino, fecha, origen_departamento_id, destino_departamento_id } = req.query;
 
     let query = supabaseAdmin
-        .from('itinerarios')
+        .from('viajes')
         .select(`
             id,
-            salida_programada,
-            llegada_estimada,
-            precio_base,
+            origen,
+            destino,
+            fecha_salida,
+            duracion_estimada,
+            precio,
             estado,
             anden,
+            origen_departamento_id,
+            destino_departamento_id,
             bus:buses(id, placa, capacidad, categoria, configuracion_asientos, estado, ubicacion_actual_ciudad),
-            ruta:rutas(
-                id, nombre, origen, destino, distancia_km, duracion_estimada,
-                departamento_origen, departamento_destino
-            ),
-            conductor:tripulacion!conductor_id(nombre_completo),
-            sucursal:sucursales(id, nombre, logo_emoji, ranking, amenidades, departamento_id),
-            asientos_ocupados:asientos_viaje(count)
+            conductor:tripulacion!conductor_id(nombre, ci),
+            sucursal:sucursales(id, nombre, logo_emoji, logo_url, ranking, amenidades, departamento_id),
+            asientos_count:asientos_viaje(count)
         `)
-        .in('estado', ['programado'])
-        .gte('salida_programada', new Date().toISOString());
+        .in('estado', ['programado', 'autorizado'])
+        .gte('fecha_salida', new Date().toISOString())
+        .order('fecha_salida', { ascending: true });
 
-    if (origen) query = query.ilike('ruta.origen', `%${origen}%`);
-    if (destino) query = query.ilike('ruta.destino', `%${destino}%`);
+    if (origen) query = query.ilike('origen', `%${origen}%`);
+    if (destino) query = query.ilike('destino', `%${destino}%`);
+    if (origen_departamento_id) query = query.eq('origen_departamento_id', origen_departamento_id);
+    if (destino_departamento_id) query = query.eq('destino_departamento_id', destino_departamento_id);
 
     if (fecha) {
         const inicio = `${fecha}T00:00:00.000Z`;
         const fin = `${fecha}T23:59:59.999Z`;
-        query = query.gte('salida_programada', inicio).lte('salida_programada', fin);
+        query = query.gte('fecha_salida', inicio).lte('fecha_salida', fin);
     }
 
-    const { data, error } = await query.order('salida_programada', { ascending: true });
+    const { data, error } = await query;
     if (error) return res.status(500).json({ error: error.message });
 
-    // Filtrar por departamento si se especificó (join no disponible en PostgREST para texto)
-    let resultados = data || [];
-    if (departamento_origen) resultados = resultados.filter(i => i.ruta?.departamento_origen === departamento_origen);
-    if (departamento_destino) resultados = resultados.filter(i => i.ruta?.departamento_destino === departamento_destino);
-    if (origen && !departamento_origen) resultados = resultados.filter(i => i.ruta?.origen?.toLowerCase().includes(origen.toLowerCase()));
-    if (destino && !departamento_destino) resultados = resultados.filter(i => i.ruta?.destino?.toLowerCase().includes(destino.toLowerCase()));
-
-    // Calcular asientos disponibles
-    const resultadosConDisponibilidad = await Promise.all(
-        resultados.map(async (itinerario) => {
+    // Calcular asientos disponibles por viaje
+    const resultados = await Promise.all(
+        (data || []).map(async (viaje) => {
             const { count } = await supabaseAdmin
                 .from('asientos_viaje')
                 .select('*', { count: 'exact', head: true })
-                .eq('itinerario_id', itinerario.id)
+                .eq('viaje_id', viaje.id)
                 .eq('estado', 'disponible');
-
-            return { ...itinerario, asientos_disponibles: count || 0 };
+            return { ...viaje, asientos_disponibles: count || 0 };
         })
     );
 
-    res.json(resultadosConDisponibilidad);
+    res.json(resultados);
 });
 
-// GET /api/viajes/:id — detalle de un itinerario
+// GET /api/viajes/:id — detalle de un viaje
 router.get('/:id', async (req, res) => {
     const { data, error } = await supabaseAdmin
-        .from('itinerarios')
+        .from('viajes')
         .select(`
             *,
             bus:buses(*),
-            ruta:rutas(*, paradas_ruta(* ORDER BY orden)),
-            conductor:tripulacion!conductor_id(nombre_completo, ci, licencia),
-            copiloto:tripulacion!copiloto_id(nombre_completo),
-            sucursal:sucursales(*)
+            conductor:tripulacion!conductor_id(nombre, ci, licencia_url, foto_url),
+            copiloto:tripulacion!copiloto_id(nombre),
+            ayudante:tripulacion!ayudante_id(nombre),
+            sucursal:sucursales(*, departamento:departamentos(nombre, color_primario)),
+            origen_departamento:departamentos!origen_departamento_id(nombre, color_primario),
+            destino_departamento:departamentos!destino_departamento_id(nombre, color_primario)
         `)
         .eq('id', req.params.id)
         .single();
 
-    if (error) return res.status(404).json({ error: 'Itinerario no encontrado.' });
+    if (error) return res.status(404).json({ error: 'Viaje no encontrado.' });
     res.json(data);
 });
 
-// POST /api/viajes — crear itinerario (admin_sucursal, cajero)
+// POST /api/viajes — programar viaje (admin_sucursal, cajero)
 router.post('/', requireAuth, requireRol('admin_sucursal', 'cajero'), async (req, res) => {
     const {
-        ruta_id, bus_id, conductor_id, copiloto_id,
-        salida_programada, llegada_estimada, precio_base
+        origen, destino, origen_departamento_id, destino_departamento_id,
+        bus_id, conductor_id, copiloto_id, ayudante_id,
+        fecha_salida, precio, duracion_estimada, calendario_salida_id
     } = req.body;
 
-    if (!ruta_id || !bus_id || !conductor_id || !salida_programada || !precio_base) {
-        return res.status(400).json({ error: 'ruta_id, bus_id, conductor_id, salida_programada, precio_base son requeridos.' });
+    if (!origen || !destino || !bus_id || !conductor_id || !fecha_salida || !precio) {
+        return res.status(400).json({ error: 'origen, destino, bus_id, conductor_id, fecha_salida y precio son requeridos.' });
     }
 
-    // Verificar SOAT y documentación del bus vigentes
+    // Verificar bus disponible
     const { data: bus } = await supabaseAdmin
         .from('buses')
         .select('soat_vence, inspeccion_vence, estado, placa')
@@ -109,45 +107,38 @@ router.post('/', requireAuth, requireRol('admin_sucursal', 'cajero'), async (req
 
     const hoy = new Date().toISOString().split('T')[0];
     if (bus.soat_vence && bus.soat_vence < hoy) {
-        return res.status(409).json({ error: `SOAT del bus ${bus.placa} está vencido (venció: ${bus.soat_vence}).` });
+        return res.status(409).json({ error: `SOAT del bus ${bus.placa} vencido (venció: ${bus.soat_vence}).` });
     }
     if (bus.inspeccion_vence && bus.inspeccion_vence < hoy) {
-        return res.status(409).json({ error: `Inspección técnica del bus ${bus.placa} está vencida (venció: ${bus.inspeccion_vence}).` });
+        return res.status(409).json({ error: `Inspección técnica del bus ${bus.placa} vencida (venció: ${bus.inspeccion_vence}).` });
     }
 
-    // Verificar solapamiento de horario para bus
+    // Verificar solapamiento (mismo día)
+    const fechaDia = fecha_salida.split('T')[0];
     const { data: solapadosBus } = await supabaseAdmin
-        .from('itinerarios')
-        .select('id, salida_programada, llegada_estimada')
+        .from('viajes')
+        .select('id')
         .eq('bus_id', bus_id)
-        .in('estado', ['programado', 'en_ruta'])
-        .overlaps('salida_programada', llegada_estimada);
+        .in('estado', ['programado', 'autorizado', 'en_viaje'])
+        .gte('fecha_salida', `${fechaDia}T00:00:00Z`)
+        .lte('fecha_salida', `${fechaDia}T23:59:59Z`);
 
     if (solapadosBus?.length > 0) {
-        return res.status(409).json({ error: 'El bus tiene conflicto de horario con otro itinerario.' });
+        return res.status(409).json({ error: 'El bus tiene un viaje programado el mismo día.' });
     }
-
-    // Verificar solapamiento de conductor
-    const { data: solapadosConductor } = await supabaseAdmin
-        .from('itinerarios')
-        .select('id')
-        .eq('conductor_id', conductor_id)
-        .in('estado', ['programado', 'en_ruta']);
-
-    if (solapadosConductor?.length > 0) {
-        return res.status(409).json({ error: 'El conductor tiene conflicto de horario.' });
-    }
-
-    const sucursal_id = req.usuario.perfil?.sucursal_id;
 
     const { data, error } = await supabaseAdmin
-        .from('itinerarios')
+        .from('viajes')
         .insert({
-            ruta_id, bus_id, conductor_id, copiloto_id,
-            salida_programada, llegada_estimada, precio_base,
-            sucursal_id
+            origen, destino, origen_departamento_id, destino_departamento_id,
+            bus_id, conductor_id, copiloto_id: copiloto_id || null,
+            ayudante_id: ayudante_id || null,
+            fecha_salida, precio, duracion_estimada: duracion_estimada || null,
+            calendario_salida_id: calendario_salida_id || null,
+            sucursal_id: req.usuario.perfil?.sucursal_id,
+            estado: 'programado'
         })
-        .select(`*, ruta:rutas(nombre, origen, destino), bus:buses(placa)`)
+        .select(`*, bus:buses(placa), conductor:tripulacion!conductor_id(nombre)`)
         .single();
 
     if (error) return res.status(500).json({ error: error.message });
@@ -157,7 +148,7 @@ router.post('/', requireAuth, requireRol('admin_sucursal', 'cajero'), async (req
 // PUT /api/viajes/:id/estado — actualizar estado (conductor, admin, cajero)
 router.put('/:id/estado', requireAuth, requireRol('conductor', 'admin_sucursal', 'cajero'), async (req, res) => {
     const { estado, latitud, longitud, anden } = req.body;
-    const estadosValidos = ['programado', 'en_ruta', 'finalizado', 'cancelado'];
+    const estadosValidos = ['programado', 'autorizado', 'en_viaje', 'completado', 'cancelado', 'deshabilitado'];
 
     if (!estadosValidos.includes(estado)) {
         return res.status(400).json({ error: `Estado inválido. Válidos: ${estadosValidos.join(', ')}` });
@@ -171,33 +162,44 @@ router.put('/:id/estado', requireAuth, requireRol('conductor', 'admin_sucursal',
     }
     if (anden !== undefined) actualizacion.anden = anden;
 
+    // Registrar en bitácora
+    await supabaseAdmin.from('bitacora_viajes').insert({
+        viaje_id: req.params.id,
+        conductor_id: req.usuario.id,
+        estado_reportado: ['partiendo', 'en_ruta', 'atrasado', 'emergencia', 'llegada', 'ruta_cumplida'].includes(estado)
+            ? estado
+            : estado === 'en_viaje' ? 'en_ruta' : estado === 'completado' ? 'llegada' : 'disponible',
+        latitud: latitud || null,
+        longitud: longitud || null
+    }).catch(() => {});
+
     const { data, error } = await supabaseAdmin
-        .from('itinerarios')
+        .from('viajes')
         .update(actualizacion)
         .eq('id', req.params.id)
-        .select(`*, ruta:rutas(nombre, origen, destino), bus:buses(placa)`)
+        .select(`*, bus:buses(placa), conductor:tripulacion!conductor_id(nombre)`)
         .single();
 
     if (error) return res.status(500).json({ error: error.message });
 
-    // Broadcast WebSocket (se maneja desde servidor.js)
     req.app.locals.broadcast('estado_viaje_actualizado', {
-        itinerarioId: req.params.id,
+        viajeId: req.params.id,
         estado,
-        bus: data.bus,
-        ruta: data.ruta
+        origen: data.origen,
+        destino: data.destino,
+        bus: data.bus
     });
 
     res.json(data);
 });
 
-// PUT /api/viajes/:id/ubicacion — el conductor actualiza posición GPS
+// PUT /api/viajes/:id/ubicacion — conductor actualiza posición GPS
 router.put('/:id/ubicacion', requireAuth, requireRol('conductor'), async (req, res) => {
     const { latitud, longitud } = req.body;
     if (!latitud || !longitud) return res.status(400).json({ error: 'latitud y longitud requeridos.' });
 
     const { data, error } = await supabaseAdmin
-        .from('itinerarios')
+        .from('viajes')
         .update({
             latitud_actual: latitud,
             longitud_actual: longitud,
@@ -210,7 +212,7 @@ router.put('/:id/ubicacion', requireAuth, requireRol('conductor'), async (req, r
     if (error) return res.status(500).json({ error: error.message });
 
     req.app.locals.broadcast('ubicacion_actualizada', {
-        itinerarioId: req.params.id,
+        viajeId: req.params.id,
         latitud: data.latitud_actual,
         longitud: data.longitud_actual,
         ts: data.ubicacion_actualizada_en
@@ -225,10 +227,10 @@ router.put('/:id/anden', requireAuth, requireRol('cajero', 'admin_sucursal'), as
     if (!anden) return res.status(400).json({ error: 'anden requerido.' });
 
     const actualizacion = { anden };
-    if (nuevo_horario) actualizacion.salida_programada = nuevo_horario;
+    if (nuevo_horario) actualizacion.fecha_salida = nuevo_horario;
 
     const { data, error } = await supabaseAdmin
-        .from('itinerarios')
+        .from('viajes')
         .update(actualizacion)
         .eq('id', req.params.id)
         .select()
@@ -237,7 +239,7 @@ router.put('/:id/anden', requireAuth, requireRol('cajero', 'admin_sucursal'), as
     if (error) return res.status(500).json({ error: error.message });
 
     req.app.locals.broadcast('cambio_anden', {
-        itinerarioId: req.params.id,
+        viajeId: req.params.id,
         anden,
         nuevo_horario: nuevo_horario || null
     });
@@ -250,23 +252,22 @@ router.get('/:id/manifiesto', requireAuth, requireRol('conductor', 'admin_sucurs
     const { data, error } = await supabaseAdmin
         .from('boletos')
         .select(`
-            numero_boleto,
-            pasajero_nombre,
-            pasajero_ci,
-            precio,
+            id,
+            qr_token,
+            asiento,
+            nombre_pasajero,
+            ci_pasajero,
+            email_pasajero,
+            precio_individual,
             estado,
-            equipaje_maletas,
-            equipaje_peso_kg,
-            asiento:asientos_viaje!asiento_id(numero),
-            reserva:reservas!reserva_id(
-                creado_en,
-                origen_venta,
-                pago:pagos(metodo, estado)
-            )
+            declaraciones,
+            escaneado_en,
+            creado_en,
+            reserva:reservas(creado_en, metodo_pago, estado)
         `)
-        .eq('asientos_viaje.itinerario_id', req.params.id)
+        .eq('viaje_id', req.params.id)
         .neq('estado', 'cancelado')
-        .order('asiento.numero');
+        .order('asiento');
 
     if (error) return res.status(500).json({ error: error.message });
     res.json(data || []);

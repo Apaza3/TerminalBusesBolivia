@@ -16,16 +16,17 @@ router.get('/viaje-activo', requireAuth, SOLO_CONDUCTOR, async (req, res) => {
     if (!tripulacion) return res.status(404).json({ error: 'Perfil de conductor no encontrado.' });
 
     const { data, error } = await supabaseAdmin
-        .from('itinerarios')
+        .from('viajes')
         .select(`
             *,
-            ruta:rutas(*, paradas_ruta(* ORDER BY orden)),
             bus:buses(placa, capacidad, marca, modelo),
-            sucursal:sucursales(nombre)
+            sucursal:sucursales(nombre),
+            origen_departamento:departamentos!origen_departamento_id(nombre),
+            destino_departamento:departamentos!destino_departamento_id(nombre)
         `)
         .eq('conductor_id', tripulacion.id)
-        .in('estado', ['programado', 'en_ruta'])
-        .order('salida_programada', { ascending: true })
+        .in('estado', ['programado', 'autorizado', 'en_viaje'])
+        .order('fecha_salida', { ascending: true })
         .limit(1)
         .single();
 
@@ -35,10 +36,10 @@ router.get('/viaje-activo', requireAuth, SOLO_CONDUCTOR, async (req, res) => {
 
 // POST /api/conductor/incidencias — reportar incidencia
 router.post('/incidencias', requireAuth, SOLO_CONDUCTOR, async (req, res) => {
-    const { itinerario_id, tipo, descripcion, latitud, longitud, ubicacion_manual } = req.body;
+    const { viaje_id, tipo, descripcion, latitud, longitud, ubicacion_manual } = req.body;
 
-    if (!itinerario_id || !tipo || !descripcion) {
-        return res.status(400).json({ error: 'itinerario_id, tipo y descripcion son requeridos.' });
+    if (!viaje_id || !tipo || !descripcion) {
+        return res.status(400).json({ error: 'viaje_id, tipo y descripcion son requeridos.' });
     }
 
     const tiposValidos = ['accidente', 'desvio', 'pasajero_conflictivo', 'mecanico', 'retraso', 'otro'];
@@ -49,7 +50,7 @@ router.post('/incidencias', requireAuth, SOLO_CONDUCTOR, async (req, res) => {
     const { data, error } = await supabaseAdmin
         .from('incidencias')
         .insert({
-            itinerario_id, tipo, descripcion,
+            viaje_id, tipo, descripcion,
             reportado_por: req.usuario.id,
             latitud: latitud || null,
             longitud: longitud || null,
@@ -62,7 +63,7 @@ router.post('/incidencias', requireAuth, SOLO_CONDUCTOR, async (req, res) => {
     if (error) return res.status(500).json({ error: error.message });
 
     req.app.locals.broadcast('nueva_incidencia', {
-        itinerarioId: itinerario_id,
+        viajeId: viaje_id,
         tipo,
         descripcion,
         id: data.id
@@ -73,7 +74,7 @@ router.post('/incidencias', requireAuth, SOLO_CONDUCTOR, async (req, res) => {
 
 // POST /api/conductor/mantenimiento — reportar problema de bus
 router.post('/mantenimiento', requireAuth, SOLO_CONDUCTOR, async (req, res) => {
-    const { bus_id, itinerario_id, tipo, descripcion, severidad, foto_base64 } = req.body;
+    const { bus_id, viaje_id, tipo, descripcion, severidad, foto_base64 } = req.body;
 
     if (!bus_id || !tipo || !descripcion) {
         return res.status(400).json({ error: 'bus_id, tipo y descripcion son requeridos.' });
@@ -82,7 +83,8 @@ router.post('/mantenimiento', requireAuth, SOLO_CONDUCTOR, async (req, res) => {
     const { data, error } = await supabaseAdmin
         .from('reportes_mantenimiento')
         .insert({
-            bus_id, itinerario_id,
+            bus_id,
+            viaje_id: viaje_id || null,
             reportado_por: req.usuario.id,
             tipo, descripcion,
             severidad: severidad || 'media',
@@ -94,11 +96,10 @@ router.post('/mantenimiento', requireAuth, SOLO_CONDUCTOR, async (req, res) => {
 
     if (error) return res.status(500).json({ error: error.message });
 
-    // Alerta crítica → broadcast inmediato
     if (severidad === 'critica') {
         req.app.locals.broadcast('alerta_mantenimiento_critico', {
             busId: bus_id,
-            itinerarioId: itinerario_id,
+            viajeId: viaje_id,
             tipo,
             descripcion,
             id: data.id
@@ -110,48 +111,54 @@ router.post('/mantenimiento', requireAuth, SOLO_CONDUCTOR, async (req, res) => {
 
 // POST /api/conductor/validar-qr — escanear QR de boleto para abordaje
 router.post('/validar-qr', requireAuth, SOLO_CONDUCTOR, async (req, res) => {
-    const { qr_codigo, itinerario_id } = req.body;
-    if (!qr_codigo || !itinerario_id) {
-        return res.status(400).json({ error: 'qr_codigo e itinerario_id son requeridos.' });
+    const { qr_token, viaje_id } = req.body;
+    if (!qr_token || !viaje_id) {
+        return res.status(400).json({ error: 'qr_token y viaje_id son requeridos.' });
     }
 
     const { data: boleto } = await supabaseAdmin
         .from('boletos')
-        .select(`
-            id, numero_boleto, pasajero_nombre, pasajero_ci, precio, estado,
-            asiento:asientos_viaje(numero, itinerario_id)
-        `)
-        .eq('qr_codigo', qr_codigo)
+        .select('id, qr_token, nombre_pasajero, ci_pasajero, precio_individual, estado, asiento, viaje_id')
+        .eq('qr_token', qr_token)
         .single();
 
     if (!boleto) return res.status(404).json({ error: 'Boleto no encontrado.' });
-    if (boleto.asiento?.itinerario_id !== itinerario_id) {
+    if (boleto.viaje_id !== viaje_id) {
         return res.status(409).json({ error: 'El boleto no corresponde a este viaje.' });
     }
-    if (boleto.estado === 'abordado') {
+    if (boleto.estado === 'validado') {
         return res.status(409).json({ error: 'Pasajero ya abordó.', boleto });
     }
     if (boleto.estado === 'cancelado') {
         return res.status(409).json({ error: 'Boleto cancelado.', boleto });
     }
+    if (boleto.estado === 'pendiente') {
+        return res.status(409).json({ error: 'Boleto pendiente de pago.', boleto });
+    }
 
-    // Marcar como abordado
+    // Marcar como validado (abordado)
     await supabaseAdmin
         .from('boletos')
-        .update({ estado: 'abordado', abordado_en: new Date().toISOString() })
+        .update({
+            estado: 'validado',
+            escaneado_en: new Date().toISOString(),
+            escaneado_por: req.usuario.id
+        })
         .eq('id', boleto.id);
 
+    // Marcar asiento como ocupado
     await supabaseAdmin
         .from('asientos_viaje')
-        .update({ estado: 'abordado' })
-        .eq('id', boleto.asiento?.id);
+        .update({ estado: 'ocupado', presente: true })
+        .eq('viaje_id', viaje_id)
+        .eq('numero_asiento', boleto.asiento);
 
     res.json({
         valido: true,
-        pasajero: boleto.pasajero_nombre,
-        ci: boleto.pasajero_ci,
-        asiento: boleto.asiento?.numero,
-        numero_boleto: boleto.numero_boleto
+        pasajero: boleto.nombre_pasajero,
+        ci: boleto.ci_pasajero,
+        asiento: boleto.asiento,
+        qr_token: boleto.qr_token
     });
 });
 

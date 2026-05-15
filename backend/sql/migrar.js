@@ -9,6 +9,7 @@ const fs = require('fs');
 const path = require('path');
 
 const PROJECT_REF = 'eoiindqtjhvyyoahnpcp';
+const POOLER_HOST = 'aws-0-us-east-1.pooler.supabase.com';
 
 const DB_PASSWORD = process.env.DB_PASSWORD;
 if (!DB_PASSWORD) {
@@ -18,10 +19,10 @@ if (!DB_PASSWORD) {
 }
 
 const client = new Client({
-    host: `db.${PROJECT_REF}.supabase.co`,
-    port: 5432,
+    host: POOLER_HOST,
+    port: 6543,
     database: 'postgres',
-    user: 'postgres',
+    user: `postgres.${PROJECT_REF}`,
     password: DB_PASSWORD,
     ssl: { rejectUnauthorized: false }
 });
