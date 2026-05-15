@@ -1,50 +1,145 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { Routes, Route, NavLink, Navigate } from 'react-router-dom';
+import { AuthProvider } from './contextos/AuthContext';
+import { DepartamentoProvider } from './contextos/DepartamentoContext';
+import { ToastProvider } from './componentes/ToastNotifications';
 import Inicio from './paginas/Inicio';
 import BuscadorViajes from './paginas/BuscadorViajes';
+import SucursalDetalle from './paginas/SucursalDetalle';
+import LoginAdmin from './paginas/auth/LoginAdmin';
+import LoginCliente from './paginas/auth/LoginCliente';
+import RegistroCliente from './paginas/auth/RegistroCliente';
+import RecuperarPassword from './paginas/auth/RecuperarPassword';
+import AdminDashboard from './paginas/admin/AdminDashboard';
+import DashboardAnalitico from './paginas/admin/DashboardAnalitico';
+import RegistroBus from './paginas/admin/RegistroBus';
+import RegistroTripulacion from './paginas/admin/RegistroTripulacion';
+import ProtectedRoute from './componentes/ProtectedRoute';
+import MapaAsientos from './paginas/MapaAsientos';
+import PanelConductor from './paginas/conductor/PanelConductor';
+import RegistrarIncidencia from './paginas/conductor/RegistrarIncidencia';
+import ReporteMantenimiento from './paginas/conductor/ReporteMantenimiento';
+import RecuperarBoleto from './paginas/RecuperarBoleto';
+import PanelCajero from './paginas/cajero/PanelCajero';
+import MisViajes from './paginas/cliente/MisViajes';
+import EditarPerfil from './paginas/perfil/EditarPerfil';
+import PerfilIndicador from './componentes/PerfilIndicador';
+
 import './estilos/escritorio/buscador.css';
 import './estilos/movil/buscador-responsivo.css';
 
 /**
- * App - Componente raíz con navegación interna por estado.
- * Gestiona la vista activa (inicio o buscador) sin react-router.
+ * App - Root component with react-router-dom navigation.
+ * Manages routing between Inicio, BuscadorViajes, and SucursalDetalle.
+ * Replaces the previous state-based navigation to support browser Back button.
  */
 function App() {
-    // Estado de navegación: 'inicio' o 'buscador'
-    const [paginaActual, setPaginaActual] = useState('inicio');
-
     return (
-        <div className="App">
-            {/* Barra de navegación superior */}
-            <nav className="barra-nav">
-                <div className="nav-logo">
-                    🚌 Terminal<span>Bolivia</span>
-                </div>
-                <div className="nav-links">
-                    <button
-                        className={`nav-link ${paginaActual === 'inicio' ? 'activo' : ''}`}
-                        onClick={() => setPaginaActual('inicio')}
-                        id="nav-inicio"
-                    >
-                        Inicio
-                    </button>
-                    <button
-                        className={`nav-link ${paginaActual === 'buscador' ? 'activo' : ''}`}
-                        onClick={() => setPaginaActual('buscador')}
-                        id="nav-buscador"
-                    >
-                        Buscar Viajes
-                    </button>
-                </div>
-            </nav>
+        <ToastProvider>
+        <DepartamentoProvider>
+        <AuthProvider>
+            <div className="App">
+                {/* Barra de navegación superior */}
+                <nav className="barra-nav">
+                    <div className="nav-logo">
+                        <NavLink to="/" style={{ color: 'inherit', textDecoration: 'none' }}>
+                            🚌 Terminal<span>Bolivia</span>
+                        </NavLink>
+                    </div>
+                    <div className="nav-links">
+                        <NavLink
+                            to="/"
+                            end
+                            className={({ isActive }) => `nav-link ${isActive ? 'activo' : ''}`}
+                            id="nav-inicio"
+                        >
+                            Inicio
+                        </NavLink>
+                        <NavLink
+                            to="/buscar"
+                            className={({ isActive }) => `nav-link ${isActive ? 'activo' : ''}`}
+                            id="nav-buscador"
+                        >
+                            Buscar Viajes
+                        </NavLink>
+                        <PerfilIndicador />
+                    </div>
+                </nav>
 
-            {/* Renderizado condicional de la página activa */}
-            {paginaActual === 'inicio' && (
-                <Inicio onBuscarViajes={() => setPaginaActual('buscador')} />
-            )}
-            {paginaActual === 'buscador' && (
-                <BuscadorViajes onVolver={() => setPaginaActual('inicio')} />
-            )}
-        </div>
+                {/* Route-based page rendering */}
+                <Routes>
+                    {/* Public Routes */}
+                    <Route path="/" element={<Inicio />} />
+                    <Route path="/buscar" element={<BuscadorViajes />} />
+                    <Route path="/sucursal/:id" element={<SucursalDetalle />} />
+                    <Route path="/login" element={<LoginAdmin />} />
+                    <Route path="/login-cliente" element={<LoginCliente />} />
+                    <Route path="/registro" element={<RegistroCliente />} />
+                    <Route path="/recuperar-password" element={<RecuperarPassword />} />
+                    <Route path="/reserva/:viajeId" element={<MapaAsientos />} />
+                    <Route path="/mis-viajes" element={<MisViajes />} />
+                    <Route path="/perfil/editar" element={<EditarPerfil />} />
+                    <Route path="/recuperar-boleto" element={<RecuperarBoleto />} />
+
+                    {/* Rutas no subidas en esta rama (como MapaAsientos) se redirigen o fallan
+                        dependiendo de si existen en FileSystem o no. */}
+
+                    {/* Admin Protected Routes */}
+                    <Route path="/admin/dashboard" element={
+                        <ProtectedRoute rolesPermitidos={['admin_sucursal', 'conductor']}>
+                            <AdminDashboard />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/admin/bus/nuevo" element={
+                        <ProtectedRoute rolesPermitidos={['admin_sucursal']}>
+                            <RegistroBus />
+                        </ProtectedRoute>
+                    } />
+                    {/* Ruta de Registro de Tripulación restaurada */}
+                    <Route path="/admin/tripulacion/nuevo" element={
+                        <ProtectedRoute rolesPermitidos={['admin_sucursal']}>
+                            <RegistroTripulacion />
+                        </ProtectedRoute>
+                    } />
+                    
+                    {/* Redirect root admin to dashboard */}
+                    <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+
+                    {/* ─── Analytics Dashboard (Admin) ─── */}
+                    <Route path="/admin/analitica" element={
+                        <ProtectedRoute rolesPermitidos={['admin_sucursal']}>
+                            <DashboardAnalitico />
+                        </ProtectedRoute>
+                    } />
+
+                    {/* ─── Cajero Protected Route ─── */}
+                    <Route path="/cajero/panel" element={
+                        <ProtectedRoute rolesPermitidos={['cajero', 'admin_sucursal']}>
+                            <PanelCajero />
+                        </ProtectedRoute>
+                    } />
+
+                    {/* ─── Conductor Protected Routes ─── */}
+                    <Route path="/conductor/panel" element={
+                        <ProtectedRoute rolesPermitidos={['conductor', 'admin_sucursal']}>
+                            <PanelConductor />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/conductor/incidencia/:viajeId" element={
+                        <ProtectedRoute rolesPermitidos={['conductor', 'admin_sucursal']}>
+                            <RegistrarIncidencia />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/conductor/mantenimiento" element={
+                        <ProtectedRoute rolesPermitidos={['conductor', 'admin_sucursal']}>
+                            <ReporteMantenimiento />
+                        </ProtectedRoute>
+                    } />
+                </Routes>
+            </div>
+        </AuthProvider>
+        </DepartamentoProvider>
+        </ToastProvider>
     );
 }
 

@@ -1,0 +1,267 @@
+/* ==========================================================================
+   Admin CSS (Desktop)
+   Estilos premium para el panel de administración
+   ========================================================================== */
+
+.pagina-admin {
+    background-color: #0f172a;
+    color: #f1f5f9;
+    min-height: 100vh;
+    font-family: 'Inter', system-ui, sans-serif;
+    display: flex;
+    flex-direction: column;
+}
+
+.admin-banner {
+    background: linear-gradient(90deg, #1e3a8a 0%, #3b82f6 100%);
+    color: white;
+    padding: 0.5rem 2rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.admin-header {
+    padding: 2rem;
+    background-color: #1e293b;
+    border-bottom: 1px solid #334155;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.admin-header h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    color: #f8fafc;
+    letter-spacing: -0.02em;
+}
+
+.admin-header-sub {
+    color: #94a3b8;
+    font-size: 0.9rem;
+    margin-top: 0.25rem;
+}
+
+.btn-volver-admin {
+    background: transparent;
+    border: 1px solid #475569;
+    color: #cbd5e1;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.btn-volver-admin:hover {
+    background: #334155;
+    color: white;
+}
+
+/* Contenido Principal */
+.admin-contenido {
+    flex: 1;
+    max-width: 800px;
+    margin: 2rem auto;
+    width: 100%;
+    padding: 0 1rem;
+}
+
+.admin-seccion {
+    background: #1e293b;
+    border-radius: 12px;
+    border: 1px solid #334155;
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.admin-seccion-titulo {
+    padding: 1.25rem 1.5rem;
+    background: #0f172a;
+    border-bottom: 1px solid #334155;
+    font-weight: 600;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.admin-seccion-cuerpo {
+    padding: 1.5rem;
+}
+
+/* Grillas de Formularios */
+.campos-grid-1 {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+}
+
+.campos-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+
+/* Inputs */
+.campo-grupo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.campo-label {
+    font-size: 0.85rem;
+    color: #cbd5e1;
+    font-weight: 500;
+}
+
+.campo-requerido {
+    color: #ef4444;
+}
+
+.campo-input, .campo-select {
+    background: #0f172a;
+    border: 1px solid #475569;
+    color: #f8fafc;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+}
+
+.campo-input:focus, .campo-select:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.campo-input.error { border-color: #ef4444; }
+.campo-input.ok { border-color: #10b981; }
+
+.campo-hint { font-size: 0.8rem; color: #64748b; }
+.campo-error-msg { font-size: 0.8rem; color: #ef4444; margin-top: 0.25rem; }
+.campo-ok-msg { font-size: 0.8rem; color: #10b981; margin-top: 0.25rem; }
+.campo-cargando { font-size: 0.8rem; color: #3b82f6; display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem; }
+
+/* Toggles & Botones */
+.toggle-grupo {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.toggle-btn {
+    flex: 1;
+    padding: 0.75rem;
+    background: #0f172a;
+    border: 1px solid #475569;
+    color: #94a3b8;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.toggle-btn:hover {
+    background: #334155;
+}
+
+.toggle-btn.activo {
+    background: rgba(59, 130, 246, 0.1);
+    border-color: #3b82f6;
+    color: #60a5fa;
+}
+
+/* Amenidades */
+.amenidades-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.amenidad-tag {
+    padding: 0.5rem 1rem;
+    background: #0f172a;
+    border: 1px solid #475569;
+    color: #cbd5e1;
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+    user-select: none;
+}
+
+.amenidad-tag:hover { background: #334155; }
+.amenidad-tag.activo {
+    background: #3b82f6;
+    border-color: #3b82f6;
+    color: white;
+}
+
+/* Feedback */
+.admin-feedback {
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    font-weight: 500;
+}
+.admin-feedback.exito { background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2); }
+.admin-feedback.error { background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); }
+
+/* Footer */
+.admin-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+}
+
+.btn-admin-cancelar {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    padding: 0.75rem 1.5rem;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.btn-admin-cancelar:hover { color: white; }
+
+.btn-admin-guardar {
+    background: #3b82f6;
+    border: none;
+    color: white;
+    padding: 0.75rem 2rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-admin-guardar:hover:not(:disabled) { background: #2563eb; }
+.btn-admin-guardar:disabled { background: #475569; color: #94a3b8; cursor: not-allowed; }
+
+/* Utilities */
+.spinner-mini {
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255,255,255,0.1);
+    border-top-color: #60a5fa;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }

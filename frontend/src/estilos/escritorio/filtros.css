@@ -1,0 +1,299 @@
+/* ===========================================================
+   Estilos Desktop - Panel de Filtros Avanzados v2.0
+   Paleta Boliviana: Azul profundo, Gris andino, Dorado, Verde
+   =========================================================== */
+
+/* --- Panel de Filtros --- */
+.panel-filtros {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(26, 54, 93, 0.08);
+    border: 1px solid rgba(26, 54, 93, 0.06);
+    margin-bottom: 30px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+/* --- Toggle Button --- */
+.filtros-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 18px 24px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 1rem;
+    color: #2d3748;
+    transition: background 0.2s ease;
+}
+
+.filtros-toggle:hover {
+    background: #f7fafc;
+}
+
+.filtros-toggle-icono {
+    font-size: 1.2rem;
+}
+
+.filtros-badge {
+    color: #3182ce;
+    font-size: 0.7rem;
+    margin-left: -4px;
+}
+
+.filtros-flecha {
+    margin-left: auto;
+    color: #a0aec0;
+    font-size: 0.75rem;
+    transition: transform 0.3s ease;
+}
+
+.filtros-flecha.abierta {
+    transform: rotate(180deg);
+}
+
+/* --- Scope Indicator --- */
+.filtros-scope {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 24px 0;
+    font-size: 0.82rem;
+    color: #718096;
+    font-weight: 500;
+}
+
+.filtros-scope-sucursal {
+    color: #2c5282;
+}
+
+.scope-icono {
+    font-size: 0.9rem;
+}
+
+/* --- Filter Content (collapsible) --- */
+.filtros-contenido {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                padding 0.3s ease;
+    padding: 0 24px;
+}
+
+.panel-filtros.expandido .filtros-contenido {
+    max-height: 600px;
+    padding: 16px 24px 24px;
+}
+
+/* --- Filter Section --- */
+.filtro-seccion {
+    margin-bottom: 22px;
+}
+
+.filtro-seccion:last-of-type {
+    margin-bottom: 16px;
+}
+
+.filtro-seccion-label {
+    display: block;
+    font-weight: 600;
+    color: #2d3748;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+}
+
+/* --- Price Range --- */
+.filtro-rango-precio {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.filtro-precio {
+    flex: 1;
+    max-width: 140px;
+    text-align: center;
+}
+
+.filtro-rango-separador {
+    color: #a0aec0;
+    font-weight: 300;
+    font-size: 1.2rem;
+}
+
+/* --- Star Rating Filter --- */
+.filtro-estrellas {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.estrella-filtro {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.6rem;
+    color: #cbd5e0;
+    padding: 2px 4px;
+    transition: all 0.15s ease;
+    line-height: 1;
+}
+
+.estrella-filtro:hover {
+    transform: scale(1.2);
+}
+
+.estrella-filtro.activa {
+    color: #d69e2e;
+    text-shadow: 0 0 8px rgba(214, 158, 46, 0.3);
+}
+
+.filtro-estrellas-texto {
+    color: #718096;
+    font-size: 0.82rem;
+    margin-left: 8px;
+    font-weight: 500;
+}
+
+/* --- Amenity Buttons --- */
+.filtro-amenidades-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.filtro-amenidad-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border: 2px solid #e2e8f0;
+    border-radius: 25px;
+    background: #f7fafc;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #4a5568;
+    transition: all 0.2s ease;
+}
+
+.filtro-amenidad-btn:hover {
+    border-color: #3182ce;
+    background: #ebf8ff;
+    color: #2c5282;
+}
+
+.filtro-amenidad-btn.seleccionada {
+    border-color: #3182ce;
+    background: linear-gradient(135deg, #ebf8ff, #bee3f8);
+    color: #2c5282;
+    font-weight: 700;
+    box-shadow: 0 2px 8px rgba(49, 130, 206, 0.15);
+}
+
+.amenidad-btn-icono {
+    font-size: 1rem;
+}
+
+.amenidad-btn-label {
+    white-space: nowrap;
+}
+
+/* --- Action Buttons --- */
+.filtros-acciones {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    justify-content: flex-end;
+    padding-top: 8px;
+    border-top: 1px solid #edf2f7;
+}
+
+.btn-limpiar-filtros {
+    padding: 10px 20px;
+    background: none;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.88rem;
+    color: #718096;
+    transition: all 0.2s ease;
+}
+
+.btn-limpiar-filtros:hover {
+    border-color: #e53e3e;
+    color: #e53e3e;
+    background: #fff5f5;
+}
+
+.btn-aplicar-filtros {
+    padding: 10px 24px;
+    background: linear-gradient(135deg, #38a169, #48bb78);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 0.92rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(56, 161, 105, 0.25);
+}
+
+.btn-aplicar-filtros:hover {
+    background: linear-gradient(135deg, #276749, #38a169);
+    box-shadow: 0 6px 16px rgba(56, 161, 105, 0.35);
+    transform: translateY(-1px);
+}
+
+/* --- Sucursal Detail View --- */
+.sucursal-detalle-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    margin-top: 10px;
+}
+
+.detalle-rating {
+    justify-content: center;
+}
+
+.detalle-amenidades {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+}
+
+/* --- Link styled as button (for Inicio.js) --- */
+.btn-ver-salidas {
+    display: block;
+    padding: 12px 24px;
+    background: #3182ce;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    width: 100%;
+    text-align: center;
+    text-decoration: none;
+    transition: background 0.2s;
+    box-sizing: border-box;
+}
+
+.btn-ver-salidas:hover {
+    background: #2b6cb0;
+}
+
+/* --- Link styled as button (buscar viajes in Inicio) --- */
+a.btn-buscar-viajes {
+    display: inline-block;
+    text-decoration: none;
+}

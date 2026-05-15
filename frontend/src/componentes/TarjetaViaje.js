@@ -7,6 +7,14 @@ import React from 'react';
  *   - viaje: objeto con datos del viaje (sucursal, origen, destino, salida, precio, etc.)
  *   - onSeleccionar: callback al presionar "Seleccionar" (futuro módulo de asientos)
  */
+const CATEGORIA_CONFIG = {
+    economico:  { label: 'Económico',  color: '#94a3b8', bg: 'rgba(148,163,184,0.12)' },
+    semicama:   { label: 'Semi-Cama',  color: '#38bdf8', bg: 'rgba(56,189,248,0.12)'  },
+    cama:       { label: 'Cama',       color: '#a78bfa', bg: 'rgba(167,139,250,0.12)' },
+    vip:        { label: 'VIP ⭐',     color: '#fbbf24', bg: 'rgba(251,191,36,0.12)'  },
+    ejecutivo:  { label: 'Ejecutivo',  color: '#34d399', bg: 'rgba(52,211,153,0.12)'  },
+};
+
 const TarjetaViaje = ({ viaje, onSeleccionar }) => {
 
     // Genera estrellas visuales basadas en el ranking (1-5)
@@ -74,7 +82,21 @@ const TarjetaViaje = ({ viaje, onSeleccionar }) => {
             {/* Cabecera: Sucursal + Rating */}
             <div className="viaje-cabecera">
                 <div className="viaje-sucursal">
-                    <h3 className="sucursal-nombre">{viaje.sucursal_nombre}</h3>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        <h3 className="sucursal-nombre">{viaje.sucursal_nombre}</h3>
+                        {viaje.categoria && CATEGORIA_CONFIG[viaje.categoria] && (
+                            <span style={{
+                                fontSize: '0.72rem', fontWeight: 700,
+                                color: CATEGORIA_CONFIG[viaje.categoria].color,
+                                background: CATEGORIA_CONFIG[viaje.categoria].bg,
+                                padding: '0.15rem 0.6rem', borderRadius: 999,
+                                border: `1px solid ${CATEGORIA_CONFIG[viaje.categoria].color}44`,
+                                letterSpacing: '0.02em',
+                            }}>
+                                {CATEGORIA_CONFIG[viaje.categoria].label}
+                            </span>
+                        )}
+                    </div>
                     <div className="viaje-rating">
                         {renderEstrellas(viaje.ranking)}
                         <span className="rating-numero">({viaje.ranking})</span>
