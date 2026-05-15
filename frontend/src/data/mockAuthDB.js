@@ -16,6 +16,7 @@ const STAFF_DEFAULT = [
         ci: '1000000',
         telefono: '70000001',
         sucursal_id: 'demo-s1',
+        departamento: 'La Paz',
         activo: true,
         creadoEn: '2026-01-01T00:00:00.000Z',
     },
@@ -28,6 +29,7 @@ const STAFF_DEFAULT = [
         ci: '2000000',
         telefono: '70000002',
         sucursal_id: 'demo-s1',
+        departamento: 'La Paz',
         activo: true,
         creadoEn: '2026-01-01T00:00:00.000Z',
     },
@@ -40,6 +42,7 @@ const STAFF_DEFAULT = [
         ci: '3000000',
         telefono: '70000003',
         sucursal_id: 'demo-s1',
+        departamento: 'La Paz',
         activo: true,
         creadoEn: '2026-01-01T00:00:00.000Z',
     },
@@ -136,12 +139,13 @@ export const cambiarEstadoCuenta = (userId, activo) => {
     return { exito: true };
 };
 
-export const actualizarPerfilStaff = (userId, { nombre_completo, telefono }) => {
+export const actualizarPerfilStaff = (userId, { nombre_completo, telefono, departamento }) => {
     const usuarios = leerStaff();
     const idx = usuarios.findIndex(u => u.id === userId);
     if (idx === -1) return { exito: false, error: 'Usuario no encontrado.' };
     if (nombre_completo) usuarios[idx].nombre_completo = nombre_completo;
     if (telefono !== undefined) usuarios[idx].telefono = telefono;
+    if (departamento) usuarios[idx].departamento = departamento;
     guardarStaff(usuarios);
     const { password: _, ...perfilSeguro } = usuarios[idx];
     return { exito: true, usuario: perfilSeguro };

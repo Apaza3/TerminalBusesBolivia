@@ -1,8 +1,25 @@
 # Terminal Buses Bolivia — Estado del Proyecto
 
-> **Rama activa:** `feature/completar-parciales-v5`
+> **Rama activa:** `v7/apaza/paneles-empleados` (dentro de `v7/main`)
 > **Stack:** React 19 (frontend) · Express + WebSocket (backend) · localStorage (sin Supabase por ahora)
 > **Build:** ✅ Compila sin errores
+
+---
+
+## 🌿 ESTRATEGIA DE RAMAS (v7+)
+
+```
+v7/main                          ← rama base de la versión 7
+└── v7/apaza/<modulo>            ← rama por módulo, con nombre del dev
+    └── commits funcionales      ← cada commit = feature/fix completo
+```
+
+**Reglas:**
+- Nunca salir de `v7/main` o sus hijas hasta indicación explícita.
+- Cada módulo tiene su propia rama hija de `v7/main`.
+- Commits solo cuando el cambio es funcional (no WIP).
+- Merge a `v7/main` al terminar el módulo.
+- Módulos actuales: `v7/apaza/paneles-empleados`
 
 ---
 
@@ -100,6 +117,26 @@
 
 ---
 
+### Commit 10 — `feat(frontend): R-SOAT, R-CATEGORIA, R31 incidencias — pantallas parciales completadas`
+
+| Archivo | Cambio |
+|---------|--------|
+| `frontend/src/paginas/admin/RegistroBus.js` | Implementación de R-SOAT y R-CATEGORIA (campos de inspección, SOAT y tipo de bus). |
+| `frontend/src/paginas/conductor/RegistrarIncidencia.js` | **NUEVO.** Página para registrar incidencias en viaje (R31) usando GSAP. |
+| `frontend/src/componentes/TarjetaViaje.js` | Badge de categoría del bus. |
+
+---
+
+### Commit 11 — `feat(frontend): rediseño premium Inicio+Login, R13 RecuperarBoleto, R29 Mantenimiento`
+
+| Archivo | Cambio |
+|---------|--------|
+| `frontend/src/paginas/Inicio.js`, `LoginAdmin.js`, `LoginCliente.js` | Rediseño premium UI/UX usando animaciones GSAP. |
+| `frontend/src/paginas/RecuperarBoleto.js` | **NUEVO.** Funcionalidad pública para recuperar boleto por CI (R13). |
+| `frontend/src/paginas/conductor/ReporteMantenimiento.js` | **NUEVO.** Formulario de reporte de mantenimiento del bus (R29). |
+
+---
+
 ## ❌ REQUERIMIENTOS PENDIENTES
 
 > Los siguientes requerimientos **no tienen implementación** en el proyecto. Se listan con una descripción técnica para guiar la implementación.
@@ -116,9 +153,6 @@
 
 ### 🎫 Módulo de Gestión Comercial y Reservas
 
-#### R13 — Recuperar boleto con CI + fecha
-- **Descripción:** El pasajero puede buscar sus boletos ingresando su número de CI y la fecha de viaje. El sistema retorna todos los boletos que coincidan, con opción de re-descargar el PDF o compartir por WhatsApp. No requiere login.
-- **Archivos a crear:** `frontend/src/paginas/RecuperarBoleto.js`. Ruta pública `/recuperar-boleto`.
 
 #### R25 — Emitir facturas y recibos con NIT/CI
 - **Descripción:** Después de confirmar el pago, el sistema genera un documento PDF con formato de factura: datos del emisor (empresa), datos del comprador (NIT o CI), detalle del servicio (ruta, fecha, asientos), monto, fecha de emisión y número correlativo. El PDF debe poder descargarse o imprimirse.
@@ -128,9 +162,6 @@
 - **Descripción:** En `BuscadorViajes.js` agregar un toggle "Solo Ida / Ida y Vuelta". En modo ida y vuelta, mostrar un segundo selector de fecha de regreso. El sistema busca viajes en ambas direcciones simultáneamente y los presenta en dos secciones. Al confirmar, crea dos reservas enlazadas.
 - **Archivos a modificar:** `BuscadorViajes.js`, `mockStorage.js` (campo `reservaEnlazadaId`).
 
-#### R-ENCOMIENDA — Registro de encomiendas con código de seguimiento
-- **Descripción:** Formulario para registrar paquetes/encomiendas: remitente, destinatario, descripción, peso estimado, ruta y precio. El sistema genera un código de seguimiento alfanumérico único. El destinatario puede consultar el estado ingresando el código en una pantalla pública.
-- **Archivos a crear:** `frontend/src/paginas/encomiendas/RegistrarEncomienda.js`, `frontend/src/paginas/encomiendas/SeguimientoEncomienda.js`, `frontend/src/data/mockEncomiendaDB.js`.
 
 #### R-EQUIPAJE — Registro de equipaje con peso
 - **Descripción:** Durante el proceso de reserva, el pasajero declara el equipaje: cantidad de maletas y peso total estimado. Si el peso supera el límite de la empresa (ej. 25kg incluido, cobro extra por cada kg adicional), el sistema calcula y suma el costo al total de la reserva.
@@ -156,13 +187,7 @@
 - **Descripción:** Vista de calendario o tabla que muestra para cada bus y conductor: qué viajes tiene asignados en el rango de fechas seleccionado y en qué fechas está disponible. Permite al admin ver conflictos antes de programar un nuevo itinerario.
 - **Archivos a crear:** `frontend/src/paginas/admin/DisponibilidadRecursos.js`.
 
-#### R-SOAT — Validación de SOAT e inspección técnica de buses
-- **Descripción:** Al registrar o editar un bus, campos obligatorios: número de SOAT, fecha de vencimiento SOAT, número de inspección técnica, fecha de vencimiento inspección. El sistema muestra alertas automáticas cuando un documento vence en menos de 30 días. Buses con documentación vencida no pueden ser asignados a itinerarios.
-- **Archivos a modificar:** `RegistroBus.js`, `mockStaffDB.js` (agregar campos de documentación).
 
-#### R-CATEGORIA — Categorización de buses (Cama / Semi-cama / VIP / Ejecutivo)
-- **Descripción:** Al registrar un bus, campo de selección de categoría de servicio: Económico, Semi-cama, Cama, VIP, Ejecutivo. La categoría define la configuración de asientos predeterminada (ej. VIP = 2+1, Cama = reclinable 180°) y el rango de precio sugerido. Se muestra como badge en los resultados de búsqueda.
-- **Archivos a modificar:** `RegistroBus.js`, `TarjetaViaje.js`, `mockStaffDB.js`.
 
 ---
 
@@ -180,13 +205,7 @@
 - **Descripción:** El admin o cajero puede emitir una notificación de andén (número de andén de salida) o retraso (nueva hora estimada) para un viaje. La notificación se muestra en tiempo real en la app del pasajero (toast/banner) vía WebSocket, y opcionalmente se envía por SMS.
 - **Archivos a crear:** `frontend/src/paginas/cajero/EmitirNotificacion.js`. Evento WebSocket `tipo: 'cambio_anden'` en backend. Componente en frontend que escucha el WS y muestra toast.
 
-#### R29 — Reportes de mantenimiento desde la app del chofer
-- **Descripción:** En `PanelConductor.js`, botón "Reportar Problema" que abre un formulario: tipo de problema (motor, frenos, llantas, eléctrico, otro), descripción, foto adjunta (base64), severidad (baja/media/alta/crítica). El reporte se guarda y aparece en el panel admin con alerta si es crítico.
-- **Archivos a crear:** `frontend/src/paginas/conductor/ReporteMantenimiento.js`, `frontend/src/data/mockMantenimientoDB.js`. Modificar `AdminDashboard.js` para mostrar alertas de mantenimiento.
 
-#### R31 — Registrar incidencias de viaje
-- **Descripción:** El conductor puede registrar incidencias durante el viaje: accidente, desvío, pasajero conflictivo, problema mecánico, etc. Cada incidencia tiene: tipo, descripción, hora, ubicación (manual o GPS), estado (abierta/resuelta). El admin ve todas las incidencias activas en su dashboard.
-- **Archivos a crear:** `frontend/src/paginas/conductor/RegistrarIncidencia.js`, `frontend/src/data/mockIncidenciasDB.js`.
 
 #### R-QR-SCANNER — Escáner QR para validación de abordaje
 - **Descripción:** El conductor o cajero escanea el QR del ticket del pasajero usando la cámara del dispositivo. El sistema valida que el ticket corresponde al viaje correcto, que el asiento es válido y que no fue ya abordado. Marca el pasajero como "abordado" en el manifiesto. Usa la librería `html5-qrcode` o `@zxing/browser`.
@@ -228,8 +247,9 @@
 - **Descripción:** Integración con lector de huella dactilar USB en los puestos de cajero. Al registrar un cliente en la terminal física, se captura su huella y se asocia a su CI. En futuras visitas, el cajero puede verificar la identidad por huella en lugar de CI + foto.
 - **Archivos a crear:** `backend/servicios/biometrico.js`. Requiere driver/SDK del fabricante del lector.
 
-#### RN-SUPABASE — Migración completa a Supabase cuando se reconecte
-- **Descripción:** Actualmente el frontend usa `mockAuthDB.js`, `mockStorage.js`, `mockClientDB.js` y `mockDiscoveryDB.js`. Cuando Supabase esté disponible, reemplazar cada llamada a estos mocks por llamadas reales al cliente de Supabase (`@supabase/supabase-js`). Las tablas ya están definidas en `esquema_inicial.sql` y `v2_2_migracion.sql`. Configurar variables de entorno `REACT_APP_SUPABASE_URL` y `REACT_APP_SUPABASE_ANON_KEY` en `.env`.
+#### RN-SUPABASE — Migración completa a Supabase
+- **Estado:** Parcialmente completado (Migración DB y backend Express finalizada. Falta reconectar el cliente React a la API o al SDK de Supabase).
+- **Descripción:** Actualmente el frontend usa `mockAuthDB.js`, `mockStorage.js`, `mockClientDB.js` y `mockDiscoveryDB.js`. Reemplazar cada llamada a estos mocks por llamadas reales al backend. Configurar variables de entorno `REACT_APP_SUPABASE_URL` y `REACT_APP_SUPABASE_ANON_KEY` en `.env`.
 - **Archivos a modificar:** `AuthContext.js`, `MapaAsientos.js`, `BuscadorViajes.js`, `AdminDashboard.js`, `PanelConductor.js`, `PanelCajero.js`.
 
 ---

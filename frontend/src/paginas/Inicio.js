@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { obtenerSucursalesOrdenadas } from '../data/mockDiscoveryDB';
+import { useDepartamento, DEPARTAMENTOS } from '../contextos/DepartamentoContext';
 import gsap from 'gsap';
 
 const CIUDADES = [
@@ -11,7 +12,10 @@ const CIUDADES = [
 const RANK_MEDAL = ['🥇', '🥈', '🥉'];
 
 const Inicio = () => {
-    const [sucursales, setSucursales] = useState([]);
+    const { departamento, setDepartamento, tema } = useDepartamento();
+    const [sucursalesAll, setSucursalesAll] = useState([]);
+    const [sucursales, setSucursales]       = useState([]);
+    const [mostrarSelectorDept, setMostrarSelectorDept] = useState(false);
     const [origen, setOrigen]         = useState('');
     const [destino, setDestino]       = useState('');
     const [fecha, setFecha]           = useState('');
@@ -22,8 +26,15 @@ const Inicio = () => {
     const fechaMin = new Date().toISOString().split('T')[0];
 
     useEffect(() => {
-        setSucursales(obtenerSucursalesOrdenadas());
+        const todas = obtenerSucursalesOrdenadas();
+        setSucursalesAll(todas);
     }, []);
+
+    useEffect(() => {
+        // Filtrar por departamento si hay match; si no, mostrar todas
+        const filtradas = sucursalesAll.filter(s => !s.departamento || s.departamento === departamento);
+        setSucursales(filtradas.length > 0 ? filtradas : sucursalesAll);
+    }, [sucursalesAll, departamento]);
 
     useEffect(() => {
         const ctx = gsap.context(() => {
@@ -53,6 +64,59 @@ const Inicio = () => {
             background: '#07111f', minHeight: '100vh', color: '#dde5f0',
             fontFamily: "'Inter', system-ui, sans-serif",
         }}>
+            {/* ── Selector de Departamento (cliente) ── */}
+            <div style={{
+                background: `${tema.bg}cc`, borderBottom: `1px solid ${tema.color}30`,
+                padding: '0.5rem clamp(1rem,5vw,2.5rem)',
+                display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '1rem',
+                position: 'sticky', top: 0, zIndex: 30,
+                backdropFilter: 'blur(10px)',
+                transition: 'background 0.4s',
+            }}>
+                <span style={{ fontSize: '0.72rem', color: '#475569' }}>Tu departamento:</span>
+                <div style={{ position: 'relative' }}>
+                    <button
+                        onClick={() => setMostrarSelectorDept(!mostrarSelectorDept)}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: '0.5rem',
+                            background: `${tema.color}18`, border: `1px solid ${tema.color}50`,
+                            color: tema.acento, padding: '0.35rem 0.85rem', borderRadius: '999px',
+                            cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600,
+                            transition: 'all 0.2s',
+                        }}
+                    >
+                        <span>{DEPARTAMENTOS[departamento]?.emoji}</span>
+                        <span>{departamento}</span>
+                        <span style={{ fontSize: '0.65rem', opacity: 0.7 }}>▼</span>
+                    </button>
+                    {mostrarSelectorDept && (
+                        <div style={{
+                            position: 'absolute', top: '110%', right: 0, zIndex: 100,
+                            background: '#0d1a2e', border: `1px solid ${tema.color}40`,
+                            borderRadius: '12px', padding: '0.5rem',
+                            minWidth: 200, boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+                        }}>
+                            {Object.entries(DEPARTAMENTOS).map(([nombre, info]) => (
+                                <button key={nombre} onClick={() => { setDepartamento(nombre); setMostrarSelectorDept(false); }} style={{
+                                    display: 'flex', alignItems: 'center', gap: '0.6rem',
+                                    width: '100%', padding: '0.5rem 0.75rem', borderRadius: '8px',
+                                    border: 'none', background: nombre === departamento ? `${info.color}20` : 'transparent',
+                                    color: nombre === departamento ? info.acento : '#64748b',
+                                    cursor: 'pointer', fontSize: '0.82rem', textAlign: 'left',
+                                    transition: 'all 0.12s',
+                                }}
+                                    onMouseEnter={e => { if (nombre !== departamento) { e.currentTarget.style.background = `${info.color}12`; e.currentTarget.style.color = '#94a3b8'; } }}
+                                    onMouseLeave={e => { if (nombre !== departamento) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#64748b'; } }}>
+                                    <span>{info.emoji}</span>
+                                    <span>{nombre}</span>
+                                    {nombre === departamento && <span style={{ marginLeft: 'auto', color: info.color }}>✓</span>}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
+
             {/* ── Hero ─────────────────────────────────────────────── */}
             <section style={{
                 padding: 'clamp(5rem, 10vh, 8rem) clamp(1rem, 5vw, 2.5rem) clamp(3rem, 6vh, 5rem)',
@@ -76,10 +140,10 @@ const Inicio = () => {
                 <div style={{ maxWidth: 840, margin: '0 auto', position: 'relative' }}>
                     <p data-h="eyebrow" style={{
                         fontSize: '0.75rem', letterSpacing: '0.18em',
-                        textTransform: 'uppercase', color: '#16a34a',
+                        textTransform: 'uppercase', color: tema.color,
                         fontWeight: 700, marginBottom: '1.1rem',
                     }}>
-                        Terminal de Buses Bolivia
+                        {DEPARTAMENTOS[departamento]?.emoji} Terminal · {departamento}
                     </p>
 
                     <h1 data-h="title" style={{
@@ -172,13 +236,13 @@ const Inicio = () => {
                             type="submit"
                             style={{
                                 flex: '0 0 auto', minWidth: 130,
-                                background: '#16a34a', border: 'none',
+                                background: tema.color, border: 'none',
                                 color: '#fff', fontWeight: 700, fontSize: '0.92rem',
                                 padding: '0 1.5rem', cursor: 'pointer',
                                 letterSpacing: '0.01em', transition: 'background 0.18s',
                             }}
-                            onMouseEnter={e => e.currentTarget.style.background = '#15803d'}
-                            onMouseLeave={e => e.currentTarget.style.background = '#16a34a'}
+                            onMouseEnter={e => e.currentTarget.style.background = tema.colorSecundario}
+                            onMouseLeave={e => e.currentTarget.style.background = tema.color}
                         >
                             Buscar viajes
                         </button>

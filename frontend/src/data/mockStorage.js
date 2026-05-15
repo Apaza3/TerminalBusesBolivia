@@ -130,9 +130,18 @@ export const obtenerEstadoViaje = (viajeId) => {
 
 export const actualizarEstadoViaje = (viajeId, nuevoEstado) => {
     const estados = leer(STORAGE_KEYS.ESTADO_VIAJES) || {};
-    estados[viajeId] = nuevoEstado; // programado | en_ruta | finalizado
+    estados[viajeId] = nuevoEstado; // programado | en_ruta | finalizado | cancelado
     guardar(STORAGE_KEYS.ESTADO_VIAJES, estados);
     return nuevoEstado;
+};
+
+export const cancelarViaje = (viajeId) => {
+    actualizarEstadoViaje(viajeId, 'cancelado');
+    // Liberar todos los asientos pendientes del viaje
+    const pendientes = leer(STORAGE_KEYS.ASIENTOS_PENDIENTES) || [];
+    const filtrados = pendientes.filter(p => p.viajeId !== viajeId);
+    guardar(STORAGE_KEYS.ASIENTOS_PENDIENTES, filtrados);
+    return { exito: true };
 };
 
 // ── Asientos Pendientes (Timer) ──────────────────────
@@ -219,6 +228,7 @@ export default {
     obtenerReservaPorId,
     obtenerEstadoViaje,
     actualizarEstadoViaje,
+    cancelarViaje,
     marcarAsientosPendientes,
     liberarAsientosBloqueados,
     obtenerAsientosPendientes,

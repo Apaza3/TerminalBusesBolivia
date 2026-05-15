@@ -1,6 +1,7 @@
 import React from 'react';
 import { Routes, Route, NavLink, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contextos/AuthContext';
+import { DepartamentoProvider } from './contextos/DepartamentoContext';
 import { ToastProvider } from './componentes/ToastNotifications';
 import Inicio from './paginas/Inicio';
 import BuscadorViajes from './paginas/BuscadorViajes';
@@ -35,6 +36,7 @@ import './estilos/movil/buscador-responsivo.css';
 function App() {
     return (
         <ToastProvider>
+        <DepartamentoProvider>
         <AuthProvider>
             <div className="App">
                 {/* Barra de navegación superior */}
@@ -136,6 +138,7 @@ function App() {
                 </Routes>
             </div>
         </AuthProvider>
+        </DepartamentoProvider>
         </ToastProvider>
     );
 }
