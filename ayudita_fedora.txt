@@ -1,6 +1,6 @@
 //Recuperar la propiedad de los archivos:
 
-➡️sudo chown -R $USER:$USER 
+➡️sudo chown -R $USER:$USER .
 
 //(Esto le dice a Fedora: "Todos estos archivos pertenecen a agente_potasio, no a root").
 
