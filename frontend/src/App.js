@@ -24,6 +24,8 @@ import PanelCajero from './paginas/cajero/PanelCajero';
 import MisViajes from './paginas/cliente/MisViajes';
 import EditarPerfil from './paginas/perfil/EditarPerfil';
 import PerfilIndicador from './componentes/PerfilIndicador';
+import PagoQRMovil from './paginas/pago/PagoQRMovil';
+import ValidarAbordaje from './paginas/conductor/ValidarAbordaje';
 
 import './estilos/escritorio/buscador.css';
 import './estilos/movil/buscador-responsivo.css';
@@ -80,6 +82,7 @@ function App() {
                     <Route path="/mis-viajes" element={<MisViajes />} />
                     <Route path="/perfil/editar" element={<EditarPerfil />} />
                     <Route path="/recuperar-boleto" element={<RecuperarBoleto />} />
+                    <Route path="/pago/qr" element={<PagoQRMovil />} />
 
                     {/* Rutas no subidas en esta rama (como MapaAsientos) se redirigen o fallan
                         dependiendo de si existen en FileSystem o no. */}
@@ -133,6 +136,11 @@ function App() {
                     <Route path="/conductor/mantenimiento" element={
                         <ProtectedRoute rolesPermitidos={['conductor', 'admin_sucursal']}>
                             <ReporteMantenimiento />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/conductor/abordaje" element={
+                        <ProtectedRoute rolesPermitidos={['conductor', 'admin_sucursal']}>
+                            <ValidarAbordaje />
                         </ProtectedRoute>
                     } />
                 </Routes>

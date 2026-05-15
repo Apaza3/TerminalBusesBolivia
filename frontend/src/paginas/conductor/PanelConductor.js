@@ -339,6 +339,11 @@ const PanelConductor = () => {
 
                             {viaje.estado !== 'finalizado' && viaje.estado !== 'cancelado' && (
                                 <>
+                                    <button onClick={() => navigate('/conductor/abordaje')} style={{
+                                        padding: '0.75rem 1rem', background: `${tema.color}15`,
+                                        border: `1px solid ${tema.color}50`, color: tema.acento, borderRadius: '8px',
+                                        fontWeight: 600, cursor: 'pointer', fontSize: '0.82rem',
+                                    }}>📷 Validar Abordaje</button>
                                     <button onClick={() => navigate('/conductor/mantenimiento')} style={{
                                         padding: '0.75rem 1rem', background: 'rgba(99,102,241,0.08)',
                                         border: '1px solid #312e81', color: '#a5b4fc', borderRadius: '8px',
