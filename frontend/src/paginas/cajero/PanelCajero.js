@@ -1,20 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contextos/AuthContext';
-import { DEPARTAMENTOS, ciudadADepartamento } from '../../contextos/DepartamentoContext';
-import { obtenerReservas, obtenerVentas, crearReserva } from '../../data/mockStorage';
+import { DEPARTAMENTOS } from '../../contextos/DepartamentoContext';
+import { obtenerReservas, obtenerVentas, crearReserva, obtenerAsientosPendientes } from '../../data/mockStorage';
 import { SUCURSALES_MOCK, obtenerViajesSucursal } from '../../data/mockDiscoveryDB';
 import gsap from 'gsap';
-
-const CIUDADES_BO = ['La Paz', 'Cochabamba', 'Santa Cruz', 'Oruro', 'Potosí', 'Sucre', 'Tarija', 'Trinidad', 'Cobija'];
-
-const generarAsientos = () => {
-    const asientos = [];
-    for (let fila = 1; fila <= 10; fila++) {
-        ['A', 'B', 'C', 'D'].forEach(col => asientos.push(`${fila}${col}`));
-    }
-    return asientos;
-};
 
 const PanelCajero = () => {
     const navigate = useNavigate();
@@ -48,18 +38,33 @@ const PanelCajero = () => {
     });
     const [mensajeBoleto, setMensajeBoleto] = useState(null);
     const [boletoCreado, setBoletoCreado] = useState(null);
+    const [asientosBloqueados, setAsientosBloqueados] = useState([]);
 
     const recargar = useCallback(() => {
         setReservas(obtenerReservas());
         setVentas(obtenerVentas());
-        // Cargar viajes de todas las sucursales
         const todos = SUCURSALES_MOCK.flatMap(s => obtenerViajesSucursal(s.id));
         setViajes(todos);
     }, []);
 
+    const sincronizarAsientos = useCallback(() => {
+        if (!boleto.viajeId) return;
+        const ahora = Date.now();
+        const pendientes = obtenerAsientosPendientes(boleto.viajeId);
+        setBloqueados(pendientes.filter(p => p.expiraEn > ahora).map(p => p.asiento));
+    }, [boleto.viajeId]);
+
+    const [bloqueados, setBloqueados] = useState([]);
+
     useEffect(() => {
         recargar();
     }, [recargar]);
+
+    useEffect(() => {
+        sincronizarAsientos();
+        const iv = setInterval(sincronizarAsientos, 3000);
+        return () => clearInterval(iv);
+    }, [sincronizarAsientos]);
 
     useEffect(() => {
         const ctx = gsap.context(() => {
@@ -442,50 +447,103 @@ const PanelCajero = () => {
                                     </form>
                                 </div>
 
-                                {/* Paso 3: Selección de asientos */}
+                                {/* Paso 3: Mapa de asientos */}
                                 <div>
                                     <div style={{ color: tema.acento, fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.75rem' }}>
-                                        3 · Seleccionar asientos
+                                        3 · Mapa de asientos
                                     </div>
                                     {!boleto.viajeId ? (
-                                        <div style={{ color: '#475569', fontSize: '0.85rem', padding: '1rem', background: '#0d1a2e', borderRadius: '10px', border: '1px solid #1e293b', textAlign: 'center' }}>
-                                            Primero selecciona un viaje
+                                        <div style={{ color: '#475569', fontSize: '0.85rem', padding: '2rem', background: '#0d1a2e', borderRadius: '10px', border: '1px solid #1e293b', textAlign: 'center' }}>
+                                            Selecciona un viaje primero
                                         </div>
                                     ) : (
-                                        <>
-                                            {/* Leyenda */}
-                                            <div style={{ display: 'flex', gap: '1rem', marginBottom: '0.75rem', fontSize: '0.72rem', flexWrap: 'wrap' }}>
-                                                {[
-                                                    { color: '#1e293b', label: 'Disponible' },
-                                                    { color: tema.color, label: 'Seleccionado' },
-                                                    { color: '#374151', label: 'Ocupado' },
-                                                ].map(l => (
-                                                    <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                                                        <div style={{ width: 12, height: 12, borderRadius: '3px', background: l.color, border: '1px solid #334155' }} />
-                                                        <span style={{ color: '#64748b' }}>{l.label}</span>
+                                        <div style={{ background: '#0d1a2e', borderRadius: '12px', border: `1px solid ${tema.color}25`, overflow: 'hidden' }}>
+                                            {/* Bus header */}
+                                            <div style={{ background: '#07111f', borderBottom: `1px solid ${tema.color}20`, padding: '0.6rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <span style={{ fontSize: '0.72rem', color: '#475569' }}>🚌 Vista del bus — {boleto.busPlaca}</span>
+                                                <div style={{ display: 'flex', gap: '0.75rem', fontSize: '0.65rem' }}>
+                                                    {[
+                                                        { bg: '#0d1a2e', border: '#334155', color: '#94a3b8', label: 'Libre' },
+                                                        { bg: `${tema.color}30`, border: tema.color, color: tema.acento, label: 'Seleccionado' },
+                                                        { bg: '#1e293b', border: '#374151', color: '#374151', label: 'Ocupado' },
+                                                        { bg: '#2d1a4a', border: '#4c1d95', color: '#a78bfa', label: 'Bloqueado' },
+                                                    ].map(l => (
+                                                        <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                                            <div style={{ width: 10, height: 10, borderRadius: '2px', background: l.bg, border: `1px solid ${l.border}` }} />
+                                                            <span style={{ color: '#64748b' }}>{l.label}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {/* Seat grid — bus layout */}
+                                            <div style={{ padding: '1rem', overflowY: 'auto', maxHeight: 340 }}>
+                                                {/* Column headers */}
+                                                <div style={{ display: 'grid', gridTemplateColumns: '28px 1fr 8px 1fr', gap: '0.3rem', marginBottom: '0.4rem' }}>
+                                                    <div />
+                                                    {['A', 'B'].map(c => <div key={c} style={{ textAlign: 'center', fontSize: '0.65rem', color: '#475569', fontWeight: 600 }}>{c}</div>)}
+                                                    <div />
+                                                </div>
+
+                                                {Array.from({ length: 10 }, (_, i) => i + 1).map(fila => (
+                                                    <div key={fila} style={{ display: 'grid', gridTemplateColumns: '28px 1fr 8px 1fr 1fr', gap: '0.3rem', marginBottom: '0.3rem', alignItems: 'center' }}>
+                                                        <div style={{ textAlign: 'center', fontSize: '0.65rem', color: '#334155', fontWeight: 600 }}>{fila}</div>
+                                                        {['A', 'B'].map(col => {
+                                                            const id = `${fila}${col}`;
+                                                            const ocupado = asientosOcupados.includes(id);
+                                                            const bloqueado = !ocupado && bloqueados.includes(id);
+                                                            const seleccionado = boleto.asientosSeleccionados.includes(id);
+                                                            return (
+                                                                <button key={id} onClick={() => !ocupado && !bloqueado && toggleAsiento(id)}
+                                                                    disabled={ocupado || bloqueado}
+                                                                    title={bloqueado ? 'Reservado temporalmente' : ocupado ? 'Ocupado' : id}
+                                                                    style={{
+                                                                        padding: '0.4rem 0.2rem',
+                                                                        background: ocupado ? '#1e293b' : bloqueado ? '#2d1a4a' : seleccionado ? `${tema.color}30` : '#131f35',
+                                                                        border: `1px solid ${ocupado ? '#374151' : bloqueado ? '#4c1d95' : seleccionado ? tema.color : '#1e3a5f'}`,
+                                                                        color: ocupado ? '#374151' : bloqueado ? '#a78bfa' : seleccionado ? tema.acento : '#64748b',
+                                                                        borderRadius: '5px',
+                                                                        cursor: ocupado || bloqueado ? 'not-allowed' : 'pointer',
+                                                                        fontSize: '0.68rem', fontWeight: 600,
+                                                                        transition: 'all 0.12s',
+                                                                    }}>{id}</button>
+                                                            );
+                                                        })}
+                                                        {/* Aisle */}
+                                                        <div style={{ width: 8 }} />
+                                                        {['C', 'D'].map(col => {
+                                                            const id = `${fila}${col}`;
+                                                            const ocupado = asientosOcupados.includes(id);
+                                                            const bloqueado = !ocupado && bloqueados.includes(id);
+                                                            const seleccionado = boleto.asientosSeleccionados.includes(id);
+                                                            return (
+                                                                <button key={id} onClick={() => !ocupado && !bloqueado && toggleAsiento(id)}
+                                                                    disabled={ocupado || bloqueado}
+                                                                    title={bloqueado ? 'Reservado temporalmente' : ocupado ? 'Ocupado' : id}
+                                                                    style={{
+                                                                        padding: '0.4rem 0.2rem',
+                                                                        background: ocupado ? '#1e293b' : bloqueado ? '#2d1a4a' : seleccionado ? `${tema.color}30` : '#131f35',
+                                                                        border: `1px solid ${ocupado ? '#374151' : bloqueado ? '#4c1d95' : seleccionado ? tema.color : '#1e3a5f'}`,
+                                                                        color: ocupado ? '#374151' : bloqueado ? '#a78bfa' : seleccionado ? tema.acento : '#64748b',
+                                                                        borderRadius: '5px',
+                                                                        cursor: ocupado || bloqueado ? 'not-allowed' : 'pointer',
+                                                                        fontSize: '0.68rem', fontWeight: 600,
+                                                                        transition: 'all 0.12s',
+                                                                    }}>{id}</button>
+                                                            );
+                                                        })}
                                                     </div>
                                                 ))}
+
+                                                {/* Column headers CD */}
+                                                <div style={{ display: 'grid', gridTemplateColumns: '28px 1fr 8px 1fr 1fr', gap: '0.3rem', marginTop: '0.2rem' }}>
+                                                    <div />
+                                                    <div />
+                                                    <div />
+                                                    {['C', 'D'].map(c => <div key={c} style={{ textAlign: 'center', fontSize: '0.65rem', color: '#475569', fontWeight: 600 }}>{c}</div>)}
+                                                </div>
                                             </div>
-                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.4rem', maxHeight: 320, overflowY: 'auto' }}>
-                                                {generarAsientos().map(a => {
-                                                    const ocupado = asientosOcupados.includes(a);
-                                                    const seleccionado = boleto.asientosSeleccionados.includes(a);
-                                                    return (
-                                                        <button key={a} onClick={() => !ocupado && toggleAsiento(a)} disabled={ocupado} style={{
-                                                            padding: '0.4rem',
-                                                            background: ocupado ? '#1e293b' : seleccionado ? tema.color : '#0d1a2e',
-                                                            border: `1px solid ${ocupado ? '#334155' : seleccionado ? tema.color : '#334155'}`,
-                                                            color: ocupado ? '#374151' : seleccionado ? '#fff' : '#94a3b8',
-                                                            borderRadius: '6px', cursor: ocupado ? 'not-allowed' : 'pointer',
-                                                            fontSize: '0.72rem', fontWeight: 600,
-                                                            transition: 'all 0.12s',
-                                                        }}>
-                                                            {a}
-                                                        </button>
-                                                    );
-                                                })}
-                                            </div>
-                                        </>
+                                        </div>
                                     )}
                                 </div>
                             </div>
