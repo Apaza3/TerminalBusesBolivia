@@ -14,7 +14,12 @@ const STORAGE_KEYS = {
     ESTADO_VIAJES: 'tbb_estado_viajes',
     ASIENTOS_PENDIENTES: 'tbb_asientos_pendientes',
     VENTAS: 'tbb_ventas',
+    BOLETOS: 'tbb_boletos',
+    QR_PAGOS: 'tbb_qr_pagos',
 };
+
+const generarUID = () =>
+    'TBB-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).substr(2, 5).toUpperCase();
 
 // ── Helpers ──────────────────────────────────────────
 
@@ -219,6 +224,136 @@ export const VIAJES_CONDUCTOR_MOCK = [
     },
 ];
 
+// ── Boletos (tickets con QR único por pasajero) ──────
+
+export const crearBoletos = (reserva, datosPasajeros) => {
+    const boletos = reserva.asientos.map(asiento => {
+        const p = datosPasajeros?.[asiento] || {};
+        return {
+            id: generarUID(),
+            reservaId: reserva.id,
+            viajeId: reserva.viajeId,
+            asiento,
+            pasajeroNombre: p.nombre || reserva.pasajeroNombre,
+            pasajeroCI: p.ci || reserva.pasajeroCI,
+            origen: reserva.origen,
+            destino: reserva.destino,
+            fechaSalida: reserva.fechaSalida,
+            busPlaca: reserva.busPlaca,
+            precio: Math.round(reserva.precio / reserva.asientos.length),
+            esInfante: p.esInfante || false,
+            lleva1000: p.lleva1000 || false,
+            llevaAnimales: p.llevaAnimales || false,
+            llevaProductos: p.llevaProductos || false,
+            metodoPago: reserva.metodoPago,
+            creadoEn: new Date().toISOString(),
+            abordado: false,
+        };
+    });
+    const existing = leer(STORAGE_KEYS.BOLETOS) || [];
+    guardar(STORAGE_KEYS.BOLETOS, [...existing, ...boletos]);
+    return boletos;
+};
+
+export const obtenerBoletos = (reservaId = null) => {
+    const boletos = leer(STORAGE_KEYS.BOLETOS) || [];
+    return reservaId ? boletos.filter(b => b.reservaId === reservaId) : boletos;
+};
+
+export const validarBoleto = (boletoId) => {
+    const boletos = leer(STORAGE_KEYS.BOLETOS) || [];
+    return boletos.find(b => b.id === boletoId) || null;
+};
+
+export const marcarAbordado = (boletoId) => {
+    const boletos = leer(STORAGE_KEYS.BOLETOS) || [];
+    const idx = boletos.findIndex(b => b.id === boletoId);
+    if (idx === -1) return { exito: false, error: 'Boleto no encontrado.' };
+    boletos[idx].abordado = true;
+    boletos[idx].horaAbordaje = new Date().toISOString();
+    guardar(STORAGE_KEYS.BOLETOS, boletos);
+    return { exito: true, boleto: boletos[idx] };
+};
+
+export const obtenerBoletosViaje = (viajeId) => {
+    const boletos = leer(STORAGE_KEYS.BOLETOS) || [];
+    return boletos.filter(b => b.viajeId === viajeId);
+};
+
+// ── QR Payment tokens ────────────────────────────────
+
+export const crearTokenQR = (datosViaje) => {
+    const token = 'QRP-' + Date.now().toString(36).toUpperCase();
+    const pagos = leer(STORAGE_KEYS.QR_PAGOS) || {};
+    pagos[token] = { estado: 'pendiente', datosViaje, creadoEn: new Date().toISOString() };
+    guardar(STORAGE_KEYS.QR_PAGOS, pagos);
+    return token;
+};
+
+export const obtenerEstadoQR = (token) => {
+    const pagos = leer(STORAGE_KEYS.QR_PAGOS) || {};
+    return pagos[token] || null;
+};
+
+export const actualizarEstadoQR = (token, estado) => {
+    const pagos = leer(STORAGE_KEYS.QR_PAGOS) || {};
+    if (pagos[token]) {
+        pagos[token].estado = estado;
+        pagos[token].actualizadoEn = new Date().toISOString();
+        guardar(STORAGE_KEYS.QR_PAGOS, pagos);
+    }
+    return pagos[token] || null;
+};
+
+// ── Reservas pendiente efectivo / documentos ─────────
+
+export const crearReservaConEstado = (datos, estado) => {
+    const { disponible, conflictos } = validarDisponibilidad(datos.viajeId, datos.asientos);
+    if (!disponible) return { error: true, mensaje: `Asientos ya reservados: ${conflictos.join(', ')}` };
+
+    const reservas = leer(STORAGE_KEYS.RESERVAS) || [];
+    // Test timing: 3 min for efectivo/documentos timers (instead of 3h)
+    const TIMER_MS = 3 * 60 * 1000;
+    const nueva = {
+        id: generarId(),
+        ...datos,
+        estado,
+        expiraEn: Date.now() + TIMER_MS,
+        creadoEn: new Date().toISOString(),
+    };
+    reservas.push(nueva);
+    guardar(STORAGE_KEYS.RESERVAS, reservas);
+    liberarAsientosBloqueados(datos.viajeId, datos.asientos);
+    return nueva;
+};
+
+export const actualizarEstadoReserva = (reservaId, nuevoEstado) => {
+    const reservas = leer(STORAGE_KEYS.RESERVAS) || [];
+    const idx = reservas.findIndex(r => r.id === reservaId);
+    if (idx === -1) return null;
+    reservas[idx].estado = nuevoEstado;
+    if (nuevoEstado === 'cancelada') {
+        liberarAsientosBloqueados(reservas[idx].viajeId, reservas[idx].asientos);
+    }
+    guardar(STORAGE_KEYS.RESERVAS, reservas);
+    return reservas[idx];
+};
+
+export const verificarExpiradas = () => {
+    const reservas = leer(STORAGE_KEYS.RESERVAS) || [];
+    const ahora = Date.now();
+    let modificado = false;
+    reservas.forEach((r, i) => {
+        if ((r.estado === 'pendiente_efectivo' || r.estado === 'pendiente_documentos') && r.expiraEn && ahora > r.expiraEn) {
+            reservas[i].estado = 'cancelada';
+            liberarAsientosBloqueados(r.viajeId, r.asientos);
+            modificado = true;
+        }
+    });
+    if (modificado) guardar(STORAGE_KEYS.RESERVAS, reservas);
+    return reservas;
+};
+
 export default {
     crearReserva,
     validarDisponibilidad,
@@ -233,5 +368,16 @@ export default {
     liberarAsientosBloqueados,
     obtenerAsientosPendientes,
     liberarAsientosExpirados,
+    crearBoletos,
+    obtenerBoletos,
+    validarBoleto,
+    marcarAbordado,
+    obtenerBoletosViaje,
+    crearTokenQR,
+    obtenerEstadoQR,
+    actualizarEstadoQR,
+    crearReservaConEstado,
+    actualizarEstadoReserva,
+    verificarExpiradas,
     VIAJES_CONDUCTOR_MOCK,
 };
