@@ -7,6 +7,7 @@ import { obtenerReservas, obtenerVentas, obtenerEstadoViaje, VIAJES_CONDUCTOR_MO
 import { BUSES_MOCK } from '../../data/mockStaffDB';
 import { SUCURSALES_MOCK, obtenerViajesSucursal } from '../../data/mockDiscoveryDB';
 import gsap from 'gsap';
+import { useToast } from '../../componentes/ToastNotifications';
 
 const ROL_COLORS = {
     admin_sucursal: { bg: '#1e3a8a22', color: '#93c5fd', label: 'Admin' },
@@ -26,12 +27,17 @@ const TABS = [
 const ACCIONES = [
     { path: '/admin/bus/nuevo',          icon: '🚌', label: 'Registrar Bus' },
     { path: '/admin/tripulacion/nuevo',  icon: '🧍', label: 'Registrar Tripulación' },
+    { path: '/admin/sucursales',         icon: '🏢', label: 'Sucursales' },
+    { path: '/admin/rutas',              icon: '🛣️', label: 'Gestión Rutas' },
+    { path: '/admin/itinerarios',        icon: '📅', label: 'Programación' },
+    { path: '/admin/recursos',           icon: '📊', label: 'Disponibilidad' },
 ];
 
 const AdminDashboard = () => {
     const { perfil, logout } = useAuth();
     const navigate = useNavigate();
     const rootRef = useRef(null);
+    const { mostrar } = useToast();
 
     const sucursalInfo = SUCURSALES_MOCK.find(s => s.id === perfil?.sucursal_id) || SUCURSALES_MOCK[0];
     const deptNombre = perfil?.departamento || sucursalInfo?.departamento || 'La Paz';
@@ -96,7 +102,7 @@ const AdminDashboard = () => {
     const handleToggleCuenta = (userId, activo) => {
         const res = cambiarEstadoCuenta(userId, !activo);
         if (res.exito) setUsuarios(obtenerTodosStaff());
-        else alert(res.error);
+        else mostrar(res.error, 'error');
     };
 
     const handleCrearUsuario = (e) => {

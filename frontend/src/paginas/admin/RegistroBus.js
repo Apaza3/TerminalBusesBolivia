@@ -241,10 +241,10 @@ const RegistroBus = () => {
             errs.filas_piso_2 = 'Mínimo 1 fila en piso 2.';
         }
         if (form.soat_vence && estadoDoc(form.soat_vence) === 'vencido') {
-            errs.soat_vence = 'SOAT vencido — el bus no podrá asignarse a itinerarios.';
+            errs.soat_vence = 'RN-02: SOAT vencido — renueva el documento antes de registrar el bus.';
         }
         if (form.inspeccion_vence && estadoDoc(form.inspeccion_vence) === 'vencido') {
-            errs.inspeccion_vence = 'Inspección técnica vencida — el bus no podrá asignarse.';
+            errs.inspeccion_vence = 'RN-02: Inspección técnica vencida — renueva el documento antes de registrar.';
         }
         setErrores(errs);
         return Object.keys(errs).length === 0;

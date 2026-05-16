@@ -14,6 +14,10 @@ import AdminDashboard from './paginas/admin/AdminDashboard';
 import DashboardAnalitico from './paginas/admin/DashboardAnalitico';
 import RegistroBus from './paginas/admin/RegistroBus';
 import RegistroTripulacion from './paginas/admin/RegistroTripulacion';
+import GestionSucursales from './paginas/admin/GestionSucursales';
+import GestionRutas from './paginas/admin/GestionRutas';
+import ProgramacionItinerarios from './paginas/admin/ProgramacionItinerarios';
+import DisponibilidadRecursos from './paginas/admin/DisponibilidadRecursos';
 import ProtectedRoute from './componentes/ProtectedRoute';
 import MapaAsientos from './paginas/MapaAsientos';
 import PanelConductor from './paginas/conductor/PanelConductor';
@@ -105,6 +109,28 @@ function App() {
                         </ProtectedRoute>
                     } />
                     
+                    {/* ─── Fleet Planning (Pachas) ─── */}
+                    <Route path="/admin/sucursales" element={
+                        <ProtectedRoute rolesPermitidos={['admin_sucursal']}>
+                            <GestionSucursales />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/admin/rutas" element={
+                        <ProtectedRoute rolesPermitidos={['admin_sucursal']}>
+                            <GestionRutas />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/admin/itinerarios" element={
+                        <ProtectedRoute rolesPermitidos={['admin_sucursal']}>
+                            <ProgramacionItinerarios />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/admin/recursos" element={
+                        <ProtectedRoute rolesPermitidos={['admin_sucursal']}>
+                            <DisponibilidadRecursos />
+                        </ProtectedRoute>
+                    } />
+
                     {/* Redirect root admin to dashboard */}
                     <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
 
