@@ -162,4 +162,79 @@ router.post('/validar-qr', requireAuth, SOLO_CONDUCTOR, async (req, res) => {
     });
 });
 
+// [Académico] Sprint 4 - PATCH /api/conductor/viajes/:id/estado (R20)
+router.patch('/viajes/:id/estado', requireAuth, SOLO_CONDUCTOR, async (req, res) => {
+    const { id } = req.params;
+    const { estado } = req.body;
+    const estadosValidos = ['programado', 'en_ruta', 'finalizado', 'cancelado'];
+    if (!estado || !estadosValidos.includes(estado)) {
+        return res.status(400).json({ error: `Estado inválido. Válidos: ${estadosValidos.join(', ')}` });
+    }
+
+    const { data, error } = await supabaseAdmin
+        .from('viajes')
+        .update({ estado, actualizado_en: new Date().toISOString() })
+        .eq('id', id)
+        .select('id, estado')
+        .single();
+
+    if (error) return res.status(500).json({ error: error.message });
+
+    req.app.locals.broadcast('estado_viaje_actualizado', { viaje_id: id, estado });
+    res.json({ ok: true, viaje: data });
+});
+
+// [Académico] Sprint 4 - GET /api/conductor/manifiesto/:viajeId (R19)
+router.get('/manifiesto/:viajeId', requireAuth, SOLO_CONDUCTOR, async (req, res) => {
+    const { viajeId } = req.params;
+    const { data, error } = await supabaseAdmin
+        .from('boletos')
+        .select('id, qr_token, nombre_pasajero, ci_pasajero, asiento, estado, escaneado_en')
+        .eq('viaje_id', viajeId)
+        .order('asiento', { ascending: true });
+
+    if (error) return res.status(500).json({ error: error.message });
+    const boletos = (data || []).map(b => ({
+        id: b.qr_token || b.id,
+        pasajeroNombre: b.nombre_pasajero,
+        pasajeroCI: b.ci_pasajero,
+        asiento: b.asiento,
+        abordado: b.estado === 'validado',
+        horaAbordaje: b.escaneado_en,
+    }));
+    res.json({ boletos });
+});
+
+// [Académico] Sprint 4 - POST /api/conductor/notificaciones/anden (R26)
+router.post('/notificaciones/anden', requireAuth, requireRol('admin_sucursal', 'cajero', 'conductor'), async (req, res) => {
+    const { viajeId, tipo, mensaje } = req.body;
+    if (!mensaje) return res.status(400).json({ error: 'mensaje es requerido.' });
+
+    req.app.locals.broadcast('notificacion_anden', {
+        viajeId: viajeId || null,
+        tipo: tipo || 'otro',
+        mensaje,
+        emitido_por: req.usuario.id,
+        ts: Date.now(),
+    });
+
+    res.json({ ok: true });
+});
+
+// [Académico] Sprint 4 - GET /api/conductor/estado-flota (R17)
+router.get('/estado-flota', requireAuth, requireRol('admin_sucursal'), async (req, res) => {
+    const [incidencias, mantenimiento, itinerarios] = await Promise.all([
+        supabaseAdmin.from('incidencias').select('*').order('creado_en', { ascending: false }).limit(50),
+        supabaseAdmin.from('reportes_mantenimiento').select('*').order('creado_en', { ascending: false }).limit(50),
+        supabaseAdmin.from('itinerarios').select('*').order('salida_programada', { ascending: false }).limit(50),
+    ]);
+
+    res.json({
+        incidencias: incidencias.data || [],
+        mantenimiento: mantenimiento.data || [],
+        itinerarios: itinerarios.data || [],
+        notificaciones: [],
+    });
+});
+
 module.exports = router;

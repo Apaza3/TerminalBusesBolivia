@@ -26,9 +26,31 @@ const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 const wsClientes = new Set();
 
-wss.on('connection', (ws, req) => {
+wss.on('connection', (ws) => {
     wsClientes.add(ws);
+    ws.canales = new Set();
     console.log(`[WS] Conectado. Total: ${wsClientes.size}`);
+
+    // [Académico] Sprint 4 - Procesar mensajes del cliente (subscribe + events)
+    ws.on('message', (raw) => {
+        try {
+            const msg = JSON.parse(raw.toString());
+            if (msg.tipo === 'subscribe' && msg.canal) {
+                ws.canales.add(msg.canal);
+                return;
+            }
+            // Relay eventos del conductor al resto de clientes (R20, R26)
+            const tiposRelay = ['update_trip_status', 'estado_viaje_actualizado', 'notificacion_anden', 'incidencia_creada', 'mantenimiento_creado'];
+            if (tiposRelay.includes(msg.tipo)) {
+                const payload = JSON.stringify({ tipo: msg.tipo, payload: msg.payload, ts: Date.now() });
+                for (const cliente of wsClientes) {
+                    if (cliente !== ws && cliente.readyState === WebSocket.OPEN) {
+                        cliente.send(payload);
+                    }
+                }
+            }
+        } catch {}
+    });
 
     ws.on('close', () => {
         wsClientes.delete(ws);
@@ -56,6 +78,9 @@ app.use('/api/buses',      require('./rutas/buses'));
 app.use('/api/encomiendas', require('./rutas/encomiendas'));
 app.use('/api/admin',      require('./rutas/admin'));
 app.use('/api/conductor',  require('./rutas/conductor'));
+app.use('/api/rutas',      require('./rutas/rutas'));
+app.use('/api/itinerarios',require('./rutas/itinerarios'));
+app.use('/api/sucursales', require('./rutas/sucursales'));
 
 // ── Health ────────────────────────────────────────────────────────────────────
 

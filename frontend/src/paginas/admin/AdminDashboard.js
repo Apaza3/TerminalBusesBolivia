@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contextos/AuthContext';
 import { DEPARTAMENTOS } from '../../contextos/DepartamentoContext';
+import { useToast } from '../../componentes/ToastNotifications';
 import { obtenerTodosStaff, cambiarEstadoCuenta, registrarStaff } from '../../data/mockAuthDB';
 import { obtenerReservas, obtenerVentas, obtenerEstadoViaje, VIAJES_CONDUCTOR_MOCK } from '../../data/mockStorage';
 import { BUSES_MOCK } from '../../data/mockStaffDB';
@@ -26,10 +27,16 @@ const TABS = [
 const ACCIONES = [
     { path: '/admin/bus/nuevo',          icon: '🚌', label: 'Registrar Bus' },
     { path: '/admin/tripulacion/nuevo',  icon: '🧍', label: 'Registrar Tripulación' },
+    { path: '/admin/sucursales',         icon: '🏢', label: 'Sucursales' },
+    { path: '/admin/rutas',              icon: '🛣️', label: 'Gestión Rutas' },
+    { path: '/admin/itinerarios',        icon: '📅', label: 'Programación' },
+    { path: '/admin/recursos',           icon: '📊', label: 'Disponibilidad' },
+    { path: '/admin/monitor',            icon: '🛰️', label: 'Monitor Flota' },
 ];
 
 const AdminDashboard = () => {
     const { perfil, logout } = useAuth();
+    const { mostrar } = useToast();
     const navigate = useNavigate();
     const rootRef = useRef(null);
 
@@ -96,7 +103,7 @@ const AdminDashboard = () => {
     const handleToggleCuenta = (userId, activo) => {
         const res = cambiarEstadoCuenta(userId, !activo);
         if (res.exito) setUsuarios(obtenerTodosStaff());
-        else alert(res.error);
+        else mostrar(res.error, 'error');
     };
 
     const handleCrearUsuario = (e) => {

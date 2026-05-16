@@ -14,9 +14,14 @@ import AdminDashboard from './paginas/admin/AdminDashboard';
 import DashboardAnalitico from './paginas/admin/DashboardAnalitico';
 import RegistroBus from './paginas/admin/RegistroBus';
 import RegistroTripulacion from './paginas/admin/RegistroTripulacion';
+import GestionSucursales from './paginas/admin/GestionSucursales';
+import GestionRutas from './paginas/admin/GestionRutas';
+import ProgramacionItinerarios from './paginas/admin/ProgramacionItinerarios';
+import DisponibilidadRecursos from './paginas/admin/DisponibilidadRecursos';
+import MonitoreoFlota from './paginas/admin/MonitoreoFlota';
 import ProtectedRoute from './componentes/ProtectedRoute';
 import MapaAsientos from './paginas/MapaAsientos';
-import PanelConductor from './paginas/conductor/PanelConductor';
+import PanelConductorWS from './paginas/conductor/PanelConductorWS';
 import RegistrarIncidencia from './paginas/conductor/RegistrarIncidencia';
 import ReporteMantenimiento from './paginas/conductor/ReporteMantenimiento';
 import RecuperarBoleto from './paginas/RecuperarBoleto';
@@ -30,11 +35,6 @@ import ValidarAbordaje from './paginas/conductor/ValidarAbordaje';
 import './estilos/escritorio/buscador.css';
 import './estilos/movil/buscador-responsivo.css';
 
-/**
- * App - Root component with react-router-dom navigation.
- * Manages routing between Inicio, BuscadorViajes, and SucursalDetalle.
- * Replaces the previous state-based navigation to support browser Back button.
- */
 function App() {
     return (
         <ToastProvider>
@@ -68,7 +68,6 @@ function App() {
                     </div>
                 </nav>
 
-                {/* Route-based page rendering */}
                 <Routes>
                     {/* Public Routes */}
                     <Route path="/" element={<Inicio />} />
@@ -84,9 +83,6 @@ function App() {
                     <Route path="/recuperar-boleto" element={<RecuperarBoleto />} />
                     <Route path="/pago/qr" element={<PagoQRMovil />} />
 
-                    {/* Rutas no subidas en esta rama (como MapaAsientos) se redirigen o fallan
-                        dependiendo de si existen en FileSystem o no. */}
-
                     {/* Admin Protected Routes */}
                     <Route path="/admin/dashboard" element={
                         <ProtectedRoute rolesPermitidos={['admin_sucursal', 'conductor']}>
@@ -98,13 +94,41 @@ function App() {
                             <RegistroBus />
                         </ProtectedRoute>
                     } />
-                    {/* Ruta de Registro de Tripulación restaurada */}
                     <Route path="/admin/tripulacion/nuevo" element={
                         <ProtectedRoute rolesPermitidos={['admin_sucursal']}>
                             <RegistroTripulacion />
                         </ProtectedRoute>
                     } />
-                    
+
+                    {/* ─── Fleet Planning (Sprint 2) ─── */}
+                    <Route path="/admin/sucursales" element={
+                        <ProtectedRoute rolesPermitidos={['admin_sucursal']}>
+                            <GestionSucursales />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/admin/rutas" element={
+                        <ProtectedRoute rolesPermitidos={['admin_sucursal']}>
+                            <GestionRutas />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/admin/itinerarios" element={
+                        <ProtectedRoute rolesPermitidos={['admin_sucursal']}>
+                            <ProgramacionItinerarios />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/admin/recursos" element={
+                        <ProtectedRoute rolesPermitidos={['admin_sucursal']}>
+                            <DisponibilidadRecursos />
+                        </ProtectedRoute>
+                    } />
+
+                    {/* ─── Monitor Flota (Sprint 4 - R17) ─── */}
+                    <Route path="/admin/monitor" element={
+                        <ProtectedRoute rolesPermitidos={['admin_sucursal']}>
+                            <MonitoreoFlota />
+                        </ProtectedRoute>
+                    } />
+
                     {/* Redirect root admin to dashboard */}
                     <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
 
@@ -123,9 +147,10 @@ function App() {
                     } />
 
                     {/* ─── Conductor Protected Routes ─── */}
+                    {/* [Académico] Sprint 4 - PanelConductorWS wrapper añade WS + notificaciones (R20, R26) */}
                     <Route path="/conductor/panel" element={
                         <ProtectedRoute rolesPermitidos={['conductor', 'admin_sucursal']}>
-                            <PanelConductor />
+                            <PanelConductorWS />
                         </ProtectedRoute>
                     } />
                     <Route path="/conductor/incidencia/:viajeId" element={

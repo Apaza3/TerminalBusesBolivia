@@ -1,6 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
+// [Académico] Sprint 4 - ReporteMantenimiento con opsService + WS emit (R29)
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contextos/AuthContext';
+import { registrarMantenimiento } from '../../servicios/opsService';
+import useWebSocket from '../../hooks/useWebSocket';
 import gsap from 'gsap';
 import '../../estilos/escritorio/admin.css';
 import '../../estilos/movil/admin-responsivo.css';
@@ -21,17 +24,12 @@ const SEVERIDADES = [
     { id: 'critica', label: 'Crítica', color: '#7c3aed', desc: 'Detener el bus de inmediato' },
 ];
 
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:4000';
-
-const guardarLocalFallback = (datos) => {
-    const prev = JSON.parse(localStorage.getItem('tbb_mantenimiento') || '[]');
-    prev.push({ ...datos, id: `mnt_${Date.now()}`, estado: 'abierto', creado_en: new Date().toISOString(), pendiente_sync: true });
-    localStorage.setItem('tbb_mantenimiento', JSON.stringify(prev));
-};
-
 const ReporteMantenimiento = () => {
     const navigate    = useNavigate();
     const { perfil }  = useAuth();
+
+    const handleMensajeWS = useCallback(() => {}, []);
+    const { emit } = useWebSocket(['flota'], handleMensajeWS);
     const rootRef     = useRef(null);
 
     const [tipo,       setTipo]       = useState('');
@@ -92,20 +90,22 @@ const ReporteMantenimiento = () => {
             descripcion: descripcion.trim(),
             severidad,
             foto_base64: foto || null,
+            conductor:   perfil?.nombre_completo,
         };
 
         try {
-            const resp = await fetch(`${API_BASE}/api/conductor/mantenimiento`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
+            // [Académico] Sprint 4 - opsService gestiona mock/backend + WS emit (critica → broadcast)
+            const res = await registrarMantenimiento(payload, emit);
+            const id = res.reporte?.id || '';
+            const origen = res.reporte?.pendiente_sync ? 'local' : 'servidor';
+            setResultado({
+                ok: true,
+                msg: origen === 'servidor'
+                    ? `Reporte #${String(id).slice(0, 8)} enviado al servidor.`
+                    : 'Guardado localmente. Se sincronizará al reconectar.',
+                origen,
             });
-            if (!resp.ok) throw new Error('auth');
-            const data = await resp.json();
-            setResultado({ ok: true, msg: `Reporte #${String(data.id).slice(0,8)} enviado al servidor.`, origen: 'servidor' });
         } catch {
-            // TODO: [Aaron Apaza] Conectar JWT cuando AuthContext migre a Supabase Auth (RN-SUPABASE)
-            guardarLocalFallback({ ...payload, conductor: perfil?.nombre_completo });
             setResultado({ ok: true, msg: 'Guardado localmente. Se sincronizará al reconectar.', origen: 'local' });
         } finally {
             setEnviando(false);

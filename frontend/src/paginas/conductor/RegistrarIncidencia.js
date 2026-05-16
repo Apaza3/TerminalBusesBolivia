@@ -1,6 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
+// [Académico] Sprint 4 - RegistrarIncidencia con opsService + WS emit (R31)
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../contextos/AuthContext';
+import { registrarIncidencia } from '../../servicios/opsService';
+import useWebSocket from '../../hooks/useWebSocket';
 import gsap from 'gsap';
 import '../../estilos/escritorio/admin.css';
 import '../../estilos/movil/admin-responsivo.css';
@@ -14,12 +17,13 @@ const TIPOS = [
     { id: 'otro',                 label: 'Otro',                 icono: '📝', color: '#34d399', bg: 'rgba(52,211,153,0.12)',  border: '#064e3b' },
 ];
 
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:4000';
-
 const RegistrarIncidencia = () => {
     const navigate = useNavigate();
     const { viajeId } = useParams();
     const { perfil } = useAuth();
+
+    const handleMensajeWS = useCallback(() => {}, []);
+    const { emit } = useWebSocket(['viajes'], handleMensajeWS);
 
     const [tipo, setTipo] = useState('');
     const [descripcion, setDescripcion] = useState('');
@@ -65,18 +69,6 @@ const RegistrarIncidencia = () => {
         return Object.keys(errs).length === 0;
     };
 
-    const guardarFallback = (datos) => {
-        const prev = JSON.parse(localStorage.getItem('tbb_incidencias') || '[]');
-        prev.push({
-            ...datos,
-            id: `inc_${Date.now()}`,
-            estado: 'abierta',
-            creado_en: new Date().toISOString(),
-            pendiente_sync: true,
-        });
-        localStorage.setItem('tbb_incidencias', JSON.stringify(prev));
-    };
-
     const handleEnviar = async (e) => {
         e.preventDefault();
         if (!validar()) return;
@@ -87,21 +79,22 @@ const RegistrarIncidencia = () => {
             tipo,
             descripcion: descripcion.trim(),
             ubicacion_manual: ubicacionManual.trim() || null,
+            conductor: perfil?.nombre_completo,
         };
 
         try {
-            const resp = await fetch(`${API_BASE}/api/conductor/incidencias`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
+            // [Académico] Sprint 4 - opsService gestiona mock/backend + WS emit
+            const res = await registrarIncidencia(payload, emit);
+            const origen = res.incidencia?.pendiente_sync ? 'local' : 'servidor';
+            setResultado({
+                ok: true,
+                msg: origen === 'servidor'
+                    ? `Registrada (ID: ${String(res.incidencia?.id).slice(0, 8)})`
+                    : 'Guardada localmente. Se sincronizará al reconectar.',
+                origen,
             });
-            if (!resp.ok) throw new Error('auth_required');
-            const data = await resp.json();
-            setResultado({ ok: true, msg: `Registrada en servidor (ID: ${String(data.id).slice(0, 8)})`, origen: 'servidor' });
         } catch {
-            // TODO: [Aaron Apaza] Integrar token JWT cuando AuthContext use Supabase Auth real (RN-SUPABASE)
-            guardarFallback({ ...payload, conductor: perfil?.nombre_completo });
-            setResultado({ ok: true, msg: 'Guardada localmente. Se sincronizará al conectar con el servidor.', origen: 'local' });
+            setResultado({ ok: false, msg: 'Error al registrar incidencia.' });
         } finally {
             setEnviando(false);
         }
