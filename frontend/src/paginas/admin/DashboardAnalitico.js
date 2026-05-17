@@ -1,7 +1,10 @@
-import React, { useState, useMemo } from 'react';
+// [Académico] Sprint 5 - Dashboard analítico: conectado a analyticsService (R22, R23, R24, R30)
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BarChart3, TrendingUp, Users, Bus, MapPin, AlertTriangle, Activity } from 'lucide-react';
 import { obtenerKPIs, TRAFICO_POR_HORA, INGRESOS_POR_RUTA, obtenerAnalisisOcupacion, BUSES_MANTENIMIENTO } from '../../data/mockAnalyticsDB';
+import { obtenerKPIsGlobales, obtenerVentasHistorico } from '../../servicios/analyticsService';
+import ExportReportes from '../../componentes/ExportReportes';
 import AsistenteIA from '../../componentes/AsistenteIA';
 
 /**
@@ -11,9 +14,17 @@ import AsistenteIA from '../../componentes/AsistenteIA';
  */
 const DashboardAnalitico = () => {
     const navigate = useNavigate();
-    const kpis = useMemo(() => obtenerKPIs(), []);
+    // [Académico] Sprint 5 - R22: KPIs globales combinados (mock + localStorage real)
+    const [kpis, setKpis] = useState(() => obtenerKPIs());
+    const [periodo, setPeriodo] = useState('mes'); // semana | mes | trimestre
+    const [ventasHistorico, setVentasHistorico] = useState([]);
     const ocupacion = useMemo(() => obtenerAnalisisOcupacion(), []);
-    const [tabActiva, setTabActiva] = useState('trafico'); // trafico | ingresos | ocupacion | mantenimiento
+    const [tabActiva, setTabActiva] = useState('trafico'); // trafico | ingresos | ocupacion | mantenimiento | ventas
+
+    useEffect(() => {
+        obtenerKPIsGlobales({ periodo }).then(data => setKpis(data));
+        setVentasHistorico(obtenerVentasHistorico(periodo === 'semana' ? 7 : periodo === 'trimestre' ? 90 : 30));
+    }, [periodo]);
 
     const maxSalidas = Math.max(...TRAFICO_POR_HORA.map(h => h.salidas));
     const maxIngresos = Math.max(...INGRESOS_POR_RUTA.map(r => r.ingresos));
@@ -56,6 +67,26 @@ const DashboardAnalitico = () => {
                         </h1>
                         <p style={{ color: '#64748b', fontSize: '0.8rem', margin: '0.25rem 0 0' }}>Inteligencia operativa del terminal</p>
                     </div>
+                    {/* [Académico] Sprint 5 - R-HISTORICO: filtro período + R30: exportación */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'flex-end' }}>
+                        <div style={{ display: 'flex', gap: '0.35rem' }}>
+                            {[{ k: 'semana', l: '7d' }, { k: 'mes', l: '30d' }, { k: 'trimestre', l: '90d' }].map(p => (
+                                <button key={p.k} onClick={() => setPeriodo(p.k)} style={{
+                                    padding: '0.3rem 0.7rem', borderRadius: 6, border: 'none', fontSize: '0.73rem', fontWeight: 600,
+                                    background: periodo === p.k ? '#3b82f6' : '#1e293b',
+                                    color: periodo === p.k ? '#fff' : '#94a3b8', cursor: 'pointer',
+                                }}>{p.l}</button>
+                            ))}
+                        </div>
+                        <ExportReportes
+                            titulo={`Panel Analítico — Terminal Buses Bolivia (${periodo})`}
+                            columnas={['Ruta', 'Ingresos (Bs)', 'Boletos', 'Ocupación %']}
+                            filas={INGRESOS_POR_RUTA.map(r => [r.ruta, r.ingresos, r.boletos, r.ocupacion])}
+                            datosExcel={INGRESOS_POR_RUTA.map(r => ({ Ruta: r.ruta, 'Ingresos (Bs)': r.ingresos, Boletos: r.boletos, 'Ocupación %': r.ocupacion }))}
+                            nombreArchivo="dashboard_analitico"
+                            formatos={['pdf', 'excel', 'csv']}
+                        />
+                    </div>
                 </div>
 
                 {/* KPI Cards */}
@@ -90,6 +121,7 @@ const DashboardAnalitico = () => {
                         { key: 'ingresos', label: '💰 Ingresos' },
                         { key: 'ocupacion', label: '📊 Ocupación' },
                         { key: 'mantenimiento', label: '🔧 Mantenimiento' },
+                        { key: 'ventas', label: '📈 Ventas Hist.' },
                     ].map(tab => (
                         <button key={tab.key} onClick={() => setTabActiva(tab.key)}
                             style={{
@@ -293,6 +325,62 @@ const DashboardAnalitico = () => {
                                     </span>
                                 </div>
                             ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* ═══════ TAB: VENTAS HISTORICO ═══════ */}
+                {/* [Académico] Sprint 5 - R-HISTORICO + R22: historial ventas por período */}
+                {tabActiva === 'ventas' && (
+                    <div style={{ background: '#1e293b', borderRadius: '14px', padding: '1.25rem', border: '1px solid #334155', marginBottom: '1.5rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                            <h3 style={{ margin: 0, fontSize: '1rem', color: '#f1f5f9' }}>
+                                📈 Ventas Históricas — {periodo === 'semana' ? 'Últimos 7 días' : periodo === 'trimestre' ? 'Últimos 90 días' : 'Últimos 30 días'}
+                            </h3>
+                            <ExportReportes
+                                titulo="Ventas Históricas"
+                                columnas={['Fecha', 'Ingresos (Bs)', 'Boletos']}
+                                filas={ventasHistorico.map(v => [v.fecha, v.ingresos, v.boletos])}
+                                datosExcel={ventasHistorico}
+                                nombreArchivo="ventas_historico"
+                                formatos={['excel', 'csv']}
+                            />
+                        </div>
+
+                        {/* KPI resumen */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
+                            {[
+                                { label: 'Ingresos Total', value: `Bs ${ventasHistorico.reduce((s, v) => s + v.ingresos, 0).toLocaleString()}`, color: '#10b981' },
+                                { label: 'Boletos Vendidos', value: ventasHistorico.reduce((s, v) => s + v.boletos, 0), color: '#3b82f6' },
+                                { label: 'Promedio/día', value: `Bs ${Math.round(ventasHistorico.reduce((s, v) => s + v.ingresos, 0) / (ventasHistorico.length || 1)).toLocaleString()}`, color: '#f59e0b' },
+                            ].map((k, i) => (
+                                <div key={i} style={{ background: '#0f172a', borderRadius: 10, padding: '0.75rem 1rem', border: '1px solid #334155' }}>
+                                    <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{k.label}</div>
+                                    <div style={{ fontSize: '1.1rem', fontWeight: 700, color: k.color, marginTop: '0.2rem' }}>{k.value}</div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Mini bar chart */}
+                        <div style={{ overflowX: 'auto' }}>
+                            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '2px', height: 80, minWidth: Math.max(300, ventasHistorico.length * 12) }}>
+                                {ventasHistorico.map((v, i) => {
+                                    const maxIng = Math.max(...ventasHistorico.map(x => x.ingresos), 1);
+                                    const h = Math.max(4, (v.ingresos / maxIng) * 80);
+                                    return (
+                                        <div key={i} title={`${v.fecha}: Bs ${v.ingresos}`} style={{
+                                            flex: 1, height: h, minWidth: 8,
+                                            background: 'linear-gradient(180deg, #3b82f6, #1d4ed8)',
+                                            borderRadius: '2px 2px 0 0', cursor: 'default',
+                                            transition: 'opacity 0.2s',
+                                        }} />
+                                    );
+                                })}
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.25rem', fontSize: '0.65rem', color: '#475569' }}>
+                                <span>{ventasHistorico[0]?.fecha}</span>
+                                <span>{ventasHistorico[ventasHistorico.length - 1]?.fecha}</span>
+                            </div>
                         </div>
                     </div>
                 )}

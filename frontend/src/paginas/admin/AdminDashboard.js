@@ -26,6 +26,11 @@ const TABS = [
 const ACCIONES = [
     { path: '/admin/bus/nuevo',          icon: '🚌', label: 'Registrar Bus' },
     { path: '/admin/tripulacion/nuevo',  icon: '🧍', label: 'Registrar Tripulación' },
+    // [Académico] Sprint 5 - R22/R23/R24/RN-01: acciones analítica
+    { path: '/admin/analitica',          icon: '📊', label: 'Panel Analítico' },
+    { path: '/admin/rendimiento-rutas',  icon: '🛣️', label: 'Rendimiento Rutas' },
+    { path: '/admin/ranking-empresas',   icon: '🏆', label: 'Ranking Empresas' },
+    { path: '/admin/manifiesto',         icon: '📋', label: 'Manifiesto PDF' },
 ];
 
 const AdminDashboard = () => {

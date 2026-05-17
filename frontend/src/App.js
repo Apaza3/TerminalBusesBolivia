@@ -26,6 +26,10 @@ import EditarPerfil from './paginas/perfil/EditarPerfil';
 import PerfilIndicador from './componentes/PerfilIndicador';
 import PagoQRMovil from './paginas/pago/PagoQRMovil';
 import ValidarAbordaje from './paginas/conductor/ValidarAbordaje';
+// [Académico] Sprint 5 - R23/R24/RN-01: páginas analítica
+import RendimientoRutas from './paginas/admin/RendimientoRutas';
+import RankingEmpresas from './paginas/admin/RankingEmpresas';
+import ManifiestoPDF from './paginas/admin/ManifiestoPDF';
 
 import './estilos/escritorio/buscador.css';
 import './estilos/movil/buscador-responsivo.css';
@@ -112,6 +116,22 @@ function App() {
                     <Route path="/admin/analitica" element={
                         <ProtectedRoute rolesPermitidos={['admin_sucursal']}>
                             <DashboardAnalitico />
+                        </ProtectedRoute>
+                    } />
+                    {/* [Académico] Sprint 5 - R23/R24/RN-01 */}
+                    <Route path="/admin/rendimiento-rutas" element={
+                        <ProtectedRoute rolesPermitidos={['admin_sucursal']}>
+                            <RendimientoRutas />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/admin/ranking-empresas" element={
+                        <ProtectedRoute rolesPermitidos={['admin_sucursal']}>
+                            <RankingEmpresas />
+                        </ProtectedRoute>
+                    } />
+                    <Route path="/admin/manifiesto" element={
+                        <ProtectedRoute rolesPermitidos={['admin_sucursal', 'cajero']}>
+                            <ManifiestoPDF />
                         </ProtectedRoute>
                     } />
 

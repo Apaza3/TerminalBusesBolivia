@@ -1,7 +1,9 @@
+// [Académico] Sprint 5 - R24: integración CalificacionViaje post-viaje
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contextos/AuthContext';
 import { obtenerReservas } from '../../data/mockStorage';
+import CalificacionViaje from '../../componentes/CalificacionViaje';
 
 /**
  * MisViajes — Passenger travel history page.
@@ -159,6 +161,15 @@ const MisViajes = () => {
                                             🎫 Ver Detalles
                                         </button>
                                     </div>
+                                    {/* [Académico] Sprint 5 - R24: calificación solo para viajes completados */}
+                                    {new Date(reserva.fechaSalida) < ahora && (
+                                        <div style={{ padding: '0 1.25rem 0.75rem' }}>
+                                            <CalificacionViaje
+                                                reserva={reserva}
+                                                sucursalId={reserva.sucursalId}
+                                            />
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })}
