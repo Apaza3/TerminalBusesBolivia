@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route, NavLink, Navigate } from 'react-router-dom';
+import { Routes, Route, NavLink, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './contextos/AuthContext';
 import { DepartamentoProvider } from './contextos/DepartamentoContext';
 import { ToastProvider } from './componentes/ToastNotifications';
@@ -27,6 +27,7 @@ import PerfilIndicador from './componentes/PerfilIndicador';
 import PagoQRMovil from './paginas/pago/PagoQRMovil';
 import ValidarAbordaje from './paginas/conductor/ValidarAbordaje';
 
+import './estilos/anden-tokens.css';
 import './estilos/escritorio/buscador.css';
 import './estilos/movil/buscador-responsivo.css';
 
@@ -35,14 +36,14 @@ import './estilos/movil/buscador-responsivo.css';
  * Manages routing between Inicio, BuscadorViajes, and SucursalDetalle.
  * Replaces the previous state-based navigation to support browser Back button.
  */
-function App() {
+function AppInner() {
+    const location = useLocation();
+    const hideNav = ['/', '/login', '/login-cliente', '/registro'].includes(location.pathname);
+
     return (
-        <ToastProvider>
-        <DepartamentoProvider>
-        <AuthProvider>
-            <div className="App">
-                {/* Barra de navegación superior */}
-                <nav className="barra-nav">
+        <div className="App">
+            {/* Global nav — hidden on pages with own header */}
+            <nav className="barra-nav" style={{ display: hideNav ? 'none' : undefined }}>
                     <div className="nav-logo">
                         <NavLink to="/" style={{ color: 'inherit', textDecoration: 'none' }}>
                             🚌 Terminal<span>Bolivia</span>
@@ -144,7 +145,16 @@ function App() {
                         </ProtectedRoute>
                     } />
                 </Routes>
-            </div>
+        </div>
+    );
+}
+
+function App() {
+    return (
+        <ToastProvider>
+        <DepartamentoProvider>
+        <AuthProvider>
+            <AppInner />
         </AuthProvider>
         </DepartamentoProvider>
         </ToastProvider>

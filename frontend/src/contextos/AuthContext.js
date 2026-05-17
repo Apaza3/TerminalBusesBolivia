@@ -1,15 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { loginStaff, inicializarStaff, actualizarPerfilStaff } from '../data/mockAuthDB';
+import { supabase } from '../servicios/supabase';
 import { loginCliente as mockLoginCliente } from '../data/mockClientDB';
 
-// ──────────────────────────────────────────────────────
-// AuthContext
-// Maneja el estado global de autenticación con localStorage.
-// Roles: admin_sucursal, cajero, conductor, cliente
-// ──────────────────────────────────────────────────────
-
 const AuthContext = createContext();
-
 const SESSION_KEY = 'tbb_session';
 const SESSION_REMEMBER_KEY = 'tbb_session_remember';
 
@@ -19,48 +12,71 @@ export const AuthProvider = ({ children }) => {
     const [cargandoAuth, setCargandoAuth] = useState(true);
 
     useEffect(() => {
-        inicializarStaff();
-
-        // Restaurar sesión desde localStorage
-        try {
-            const guardada = localStorage.getItem(SESSION_KEY) || sessionStorage.getItem(SESSION_KEY);
-            if (guardada) {
-                const parsed = JSON.parse(guardada);
-                setSesion({ user: parsed });
-                setPerfil(parsed);
+        const initAuth = async () => {
+            try {
+                const guardada = localStorage.getItem(SESSION_KEY) || sessionStorage.getItem(SESSION_KEY);
+                if (guardada) {
+                    const parsed = JSON.parse(guardada);
+                    setSesion({ user: parsed });
+                    setPerfil(parsed);
+                } else {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    if (session) {
+                        const { data: p } = await supabase
+                            .from('usuarios')
+                            .select('id, email, nombre_completo, rol, sucursal_id, departamento_id, ci, telefono, foto_url, activo')
+                            .eq('id', session.user.id)
+                            .single();
+                        if (p && p.activo) {
+                            setSesion({ user: p });
+                            setPerfil(p);
+                        }
+                    }
+                }
+            } catch {
+                localStorage.removeItem(SESSION_KEY);
+                sessionStorage.removeItem(SESSION_KEY);
             }
-        } catch {
-            localStorage.removeItem(SESSION_KEY);
-            sessionStorage.removeItem(SESSION_KEY);
-        }
-
-        setCargandoAuth(false);
+            setCargandoAuth(false);
+        };
+        initAuth();
     }, []);
 
-    const _guardarSesion = (perfil, recordar) => {
-        setSesion({ user: perfil });
-        setPerfil(perfil);
+    const _guardarSesion = (p, recordar) => {
+        setSesion({ user: p });
+        setPerfil(p);
         if (recordar) {
-            localStorage.setItem(SESSION_KEY, JSON.stringify(perfil));
+            localStorage.setItem(SESSION_KEY, JSON.stringify(p));
             localStorage.setItem(SESSION_REMEMBER_KEY, 'true');
         } else {
-            // Solo sesión en memoria (se borra al cerrar); pero guardamos para SPA
-            sessionStorage.setItem(SESSION_KEY, JSON.stringify(perfil));
+            sessionStorage.setItem(SESSION_KEY, JSON.stringify(p));
             localStorage.removeItem(SESSION_KEY);
         }
     };
 
-    // ── Login Staff / Admin / Cajero / Conductor ──────
+    // ── Staff login via Supabase ──────────────────────────
     const login = async (email, password, recordar = false) => {
-        const resultado = loginStaff(email, password);
-        if (resultado.exito) {
-            _guardarSesion(resultado.usuario, recordar);
-            return { exito: true };
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) return { exito: false, error: 'Credenciales inválidas.' };
+
+        const { data: p, error: pErr } = await supabase
+            .from('usuarios')
+            .select('id, email, nombre_completo, rol, sucursal_id, departamento_id, ci, telefono, foto_url, activo')
+            .eq('id', data.user.id)
+            .single();
+
+        if (pErr || !p) return { exito: false, error: 'Perfil no encontrado. Contacta al administrador.' };
+        if (!p.activo) return { exito: false, error: 'Cuenta desactivada. Contacta al administrador.' };
+        if (!['admin_sucursal', 'cajero', 'conductor'].includes(p.rol)) {
+            await supabase.auth.signOut();
+            return { exito: false, error: 'Sin acceso al panel de control.' };
         }
-        return { exito: false, error: resultado.error };
+
+        _guardarSesion(p, recordar);
+        return { exito: true, rol: p.rol };
     };
 
-    // ── Login Cliente (CI + password) ─────────────────
+    // ── Cliente login (mock) ─────────────────────────────
     const loginComoCliente = (ci, password, recordar = false) => {
         const resultado = mockLoginCliente(ci, password);
         if (resultado.exito) {
@@ -70,8 +86,9 @@ export const AuthProvider = ({ children }) => {
         return resultado;
     };
 
-    // ── Logout ────────────────────────────────────────
+    // ── Logout ───────────────────────────────────────────
     const logout = async () => {
+        await supabase.auth.signOut();
         setSesion(null);
         setPerfil(null);
         localStorage.removeItem(SESSION_KEY);
@@ -80,46 +97,19 @@ export const AuthProvider = ({ children }) => {
         return { exito: true };
     };
 
-    // ── Actualizar perfil ─────────────────────────────
+    // ── Actualizar perfil ────────────────────────────────
     const actualizarPerfil = (datos) => {
         if (!perfil) return { exito: false, error: 'Sin sesión.' };
-
-        let perfilActualizado;
-
-        if (perfil.rol === 'cliente') {
-            // Para clientes actualizamos en localStorage de clientes
-            perfilActualizado = { ...perfil, ...datos };
-        } else {
-            // Para staff usamos mockAuthDB
-            const resultado = actualizarPerfilStaff(perfil.id, datos);
-            if (!resultado.exito) return resultado;
-            perfilActualizado = resultado.usuario;
-        }
-
+        const perfilActualizado = { ...perfil, ...datos };
         setSesion({ user: perfilActualizado });
         setPerfil(perfilActualizado);
-
-        // Actualizar sesión persistida
-        if (localStorage.getItem(SESSION_KEY)) {
-            localStorage.setItem(SESSION_KEY, JSON.stringify(perfilActualizado));
-        }
-        if (sessionStorage.getItem(SESSION_KEY)) {
-            sessionStorage.setItem(SESSION_KEY, JSON.stringify(perfilActualizado));
-        }
-
+        if (localStorage.getItem(SESSION_KEY)) localStorage.setItem(SESSION_KEY, JSON.stringify(perfilActualizado));
+        if (sessionStorage.getItem(SESSION_KEY)) sessionStorage.setItem(SESSION_KEY, JSON.stringify(perfilActualizado));
         return { exito: true, usuario: perfilActualizado };
     };
 
     return (
-        <AuthContext.Provider value={{
-            sesion,
-            perfil,
-            cargandoAuth,
-            login,
-            loginComoCliente,
-            logout,
-            actualizarPerfil,
-        }}>
+        <AuthContext.Provider value={{ sesion, perfil, cargandoAuth, login, loginComoCliente, logout, actualizarPerfil }}>
             {children}
         </AuthContext.Provider>
     );
