@@ -1,5 +1,33 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Routes, Route, NavLink, Navigate } from 'react-router-dom';
+
+function RelojDigital() {
+    const [hora, setHora] = useState(new Date());
+    useEffect(() => {
+        const id = setInterval(() => setHora(new Date()), 1000);
+        return () => clearInterval(id);
+    }, []);
+    const pad = n => String(n).padStart(2, '0');
+    const h = pad(hora.getHours());
+    const m = pad(hora.getMinutes());
+    const s = pad(hora.getSeconds());
+    return (
+        <div style={{
+            fontFamily: "'JetBrains Mono', 'Courier New', monospace",
+            fontSize: '1.35rem', fontWeight: 800, letterSpacing: '0.08em',
+            color: '#dde5f0', lineHeight: 1,
+            display: 'flex', alignItems: 'center', gap: '0.1em',
+            userSelect: 'none',
+        }}>
+            <span>{h}</span>
+            <span style={{ color: '#3b82f6', animation: 'blink 1s step-start infinite' }}>:</span>
+            <span>{m}</span>
+            <span style={{ color: '#3b82f6', animation: 'blink 1s step-start infinite' }}>:</span>
+            <span style={{ fontSize: '1rem', color: '#64748b' }}>{s}</span>
+            <style>{`@keyframes blink { 50% { opacity: 0.3; } }`}</style>
+        </div>
+    );
+}
 import { AuthProvider } from './contextos/AuthContext';
 import { DepartamentoProvider } from './contextos/DepartamentoContext';
 import { ToastProvider } from './componentes/ToastNotifications';
@@ -46,12 +74,13 @@ function App() {
         <AuthProvider>
             <div className="App">
                 {/* Barra de navegación superior */}
-                <nav className="barra-nav">
+                <nav className="barra-nav" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div className="nav-logo">
                         <NavLink to="/" style={{ color: 'inherit', textDecoration: 'none' }}>
                             🚌 Terminal<span>Bolivia</span>
                         </NavLink>
                     </div>
+                    <RelojDigital />
                     <div className="nav-links">
                         <NavLink
                             to="/"

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { obtenerSucursalesOrdenadas } from '../data/mockDiscoveryDB';
+import { getSucursales } from '../servicios/api';
 import { useDepartamento, DEPARTAMENTOS } from '../contextos/DepartamentoContext';
 import gsap from 'gsap';
 
@@ -26,8 +26,7 @@ const Inicio = () => {
     const fechaMin = new Date().toISOString().split('T')[0];
 
     useEffect(() => {
-        const todas = obtenerSucursalesOrdenadas();
-        setSucursalesAll(todas);
+        getSucursales().then(data => setSucursalesAll(data));
     }, []);
 
     useEffect(() => {
