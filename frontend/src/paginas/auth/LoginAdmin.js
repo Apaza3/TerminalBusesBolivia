@@ -41,14 +41,12 @@ const LoginAdmin = () => {
         setError(null);
         setLoading(true);
         try {
-            const { loginStaff } = await import('../../data/mockAuthDB');
-            const resultado = loginStaff(email, password);
+            const resultado = await login(email, password, recordar);
             if (!resultado.exito) {
                 setError(resultado.error || 'Credenciales inválidas.');
                 setLoading(false);
                 return;
             }
-            await login(email, password, recordar);
             navigate(ROL_REDIRECT[resultado.usuario?.rol] || '/admin/dashboard', { replace: true });
         } catch {
             setError('Error inesperado. Intenta de nuevo.');
