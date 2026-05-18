@@ -81,6 +81,27 @@ export async function getViaje(id) {
   return data;
 }
 
+export async function getBusesSucursal(sucursalId) {
+  const { data, error } = await supabase
+    .from('buses')
+    .select('id,placa,marca,modelo,capacidad,pisos,columnas,tiene_bano,amenidades,estado,categoria,anio')
+    .eq('sucursal_id', sucursalId)
+    .order('placa');
+  if (error) { console.error('getBusesSucursal:', error.message); return []; }
+  return data || [];
+}
+
+export async function getUsuariosSucursal(sucursalId) {
+  const { data, error } = await supabase
+    .from('usuarios')
+    .select('id,email,nombre_completo,ci,telefono,rol,activo,departamentos(nombre)')
+    .eq('sucursal_id', sucursalId)
+    .in('rol', ['admin_sucursal', 'cajero', 'conductor'])
+    .order('rol');
+  if (error) { console.error('getUsuariosSucursal:', error.message); return []; }
+  return (data || []).map(u => ({ ...u, departamento: u.departamentos?.nombre || '' }));
+}
+
 export async function getViajesSucursal(sucursalId, fecha) {
   const f = fecha || new Date().toISOString().split('T')[0];
   const { data, error } = await supabase
