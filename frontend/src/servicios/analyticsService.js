@@ -48,7 +48,11 @@ export const obtenerKPIsGlobales = async (filtros = {}) => {
 export const obtenerRendimientoRutas = async (filtros = {}) => {
     if (USE_MOCK_DATA) {
         const ocupacion = obtenerAnalisisOcupacion();
-        return INGRESOS_POR_RUTA.map(r => {
+        const ciudad = filtros.departamento || null;
+        const rutasFiltradas = ciudad
+            ? INGRESOS_POR_RUTA.filter(r => r.ruta.startsWith(ciudad + ' →'))
+            : INGRESOS_POR_RUTA;
+        return rutasFiltradas.map(r => {
             const ocup = ocupacion.find(o => o.ruta === r.ruta);
             const incidencias = JSON.parse(localStorage.getItem('tbb_incidencias') || '[]')
                 .filter(i => i.descripcion?.toLowerCase().includes(r.ruta.split(' → ')[0].toLowerCase())).length;

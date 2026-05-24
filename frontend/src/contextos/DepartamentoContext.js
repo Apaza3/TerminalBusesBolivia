@@ -7,16 +7,90 @@
  */
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
+// Paleta oficial por departamento — fuente de verdad para toda la UI
 export const DEPARTAMENTOS = {
-    'La Paz':     { color: '#2563eb', colorSecundario: '#1e40af', bg: '#0f1d3d', acento: '#60a5fa', emoji: '🏔️' },
-    'Cochabamba': { color: '#059669', colorSecundario: '#065f46', bg: '#0a1e17', acento: '#6ee7b7', emoji: '🌿' },
-    'Santa Cruz': { color: '#d97706', colorSecundario: '#92400e', bg: '#1c1207', acento: '#fcd34d', emoji: '🌴' },
-    'Oruro':      { color: '#7c3aed', colorSecundario: '#4c1d95', bg: '#130d22', acento: '#c4b5fd', emoji: '⛏️' },
-    'Potosí':     { color: '#64748b', colorSecundario: '#334155', bg: '#0d1117', acento: '#cbd5e1', emoji: '🏺' },
-    'Sucre':      { color: '#b45309', colorSecundario: '#78350f', bg: '#1c1007', acento: '#fde68a', emoji: '🏛️' },
-    'Tarija':     { color: '#be123c', colorSecundario: '#881337', bg: '#1c0710', acento: '#fda4af', emoji: '🍇' },
-    'Trinidad':   { color: '#0d9488', colorSecundario: '#115e59', bg: '#071a19', acento: '#99f6e4', emoji: '🌊' },
-    'Cobija':     { color: '#65a30d', colorSecundario: '#3f6212', bg: '#0d1a04', acento: '#bef264', emoji: '🌳' },
+    'La Paz': {
+        primary: '#00F0FF', primaryText: '#0B1120',
+        secondary: '#FF2A85', secondaryText: '#FFFFFF',
+        success: '#4EE4C1', alertBg: '#C10E6C',
+        bandera1: '#E63946', bandera2: '#2A9D8F',
+        emoji: '🏔️',
+        // aliases para compatibilidad con componentes anteriores
+        color: '#00F0FF', colorSecundario: '#FF2A85',
+        bg: '#0B1120', acento: '#4EE4C1',
+    },
+    'Oruro': {
+        primary: '#FF6B00', primaryText: '#FFFFFF',
+        secondary: '#D90429', secondaryText: '#FFFFFF',
+        success: '#FFD600', alertBg: '#8D0801',
+        bandera1: '#D90429', bandera2: '#FF6B00',
+        emoji: '🎭',
+        color: '#FF6B00', colorSecundario: '#D90429',
+        bg: '#0B1120', acento: '#FFD600',
+    },
+    'Potosí': {
+        primary: '#90E0EF', primaryText: '#0B1120',
+        secondary: '#C1121F', secondaryText: '#FFFFFF',
+        success: '#E2E8F0', alertBg: '#780000',
+        bandera1: '#C1121F', bandera2: '#E2E8F0',
+        emoji: '⛏️',
+        color: '#90E0EF', colorSecundario: '#C1121F',
+        bg: '#0B1120', acento: '#E2E8F0',
+    },
+    'Cochabamba': {
+        primary: '#00F0FF', primaryText: '#0B1120',
+        secondary: '#7209B7', secondaryText: '#FFFFFF',
+        success: '#48CAE4', alertBg: '#023E8A',
+        bandera1: '#48CAE4', bandera2: '#0077B6',
+        emoji: '🏞️',
+        color: '#00F0FF', colorSecundario: '#7209B7',
+        bg: '#0B1120', acento: '#48CAE4',
+    },
+    'Chuquisaca': {
+        primary: '#EF233C', primaryText: '#FFFFFF',
+        secondary: '#F8FAFC', secondaryText: '#0B1120',
+        success: '#F48C06', alertBg: '#9A031E',
+        bandera1: '#F8FAFC', bandera2: '#EF233C',
+        emoji: '🏛️',
+        color: '#EF233C', colorSecundario: '#F8FAFC',
+        bg: '#0B1120', acento: '#F48C06',
+    },
+    'Tarija': {
+        primary: '#70E000', primaryText: '#0B1120',
+        secondary: '#9D0208', secondaryText: '#FFFFFF',
+        success: '#CCFF33', alertBg: '#6A040F',
+        bandera1: '#9D0208', bandera2: '#F8FAFC',
+        emoji: '🍇',
+        color: '#70E000', colorSecundario: '#9D0208',
+        bg: '#0B1120', acento: '#CCFF33',
+    },
+    'Santa Cruz': {
+        primary: '#39FF14', primaryText: '#0B1120',
+        secondary: '#FFD166', secondaryText: '#0B1120',
+        success: '#06D6A0', alertBg: '#2D6A4F',
+        bandera1: '#06D6A0', bandera2: '#F8FAFC',
+        emoji: '🌴',
+        color: '#39FF14', colorSecundario: '#FFD166',
+        bg: '#0B1120', acento: '#06D6A0',
+    },
+    'Beni': {
+        primary: '#FEE440', primaryText: '#0B1120',
+        secondary: '#00BBF9', secondaryText: '#0B1120',
+        success: '#00F5D4', alertBg: '#004B23',
+        bandera1: '#38B000', bandera2: '#FEE440',
+        emoji: '🌅',
+        color: '#FEE440', colorSecundario: '#00BBF9',
+        bg: '#0B1120', acento: '#00F5D4',
+    },
+    'Pando': {
+        primary: '#06D6A0', primaryText: '#0B1120',
+        secondary: '#118AB2', secondaryText: '#FFFFFF',
+        success: '#FFD166', alertBg: '#073B4C',
+        bandera1: '#FFFFFF', bandera2: '#06D6A0',
+        emoji: '🌳',
+        color: '#06D6A0', colorSecundario: '#118AB2',
+        bg: '#0B1120', acento: '#FFD166',
+    },
 };
 
 export const DEPARTAMENTO_DEFAULT = 'La Paz';
@@ -65,10 +139,10 @@ export const ciudadADepartamento = (ciudad) => {
         'Santa Cruz': 'Santa Cruz', 'Montero': 'Santa Cruz',
         'Oruro': 'Oruro',
         'Potosí': 'Potosí', 'Uyuni': 'Potosí',
-        'Sucre': 'Sucre',
+        'Sucre': 'Chuquisaca', 'Chuquisaca': 'Chuquisaca',
         'Tarija': 'Tarija',
-        'Trinidad': 'Trinidad',
-        'Cobija': 'Cobija',
+        'Trinidad': 'Beni', 'Beni': 'Beni',
+        'Cobija': 'Pando', 'Pando': 'Pando',
     };
     return mapa[ciudad] || DEPARTAMENTO_DEFAULT;
 };
