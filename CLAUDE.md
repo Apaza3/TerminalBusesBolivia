@@ -1,25 +1,26 @@
 # Terminal Buses Bolivia — Estado del Proyecto
 
-> **Rama activa:** `v7/apaza/paneles-empleados` (dentro de `v7/main`)
-> **Stack:** React 19 (frontend) · Express + WebSocket (backend) · localStorage (sin Supabase por ahora)
+> **Rama base activa:** `feature/supabase-ui-fix` (stack: React 19 + Supabase real)
+> **Stack:** React 19 (frontend) · Supabase (DB + Auth) · Express + WebSocket (backend)
 > **Build:** ✅ Compila sin errores
 
 ---
 
-## 🌿 ESTRATEGIA DE RAMAS (v7+)
+## 🌿 ESTRATEGIA DE RAMAS (actual)
 
 ```
-v7/main                          ← rama base de la versión 7
-└── v7/apaza/<modulo>            ← rama por módulo, con nombre del dev
-    └── commits funcionales      ← cada commit = feature/fix completo
+main
+└── feature/supabase-ui-fix          ← base actual — auth real + panel admin
+    └── mejorando_diseño_pt2         ← rama activa — cambios de diseño UI/UX
 ```
 
-**Reglas:**
-- Nunca salir de `v7/main` o sus hijas hasta indicación explícita.
-- Cada módulo tiene su propia rama hija de `v7/main`.
-- Commits solo cuando el cambio es funcional (no WIP).
-- Merge a `v7/main` al terminar el módulo.
-- Módulos actuales: `v7/apaza/paneles-empleados`
+**Reglas — OBLIGATORIO seguir:**
+1. Nunca commitear directo a `main` ni a `feature/supabase-ui-fix`.
+2. **NO crear ramas nuevas** sin autorización explícita del usuario. Todos los cambios van a la rama activa actual (`mejorando_diseño_pt2`).
+3. Commits solo cuando el cambio es funcional y compila sin errores (no WIP).
+4. Merge siempre con `--no-ff` y solo con autorización explícita del usuario.
+5. Cherry-pick nunca como estrategia principal.
+6. **Rama activa actual: `mejorando_diseño_pt2`** — quedarse aquí hasta que el usuario indique cambio.
 
 ---
 

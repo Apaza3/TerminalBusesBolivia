@@ -52,6 +52,7 @@ const PerfilIndicador = () => {
             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                 <Link
                     to="/login-cliente"
+                    className="nav-auth-btn"
                     style={{
                         padding: '0.45rem 0.9rem', borderRadius: '8px',
                         background: 'rgba(99,102,241,0.15)', color: '#a5b4fc',
@@ -64,6 +65,7 @@ const PerfilIndicador = () => {
                 </Link>
                 <Link
                     to="/registro"
+                    className="nav-auth-btn"
                     style={{
                         padding: '0.45rem 0.9rem', borderRadius: '8px',
                         background: '#10b981', color: 'white',
@@ -160,10 +162,16 @@ const PerfilIndicador = () => {
                         </button>
                     )}
                     {perfil?.rol === 'cliente' && (
-                        <button onClick={() => { navigate('/mis-viajes'); setAbierto(false); }}
-                            style={{ ...menuItemStyle }}>
-                            🗺️ Mis Viajes
-                        </button>
+                        <>
+                            <button onClick={() => { navigate('/mis-viajes'); setAbierto(false); }}
+                                style={{ ...menuItemStyle }}>
+                                🗺️ Mis Viajes
+                            </button>
+                            <button onClick={() => { navigate('/mis-viajes'); setAbierto(false); }}
+                                style={{ ...menuItemStyle }}>
+                                🎫 Boletos Recientes
+                            </button>
+                        </>
                     )}
                     <button onClick={() => { navigate('/perfil/editar'); setAbierto(false); }}
                         style={{ ...menuItemStyle }}>

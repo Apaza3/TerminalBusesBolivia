@@ -42,8 +42,8 @@ export async function getSucursal(id) {
 
 // ── Viajes ────────────────────────────────────────────────
 export async function buscarViajes(origen, destino, fecha) {
-  if (!origen || !destino || !fecha) return [];
-  const { data, error } = await supabase
+  if (!origen || !destino) return [];
+  let q = supabase
     .from('viajes')
     .select(`
       id,origen,destino,fecha_salida,precio,duracion_estimada,estado,anden,
@@ -52,10 +52,16 @@ export async function buscarViajes(origen, destino, fecha) {
     `)
     .eq('origen', origen)
     .eq('destino', destino)
-    .gte('fecha_salida', `${fecha}T00:00:00`)
-    .lte('fecha_salida', `${fecha}T23:59:59`)
     .in('estado', ['programado', 'autorizado'])
     .order('fecha_salida');
+  if (fecha) {
+    q = q.gte('fecha_salida', `${fecha}T00:00:00`).lte('fecha_salida', `${fecha}T23:59:59`);
+  } else {
+    const hoy = new Date().toISOString().split('T')[0];
+    const limite = new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0];
+    q = q.gte('fecha_salida', `${hoy}T00:00:00`).lte('fecha_salida', `${limite}T23:59:59`);
+  }
+  const { data, error } = await q;
   if (error) { console.error('buscarViajes:', error.message); return []; }
   return (data || []).map(v => ({
     ...v,
@@ -112,5 +118,75 @@ export async function getViajesSucursal(sucursalId, fecha) {
     .lte('fecha_salida', `${f}T23:59:59`)
     .order('fecha_salida');
   if (error) return [];
+  return data || [];
+}
+
+export async function getViajesSucursalProximos(sucursalId, dias = 30) {
+  const hoy = new Date().toISOString().split('T')[0];
+  const limite = new Date(Date.now() + dias * 86400000).toISOString().split('T')[0];
+  const { data, error } = await supabase
+    .from('viajes')
+    .select('id,origen,destino,fecha_salida,precio,duracion_estimada,estado,anden,buses(id,placa,capacidad,pisos,tiene_bano,amenidades)')
+    .eq('sucursal_id', sucursalId)
+    .gte('fecha_salida', `${hoy}T00:00:00`)
+    .lte('fecha_salida', `${limite}T23:59:59`)
+    .in('estado', ['programado','autorizado'])
+    .order('fecha_salida')
+    .limit(80);
+  if (error) { console.error('getViajesSucursalProximos:', error.message); return []; }
+  return data || [];
+}
+
+export async function getTodosViajesSucursal(sucursalId) {
+  const { data, error } = await supabase
+    .from('viajes')
+    .select('id,origen,destino,fecha_salida,precio,duracion_estimada,estado,anden,buses(id,placa,capacidad,pisos,tiene_bano,amenidades)')
+    .eq('sucursal_id', sucursalId)
+    .order('fecha_salida')
+    .limit(120);
+  if (error) { console.error('getTodosViajesSucursal:', error.message); return []; }
+  return data || [];
+}
+
+export async function getTodosViajesPorCiudad(ciudad) {
+  const { data, error } = await supabase
+    .from('viajes')
+    .select('id,origen,destino,fecha_salida,precio,duracion_estimada,estado,anden,sucursales(id,nombre,logo_emoji,color_accent,ranking,ciudad),buses(id,placa,capacidad,pisos,tiene_bano,amenidades)')
+    .eq('origen', ciudad)
+    .order('fecha_salida')
+    .limit(120);
+  if (error) { console.error('getTodosViajesPorCiudad:', error.message); return []; }
+  return data || [];
+}
+
+export async function buscarClientePorCI(ci) {
+  const { data, error } = await supabase
+    .from('usuarios')
+    .select('ci,nombre_completo,telefono,email')
+    .eq('ci', ci)
+    .eq('rol', 'cliente')
+    .maybeSingle();
+  if (error || !data) return null;
+  return {
+    ci: data.ci,
+    nombreCompleto: data.nombre_completo || '',
+    telefono: data.telefono || '',
+    email: data.email || '',
+  };
+}
+
+export async function getViajesPorCiudad(ciudad, dias = 30) {
+  const hoy = new Date().toISOString().split('T')[0];
+  const limite = new Date(Date.now() + dias * 86400000).toISOString().split('T')[0];
+  const { data, error } = await supabase
+    .from('viajes')
+    .select('id,origen,destino,fecha_salida,precio,duracion_estimada,estado,anden,sucursales(id,nombre,logo_emoji,color_accent,ranking,ciudad),buses(id,placa,capacidad,pisos,tiene_bano,amenidades)')
+    .eq('origen', ciudad)
+    .gte('fecha_salida', `${hoy}T00:00:00`)
+    .lte('fecha_salida', `${limite}T23:59:59`)
+    .in('estado', ['programado','autorizado'])
+    .order('fecha_salida')
+    .limit(80);
+  if (error) { console.error('getViajesPorCiudad:', error.message); return []; }
   return data || [];
 }
