@@ -1,6 +1,5 @@
 // [Académico] Sprint 5 - Rendimiento por ruta R23
 import React, { useEffect, useState, useMemo, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contextos/AuthContext';
 import { DEPARTAMENTOS } from '../../contextos/DepartamentoContext';
 import { obtenerRendimientoRutas } from '../../servicios/analyticsService';
@@ -16,7 +15,6 @@ const badgeColor = (estado) => {
 };
 
 const RendimientoRutas = () => {
-    const navigate = useNavigate();
     const { perfil } = useAuth();
     const deptNombre = perfil?.departamento || 'La Paz';
     const tema = DEPARTAMENTOS[deptNombre] || DEPARTAMENTOS['La Paz'];
@@ -36,7 +34,7 @@ const RendimientoRutas = () => {
     useEffect(() => {
         setCargando(true);
         // [Académico] Sprint 5 - R23: cargar rendimiento de rutas desde analyticsService
-        obtenerRendimientoRutas().then(data => {
+        obtenerRendimientoRutas({ departamento: deptNombre }).then(data => {
             setRutas(data);
             setCargando(false);
         });
@@ -59,33 +57,30 @@ const RendimientoRutas = () => {
     }));
 
     return (
-        <div ref={containerRef} className="pagina-admin" style={{ background: '#0f172a', minHeight: '100vh', color: '#f1f5f9', fontFamily: "'Inter', system-ui, sans-serif" }}>
-
-            {/* Header */}
-            <div data-anim="seccion" style={{
-                background: `linear-gradient(135deg, ${tema.bg} 0%, ${tema.colorSecundario}55 100%)`,
-                borderBottom: `2px solid ${tema.color}40`,
-                padding: '1rem 2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            }}>
-                <div>
-                    <button onClick={() => navigate(-1)} style={{
-                        background: `${tema.color}15`, border: `1px solid ${tema.color}40`,
-                        color: tema.acento, padding: '0.35rem 0.75rem', borderRadius: 7,
-                        cursor: 'pointer', fontSize: '0.78rem', marginBottom: '0.35rem',
-                    }}>← Volver</button>
-                    <div style={{ fontWeight: 800, fontSize: '1.15rem' }}>🛣️ Rendimiento por Ruta</div>
-                    <div style={{ fontSize: '0.75rem', color: tema.acento, opacity: 0.75 }}>
-                        R23 — Análisis de rendimiento operativo por ruta
-                    </div>
-                </div>
-                <ExportReportes
-                    titulo="Rendimiento por Ruta — Terminal Buses Bolivia"
-                    columnas={COLS_PDF} filas={filasExport}
-                    datosExcel={datosExcel} nombreArchivo="rendimiento_rutas"
-                />
-            </div>
+        <div ref={containerRef} style={{ color: '#f1f5f9', fontFamily: "'Inter', system-ui, sans-serif" }}>
 
             <div style={{ maxWidth: 1000, margin: '2rem auto', padding: '0 1rem' }}>
+
+                {/* Título */}
+                <div data-anim="seccion" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
+                    <div>
+                        <div style={{
+                            fontSize: 'clamp(1.5rem,3.5vw,2rem)', fontWeight: 900,
+                            background: `linear-gradient(90deg, ${tema.color}, ${tema.colorSecundario})`,
+                            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                            fontFamily: "'Rajdhani', system-ui, sans-serif",
+                            textTransform: 'uppercase', lineHeight: 1.1,
+                        }}>Rendimiento por Ruta</div>
+                        <div style={{ fontSize: '0.73rem', color: '#64748b', marginTop: '0.2rem' }}>
+                            Análisis de rendimiento operativo por ruta
+                        </div>
+                    </div>
+                    <ExportReportes
+                        titulo="Rendimiento por Ruta — Terminal Buses Bolivia"
+                        columnas={COLS_PDF} filas={filasExport}
+                        datosExcel={datosExcel} nombreArchivo="rendimiento_rutas"
+                    />
+                </div>
 
                 {/* Orden selector */}
                 <div data-anim="seccion" style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>

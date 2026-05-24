@@ -73,28 +73,24 @@ const AdminDashboard = () => {
     return (
         <div style={{ minHeight: '100vh', color: '#dde5f0', fontFamily: "'Inter', system-ui, sans-serif" }}>
 
-            {/* Header */}
-            <header style={{
-                background: `linear-gradient(135deg, ${tema.bg} 0%, ${tema.colorSecundario}50 100%)`,
-                borderBottom: `2px solid ${tema.color}40`,
-                padding: '1rem 2rem',
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                position: 'sticky', top: 0, zIndex: 10,
-            }}>
-                <div>
-                    <div style={{ fontWeight: 700, fontSize: '1.1rem', color: '#f1f5f9' }}>
-                        {perfil?.sucursal_logo || '🏢'} {perfil?.sucursal_nombre || 'Dashboard Admin'}
-                    </div>
-                    <div style={{ fontSize: '0.72rem', color: tema.acento, marginTop: '0.15rem' }}>
-                        {deptNombre} · Panel de Administración
-                    </div>
-                </div>
-                <div style={{ fontSize: '0.82rem', color: '#64748b' }}>
-                    {perfil?.nombre_completo || perfil?.email}
-                </div>
-            </header>
+<div style={{ padding: '1.75rem 2rem' }}>
 
-            <div style={{ padding: '1.75rem 2rem' }}>
+                {/* Título */}
+                <div style={{ marginBottom: '1.75rem' }}>
+                    <div style={{
+                        fontSize: 'clamp(1.6rem,4vw,2.2rem)', fontWeight: 900,
+                        letterSpacing: '-0.02em', lineHeight: 1,
+                        background: `linear-gradient(90deg, ${tema.color}, ${tema.colorSecundario})`,
+                        WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                        fontFamily: "'Rajdhani', system-ui, sans-serif",
+                        textTransform: 'uppercase',
+                    }}>
+                        Dashboard
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: `${tema.acento}90`, marginTop: '0.3rem', letterSpacing: '0.12em', fontFamily: "'Rajdhani', system-ui, sans-serif", textTransform: 'uppercase' }}>
+                        {perfil?.sucursal_nombre || 'Administración'} · {deptNombre}
+                    </div>
+                </div>
 
                 {/* KPIs */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
