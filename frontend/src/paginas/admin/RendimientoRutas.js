@@ -36,7 +36,7 @@ const RendimientoRutas = () => {
     useEffect(() => {
         setCargando(true);
         // [Académico] Sprint 5 - R23: cargar rendimiento de rutas desde analyticsService
-        obtenerRendimientoRutas().then(data => {
+        obtenerRendimientoRutas({ departamento: deptNombre }).then(data => {
             setRutas(data);
             setCargando(false);
         });
