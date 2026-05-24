@@ -10,12 +10,15 @@
  */
 
 const STORAGE_KEYS = {
-    RESERVAS: 'tbb_reservas',
-    ESTADO_VIAJES: 'tbb_estado_viajes',
-    ASIENTOS_PENDIENTES: 'tbb_asientos_pendientes',
-    VENTAS: 'tbb_ventas',
-    BOLETOS: 'tbb_boletos',
-    QR_PAGOS: 'tbb_qr_pagos',
+    RESERVAS:           'tbb_reservas',
+    ESTADO_VIAJES:      'tbb_estado_viajes',
+    ASIENTOS_PENDIENTES:'tbb_asientos_pendientes',
+    VENTAS:             'tbb_ventas',
+    BOLETOS:            'tbb_boletos',
+    QR_PAGOS:           'tbb_qr_pagos',
+    NOTIFICACIONES:     'tbb_notificaciones',
+    INCIDENTES:         'tbb_incidentes',
+    VIAJES_FINALIZADOS: 'tbb_viajes_finalizados',
 };
 
 const generarUID = () =>
@@ -53,7 +56,7 @@ export const validarDisponibilidad = (viajeId, asientos) => {
     return { disponible: conflictos.length === 0, conflictos };
 };
 
-export const crearReserva = ({ viajeId, pasajeroNombre, pasajeroCI, pasajeroTelefono, asientos, busPlaca, origen, destino, precio, fechaSalida, pasajeros, metodoPago }) => {
+export const crearReserva = ({ viajeId, pasajeroNombre, pasajeroCI, pasajeroTelefono, pasajeroEmail, asientos, busPlaca, origen, destino, precio, fechaSalida, pasajeros, metodoPago, sucursalId, empresaId }) => {
     // Double-booking validation
     const { disponible, conflictos } = validarDisponibilidad(viajeId, asientos);
     if (!disponible) {
@@ -68,6 +71,7 @@ export const crearReserva = ({ viajeId, pasajeroNombre, pasajeroCI, pasajeroTele
         pasajeroNombre,
         pasajeroCI,
         pasajeroTelefono: pasajeroTelefono || '',
+        pasajeroEmail:    pasajeroEmail    || '',
         asientos,
         pasajeros: pasajeros || {},
         busPlaca: busPlaca || 'ABC-1234',
@@ -76,6 +80,8 @@ export const crearReserva = ({ viajeId, pasajeroNombre, pasajeroCI, pasajeroTele
         precio: precio || asientos.length * 45,
         fechaSalida: fechaSalida || new Date().toISOString(),
         metodoPago: metodoPago || 'efectivo',
+        sucursalId: sucursalId || null,
+        empresaId:  empresaId  || null,
         estado: 'confirmada',
         creadoEn: new Date().toISOString(),
     };
@@ -99,26 +105,29 @@ export const registrarVenta = (reserva) => {
     const ventas = leer(STORAGE_KEYS.VENTAS) || [];
     ventas.push({
         id: 'venta-' + Date.now(),
-        reservaId: reserva.id,
-        ruta: `${reserva.origen} → ${reserva.destino}`,
-        monto: reserva.precio,
-        boletos: reserva.asientos.length,
-        fecha: new Date().toISOString(),
+        reservaId:  reserva.id,
+        ruta:       `${reserva.origen} → ${reserva.destino}`,
+        monto:      reserva.precio,
+        boletos:    reserva.asientos.length,
+        sucursalId: reserva.sucursalId || null,
+        empresaId:  reserva.empresaId  || null,
+        fecha:      new Date().toISOString(),
     });
     guardar(STORAGE_KEYS.VENTAS, ventas);
 };
 
-/**
- * Get all sales (for analytics dashboard).
- */
-export const obtenerVentas = () => {
-    return leer(STORAGE_KEYS.VENTAS) || [];
+export const obtenerVentas = (sucursalId = null) => {
+    const ventas = leer(STORAGE_KEYS.VENTAS) || [];
+    if (sucursalId) return ventas.filter(v => v.sucursalId === sucursalId);
+    return ventas;
 };
 
-export const obtenerReservas = (viajeId = null) => {
+export const obtenerReservas = (viajeId = null, sucursalId = null) => {
     const reservas = leer(STORAGE_KEYS.RESERVAS) || [];
-    if (viajeId) return reservas.filter(r => r.viajeId === viajeId);
-    return reservas;
+    let result = reservas;
+    if (viajeId)    result = result.filter(r => r.viajeId    === viajeId);
+    if (sucursalId) result = result.filter(r => r.sucursalId === sucursalId);
+    return result;
 };
 
 export const obtenerReservaPorId = (id) => {
@@ -151,7 +160,7 @@ export const cancelarViaje = (viajeId) => {
 
 // ── Asientos Pendientes (Timer) ──────────────────────
 
-export const marcarAsientosPendientes = (viajeId, asientos) => {
+export const marcarAsientosPendientes = (viajeId, asientos, sesionId = null) => {
     const pendientes = leer(STORAGE_KEYS.ASIENTOS_PENDIENTES) || [];
     const ahora = Date.now();
 
@@ -162,6 +171,7 @@ export const marcarAsientosPendientes = (viajeId, asientos) => {
         pendientes.push({
             viajeId,
             asiento,
+            sesionId,
             marcadoEn: ahora,
             expiraEn: ahora + (10 * 60 * 1000), // 10 minutos (RN)
         });
@@ -236,6 +246,7 @@ export const crearBoletos = (reserva, datosPasajeros) => {
             asiento,
             pasajeroNombre: p.nombre || reserva.pasajeroNombre,
             pasajeroCI: p.ci || reserva.pasajeroCI,
+            pasajeroEmail: p.email || '',
             origen: reserva.origen,
             destino: reserva.destino,
             fechaSalida: reserva.fechaSalida,
@@ -280,6 +291,107 @@ export const obtenerBoletosViaje = (viajeId) => {
     return boletos.filter(b => b.viajeId === viajeId);
 };
 
+// ── Notificaciones del sistema ───────────────────────
+// para: 'admin' | 'cajero' | 'cliente'
+// Admins/cajeros → filtrar por sucursalId; clientes → filtrar por clienteCI
+
+export const crearNotificacion = ({ tipo, para, sucursalId, clienteCI, viajeId, busPlaca, mensaje }) => {
+    const notifs = leer(STORAGE_KEYS.NOTIFICACIONES) || [];
+    const nueva = {
+        id: 'notif-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
+        tipo:       tipo       || 'incidente',
+        para,
+        sucursalId: sucursalId || null,
+        clienteCI:  clienteCI  || null,
+        viajeId:    viajeId    || null,
+        busPlaca:   busPlaca   || null,
+        mensaje,
+        leido:     false,
+        creadoEn:  new Date().toISOString(),
+    };
+    notifs.push(nueva);
+    guardar(STORAGE_KEYS.NOTIFICACIONES, notifs);
+    return nueva;
+};
+
+export const obtenerNotificaciones = ({ para, sucursalId, clienteCI, soloNoLeidas } = {}) => {
+    const notifs = leer(STORAGE_KEYS.NOTIFICACIONES) || [];
+    return notifs.filter(n => {
+        if (n.para !== para) return false;
+        if (para === 'cliente'  && clienteCI  && n.clienteCI  !== clienteCI)  return false;
+        if (para !== 'cliente'  && sucursalId && n.sucursalId !== sucursalId) return false;
+        if (soloNoLeidas && n.leido) return false;
+        return true;
+    });
+};
+
+export const marcarNotificacionLeida = (id) => {
+    const notifs = leer(STORAGE_KEYS.NOTIFICACIONES) || [];
+    const idx = notifs.findIndex(n => n.id === id);
+    if (idx !== -1) { notifs[idx].leido = true; guardar(STORAGE_KEYS.NOTIFICACIONES, notifs); }
+};
+
+export const marcarTodasLeidas = ({ para, sucursalId, clienteCI } = {}) => {
+    const notifs = leer(STORAGE_KEYS.NOTIFICACIONES) || [];
+    notifs.forEach((n, i) => {
+        if (n.para !== para) return;
+        if (para === 'cliente' && clienteCI && n.clienteCI !== clienteCI) return;
+        if (para !== 'cliente' && sucursalId && n.sucursalId !== sucursalId) return;
+        notifs[i].leido = true;
+    });
+    guardar(STORAGE_KEYS.NOTIFICACIONES, notifs);
+};
+
+// ── Incidentes (registros para admin) ───────────────
+
+export const crearIncidente = ({ viajeId, busPlaca, conductor, ayudante, origen, destino, salida, tipo, descripcion, sucursalId }) => {
+    const lista = leer(STORAGE_KEYS.INCIDENTES) || [];
+    const nuevo = {
+        id: 'inc-' + Date.now(),
+        viajeId, busPlaca, conductor, ayudante,
+        origen, destino, salida, tipo, descripcion,
+        sucursalId: sucursalId || null,
+        fecha:      new Date().toLocaleDateString('es-BO'),
+        hora:       new Date().toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' }),
+        creadoEn:   new Date().toISOString(),
+    };
+    lista.push(nuevo);
+    guardar(STORAGE_KEYS.INCIDENTES, lista);
+    return nuevo;
+};
+
+export const obtenerIncidentes = (sucursalId = null) => {
+    const lista = leer(STORAGE_KEYS.INCIDENTES) || [];
+    if (sucursalId) return lista.filter(i => i.sucursalId === sucursalId);
+    return lista;
+};
+
+// ── Viajes Finalizados (resumen para admin) ──────────
+
+export const registrarViajeFinalizados = ({ viajeId, busPlaca, origen, destino, salida, sucursalId, pasajeros }) => {
+    const lista = leer(STORAGE_KEYS.VIAJES_FINALIZADOS) || [];
+    const existente = lista.findIndex(v => v.viajeId === viajeId);
+    const registro = {
+        viajeId, busPlaca, origen, destino, salida,
+        sucursalId: sucursalId || null,
+        pasajeros:  pasajeros  || [],
+        totalPasajeros: (pasajeros || []).length,
+        finalizadoEn: new Date().toISOString(),
+        fecha: new Date().toLocaleDateString('es-BO'),
+        hora:  new Date().toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' }),
+    };
+    if (existente !== -1) lista[existente] = registro;
+    else lista.push(registro);
+    guardar(STORAGE_KEYS.VIAJES_FINALIZADOS, lista);
+    return registro;
+};
+
+export const obtenerViajesFinalizados = (sucursalId = null) => {
+    const lista = leer(STORAGE_KEYS.VIAJES_FINALIZADOS) || [];
+    if (sucursalId) return lista.filter(v => v.sucursalId === sucursalId);
+    return lista;
+};
+
 // ── QR Payment tokens ────────────────────────────────
 
 export const crearTokenQR = (datosViaje) => {
@@ -312,8 +424,8 @@ export const crearReservaConEstado = (datos, estado) => {
     if (!disponible) return { error: true, mensaje: `Asientos ya reservados: ${conflictos.join(', ')}` };
 
     const reservas = leer(STORAGE_KEYS.RESERVAS) || [];
-    // Test timing: 3 min for efectivo/documentos timers (instead of 3h)
-    const TIMER_MS = 3 * 60 * 1000;
+    // QR/tarjeta: 10 min · efectivo: 30 min (reducido de 3h para pruebas)
+    const TIMER_MS = estado === 'pendiente_efectivo' ? 3 * 60 * 1000 : 10 * 60 * 1000;
     const nueva = {
         id: generarId(),
         ...datos,
@@ -355,29 +467,14 @@ export const verificarExpiradas = () => {
 };
 
 export default {
-    crearReserva,
-    validarDisponibilidad,
-    registrarVenta,
-    obtenerVentas,
-    obtenerReservas,
-    obtenerReservaPorId,
-    obtenerEstadoViaje,
-    actualizarEstadoViaje,
-    cancelarViaje,
-    marcarAsientosPendientes,
-    liberarAsientosBloqueados,
-    obtenerAsientosPendientes,
-    liberarAsientosExpirados,
-    crearBoletos,
-    obtenerBoletos,
-    validarBoleto,
-    marcarAbordado,
-    obtenerBoletosViaje,
-    crearTokenQR,
-    obtenerEstadoQR,
-    actualizarEstadoQR,
-    crearReservaConEstado,
-    actualizarEstadoReserva,
-    verificarExpiradas,
+    crearReserva, validarDisponibilidad, registrarVenta, obtenerVentas,
+    obtenerReservas, obtenerReservaPorId, obtenerEstadoViaje, actualizarEstadoViaje,
+    cancelarViaje, marcarAsientosPendientes, liberarAsientosBloqueados,
+    obtenerAsientosPendientes, liberarAsientosExpirados, crearBoletos, obtenerBoletos,
+    validarBoleto, marcarAbordado, obtenerBoletosViaje, crearTokenQR, obtenerEstadoQR,
+    actualizarEstadoQR, crearReservaConEstado, actualizarEstadoReserva, verificarExpiradas,
+    crearNotificacion, obtenerNotificaciones, marcarNotificacionLeida, marcarTodasLeidas,
+    crearIncidente, obtenerIncidentes,
+    registrarViajeFinalizados, obtenerViajesFinalizados,
     VIAJES_CONDUCTOR_MOCK,
 };
