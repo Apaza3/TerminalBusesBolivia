@@ -1,11 +1,16 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contextos/AuthContext';
+import { DEPARTAMENTOS } from '../../contextos/DepartamentoContext';
 import { supabase } from '../../servicios/supabase';
 import '../../estilos/escritorio/admin.css';
 import '../../estilos/movil/admin-responsivo.css';
 
 const RegistroTripulacion = () => {
     const navigate = useNavigate();
+    const { perfil } = useAuth();
+    const deptNombre = perfil?.departamento || 'La Paz';
+    const tema = DEPARTAMENTOS[deptNombre] || DEPARTAMENTOS['La Paz'];
 
     // Estado del formulario
     const [formData, setFormData] = useState({
@@ -159,153 +164,127 @@ const RegistroTripulacion = () => {
         }
     };
 
+    const inputStyle = {
+        width: '100%', background: '#0f172a', border: '1px solid #334155',
+        color: '#f1f5f9', borderRadius: 8, padding: '0.55rem 0.75rem',
+        fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box',
+    };
+    const labelStyle = { fontSize: '0.72rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.35rem', display: 'block' };
+
     return (
-        <div className="pagina-admin">
-            <div className="admin-banner">
-                <span className="admin-banner-icono">🛡️</span>
-                Panel Administrativo Seguro
-            </div>
+        <div style={{ color: '#f1f5f9', fontFamily: "'Inter', system-ui, sans-serif", padding: '1.5rem 1rem 2rem' }}>
 
-            <div className="admin-header">
-                <button className="btn-volver-admin" onClick={() => navigate('/admin/dashboard')}>
-                    ← Volver
-                </button>
-                <div>
-                    <h1>Registro de Tripulación</h1>
-                    <div className="admin-header-sub">Agregue nuevos conductores y asigne roles.</div>
-                </div>
-            </div>
+            <div style={{ maxWidth: 680, margin: '0 auto' }}>
 
-            <main className="admin-contenido">
-                
-                {mensaje && (
-                    <div className={`admin-feedback ${mensaje.tipo}`}>
-                        {mensaje.texto}
+                {/* Título */}
+                <div style={{ marginBottom: '1.25rem' }}>
+                    <div style={{
+                        fontSize: 'clamp(1.5rem,3.5vw,2rem)', fontWeight: 900,
+                        background: `linear-gradient(90deg, ${tema.color}, ${tema.colorSecundario})`,
+                        WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                        fontFamily: "'Rajdhani', system-ui, sans-serif",
+                        textTransform: 'uppercase', lineHeight: 1.1,
+                    }}>Registro de Tripulación</div>
+                    <div style={{ fontSize: '0.73rem', color: '#64748b', marginTop: '0.2rem' }}>
+                        Agregue nuevos conductores y asigne roles
                     </div>
-                )}
+                </div>
 
                 <form onSubmit={handleSubmit}>
-                    <div className="admin-seccion">
-                        <div className="admin-seccion-titulo">
-                            <span className="seccion-icono">👤</span>
-                            Datos Personales
+                    {mensaje && (
+                        <div style={{
+                            padding: '0.75rem 1rem', borderRadius: 10, marginBottom: '1rem', fontSize: '0.85rem',
+                            background: mensaje.tipo === 'exito' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
+                            color: mensaje.tipo === 'exito' ? '#6ee7b7' : '#fca5a5',
+                            border: `1px solid ${mensaje.tipo === 'exito' ? '#065f46' : '#7f1d1d'}`,
+                        }}>
+                            {mensaje.texto}
                         </div>
-                        
-                        <div className="admin-seccion-cuerpo">
-                            <div className="campos-grid-2">
-                                {/* CI Input con chequeo onBlur */}
-                                <div className="campo-grupo">
-                                    <label className="campo-label">CI <span className="campo-requerido">*</span></label>
-                                    <input
-                                        type="text"
-                                        name="ci"
-                                        className={`campo-input ${ciDuplicado ? 'error' : formData.ci.length >= 5 && !verificandoCi ? 'ok' : ''}`}
-                                        value={formData.ci}
-                                        onChange={handleChange}
-                                        onBlur={verificarCI}
-                                        required
-                                        placeholder="Carnet de Identidad"
-                                    />
-                                    {verificandoCi && <span className="campo-cargando"><div className="spinner-mini"></div> Verificando...</span>}
-                                    {ciDuplicado && <span className="campo-error-msg">Este CI ya está registrado.</span>}
-                                    {!ciDuplicado && formData.ci.length >= 5 && !verificandoCi && <span className="campo-ok-msg">CI Disponible</span>}
-                                </div>
+                    )}
 
-                                {/* Nombre Input */}
-                                <div className="campo-grupo">
-                                    <label className="campo-label">Nombre Completo <span className="campo-requerido">*</span></label>
-                                    <input
-                                        type="text"
-                                        name="nombre"
-                                        className="campo-input"
-                                        value={formData.nombre}
-                                        onChange={handleChange}
-                                        required
-                                        placeholder="Ej. Juan Pérez"
-                                    />
-                                </div>
+                    {/* Card única */}
+                    <div style={{ background: 'rgba(30,41,59,0.8)', borderRadius: 14, border: '1px solid #334155', padding: '1.25rem', marginBottom: '1rem' }}>
 
-                                {/* Teléfono Input */}
-                                <div className="campo-grupo">
-                                    <label className="campo-label">Teléfono</label>
-                                    <input
-                                        type="tel"
-                                        name="telefono"
-                                        className="campo-input"
-                                        value={formData.telefono}
-                                        onChange={handleChange}
-                                        placeholder="Ej. 77012345"
-                                    />
-                                </div>
+                        {/* Fila 1: CI + Nombre */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                            <div>
+                                <label style={labelStyle}>CI <span style={{ color: '#f87171' }}>*</span></label>
+                                <input
+                                    type="text" name="ci"
+                                    style={{ ...inputStyle, borderColor: ciDuplicado ? '#ef4444' : formData.ci.length >= 5 && !verificandoCi ? '#10b981' : '#334155' }}
+                                    value={formData.ci} onChange={handleChange} onBlur={verificarCI}
+                                    required placeholder="Carnet de Identidad"
+                                />
+                                {verificandoCi && <span style={{ fontSize: '0.72rem', color: '#64748b' }}>Verificando...</span>}
+                                {ciDuplicado && <span style={{ fontSize: '0.72rem', color: '#f87171' }}>CI ya registrado.</span>}
+                                {!ciDuplicado && formData.ci.length >= 5 && !verificandoCi && <span style={{ fontSize: '0.72rem', color: '#6ee7b7' }}>CI disponible</span>}
+                            </div>
+                            <div>
+                                <label style={labelStyle}>Nombre Completo <span style={{ color: '#f87171' }}>*</span></label>
+                                <input
+                                    type="text" name="nombre" style={inputStyle}
+                                    value={formData.nombre} onChange={handleChange}
+                                    required placeholder="Ej. Juan Pérez"
+                                />
+                            </div>
+                        </div>
 
-                                {/* Rol Toggle */}
-                                <div className="campo-grupo">
-                                    <label className="campo-label">Rol en el Bus <span className="campo-requerido">*</span></label>
-                                    <div className="toggle-grupo">
-                                        <div 
-                                            className={`toggle-btn ${formData.rol === 'conductor' ? 'activo' : ''}`}
-                                            onClick={() => toggleRol('conductor')}
-                                        >
-                                            Conductor
-                                        </div>
-                                        <div 
-                                            className={`toggle-btn ${formData.rol === 'copiloto' ? 'activo' : ''}`}
-                                            onClick={() => toggleRol('copiloto')}
-                                        >
-                                            Copiloto
-                                        </div>
-                                    </div>
+                        {/* Fila 2: Teléfono + Rol */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+                            <div>
+                                <label style={labelStyle}>Teléfono</label>
+                                <input
+                                    type="tel" name="telefono" style={inputStyle}
+                                    value={formData.telefono} onChange={handleChange}
+                                    placeholder="Ej. 77012345"
+                                />
+                            </div>
+                            <div>
+                                <label style={labelStyle}>Rol <span style={{ color: '#f87171' }}>*</span></label>
+                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                    {['conductor', 'copiloto'].map(r => (
+                                        <button key={r} type="button" onClick={() => toggleRol(r)} style={{
+                                            flex: 1, padding: '0.55rem 0.5rem', borderRadius: 8, border: 'none',
+                                            background: formData.rol === r ? tema.color : '#0f172a',
+                                            color: formData.rol === r ? '#fff' : '#94a3b8',
+                                            fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer',
+                                            textTransform: 'capitalize',
+                                        }}>{r}</button>
+                                    ))}
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    <div className="admin-seccion">
-                        <div className="admin-seccion-titulo">
-                            <span className="seccion-icono">📷</span>
-                            Documentos y Fotografía
-                        </div>
-                        
-                        <div className="admin-seccion-cuerpo">
-                            <div className="campos-grid-2">
-                                
-                                {/* Upload Foto */}
-                                <div className="campo-grupo">
-                                    <label className="campo-label">Foto de Perfil</label>
-                                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginTop: '0.5rem' }}>
-                                        <div style={{ width: '80px', height: '80px', backgroundColor: '#0f172a', border: '1px dashed #475569', borderRadius: '50%', overflow: 'hidden', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                                            {getPreviewUrl('foto') ? (
-                                                <img src={getPreviewUrl('foto')} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                            ) : (
-                                                <span style={{ fontSize: '2rem' }}>👤</span>
-                                            )}
+                        {/* Separador */}
+                        <div style={{ borderTop: '1px solid #334155', paddingTop: '1.25rem' }}>
+                            <div style={{ fontSize: '0.72rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '1rem' }}>
+                                Documentos y Fotografía
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+
+                                {/* Foto perfil */}
+                                <div>
+                                    <label style={labelStyle}>Foto de Perfil</label>
+                                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                                        <div style={{ width: 56, height: 56, flexShrink: 0, background: '#0f172a', border: '1px dashed #475569', borderRadius: '50%', overflow: 'hidden', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                                            {getPreviewUrl('foto')
+                                                ? <img src={getPreviewUrl('foto')} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                : <span style={{ fontSize: '1.5rem' }}>👤</span>}
                                         </div>
-                                        <input
-                                            type="file"
-                                            accept="image/png, image/jpeg"
-                                            onChange={(e) => handleFileChange(e, 'foto')}
-                                            style={{ color: '#94a3b8' }}
-                                        />
+                                        <input type="file" accept="image/png, image/jpeg" onChange={e => handleFileChange(e, 'foto')} style={{ color: '#94a3b8', fontSize: '0.78rem', minWidth: 0 }} />
                                     </div>
                                 </div>
 
-                                {/* Upload Licencia */}
-                                <div className="campo-grupo">
-                                    <label className="campo-label">Fotografía de Licencia de Conducir</label>
-                                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginTop: '0.5rem' }}>
-                                        <div style={{ width: '120px', height: '75px', backgroundColor: '#0f172a', border: '1px dashed #475569', borderRadius: '8px', overflow: 'hidden', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                                            {getPreviewUrl('licencia') ? (
-                                                <img src={getPreviewUrl('licencia')} alt="Preview Licencia" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                            ) : (
-                                                <span style={{ fontSize: '1.5rem', color: '#475569' }}>🪪</span>
-                                            )}
+                                {/* Foto licencia */}
+                                <div>
+                                    <label style={labelStyle}>Licencia de Conducir</label>
+                                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                                        <div style={{ width: 80, height: 50, flexShrink: 0, background: '#0f172a', border: '1px dashed #475569', borderRadius: 6, overflow: 'hidden', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                                            {getPreviewUrl('licencia')
+                                                ? <img src={getPreviewUrl('licencia')} alt="Preview Licencia" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                : <span style={{ fontSize: '1.2rem', color: '#475569' }}>🪪</span>}
                                         </div>
-                                        <input
-                                            type="file"
-                                            accept="image/png, image/jpeg"
-                                            onChange={(e) => handleFileChange(e, 'licencia')}
-                                            style={{ color: '#94a3b8' }}
-                                        />
+                                        <input type="file" accept="image/png, image/jpeg" onChange={e => handleFileChange(e, 'licencia')} style={{ color: '#94a3b8', fontSize: '0.78rem', minWidth: 0 }} />
                                     </div>
                                 </div>
 
@@ -313,20 +292,22 @@ const RegistroTripulacion = () => {
                         </div>
                     </div>
 
-                    <div className="admin-footer">
-                        <button type="button" className="btn-admin-cancelar" onClick={() => navigate('/admin/dashboard')}>
-                            Descartar
-                        </button>
-                        <button 
-                            type="submit" 
-                            className="btn-admin-guardar"
-                            disabled={cargando || ciDuplicado || !formData.ci || !formData.nombre}
-                        >
+                    {/* Botones */}
+                    <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                        <button type="button" onClick={() => navigate('/admin/dashboard')} style={{
+                            padding: '0.6rem 1.25rem', borderRadius: 8, border: '1px solid #334155',
+                            background: 'transparent', color: '#94a3b8', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer',
+                        }}>Descartar</button>
+                        <button type="submit" disabled={cargando || ciDuplicado || !formData.ci || !formData.nombre} style={{
+                            padding: '0.6rem 1.5rem', borderRadius: 8, border: 'none',
+                            background: (cargando || ciDuplicado || !formData.ci || !formData.nombre) ? '#1e293b' : tema.color,
+                            color: '#fff', fontWeight: 700, fontSize: '0.85rem', cursor: cargando ? 'wait' : 'pointer',
+                        }}>
                             {cargando ? 'Registrando...' : 'Registrar Personal'}
                         </button>
                     </div>
                 </form>
-            </main>
+            </div>
         </div>
     );
 };
