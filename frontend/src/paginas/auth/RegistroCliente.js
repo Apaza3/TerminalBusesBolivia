@@ -102,7 +102,8 @@ const RegistroCliente = () => {
         if (ci.length >= 5) {
             setCiVerificando(true);
             try {
-                const res = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:4000'}/api/auth/verificar-ci/${ci.trim()}`);
+                const apiBase = process.env.REACT_APP_API_URL || `http://${window.location.hostname}:4000`;
+                const res = await fetch(`${apiBase}/api/auth/verificar-ci/${ci.trim()}`);
                 const data = await res.json();
                 setCiValido(!data.existe); // true = CI libre, false = CI ya registrado
             } catch {
@@ -151,7 +152,8 @@ const RegistroCliente = () => {
         if (err1 || err2) { mostrarToast('error', err1 || err2); return; }
         setCargando(true);
         try {
-            const res = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:4000'}/api/auth/registro`, {
+            const apiBase = process.env.REACT_APP_API_URL || `http://${window.location.hostname}:4000`;
+            const res = await fetch(`${apiBase}/api/auth/registro`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

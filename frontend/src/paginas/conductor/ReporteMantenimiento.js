@@ -21,7 +21,7 @@ const SEVERIDADES = [
     { id: 'critica', label: 'Crítica', color: '#7c3aed', desc: 'Detener el bus de inmediato' },
 ];
 
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:4000';
+const API_BASE = process.env.REACT_APP_API_URL || `http://${typeof window !== 'undefined' ? window.location.hostname : 'localhost'}:4000`;
 
 const guardarLocalFallback = (datos) => {
     const prev = JSON.parse(localStorage.getItem('tbb_mantenimiento') || '[]');

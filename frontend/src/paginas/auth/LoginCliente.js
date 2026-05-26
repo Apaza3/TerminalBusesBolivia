@@ -92,7 +92,7 @@ const LoginCliente = () => {
         <>
             {/* Cargar fuente Google Outfit */}
             <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
-            
+
             <NavbarUniversal />
             <div ref={rootRef} style={{ height: 'calc(100vh - 76px)', overflow: 'hidden', position: 'relative', fontFamily: "'Outfit', sans-serif", color: '#dde5f0', textTransform: 'uppercase' }}>
 
@@ -106,7 +106,7 @@ const LoginCliente = () => {
                     <div style={{ position: 'relative', zIndex: 2, height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
                         {/* Contenido centrado */}
-                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem', overflow: 'hidden' }}>
+                        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.25rem', overflow: 'hidden', marginTop: '-80px' }}>
                             <div ref={cardRef} style={{ width: '100%', maxWidth: 400, background: 'rgba(10,18,35,0.78)', backdropFilter: 'blur(28px)', WebkitBackdropFilter: 'blur(28px)', border: `1px solid ${tema.color}28`, borderRadius: 22, padding: '1.75rem 1.5rem', boxShadow: '0 8px 48px rgba(0,0,0,0.55)' }}>
                                 <div data-q="field" style={{ marginBottom: '1.25rem' }}>
                                     <div style={{ width: 72, height: 72, borderRadius: '50%', border: `2px solid ${tema.color}`, boxShadow: `0 0 24px ${tema.color}40`, background: '#ffffff url(/personal/logo_terminal.png) center/85% no-repeat', marginBottom: '0.85rem' }}></div>
@@ -170,7 +170,7 @@ const LoginCliente = () => {
 
                         {/* Contenido — dos columnas centradas */}
                         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', padding: '0 2rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', width: '100%', maxWidth: 980, transform: 'translateX(-120px)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', width: '100%', maxWidth: 980, transform: 'translateX(-90px)' }}>
 
                                 {/* LOGO — col izquierda */}
                                 <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>

@@ -14,7 +14,7 @@ const TIPOS = [
     { id: 'otro',                 label: 'Otro',                 icono: '📝', color: '#34d399', bg: 'rgba(52,211,153,0.12)',  border: '#064e3b' },
 ];
 
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:4000';
+const API_BASE = process.env.REACT_APP_API_URL || `http://${typeof window !== 'undefined' ? window.location.hostname : 'localhost'}:4000`;
 
 const RegistrarIncidencia = () => {
     const navigate = useNavigate();

@@ -73,12 +73,15 @@ const PagoQRMovil = () => {
                         monto: newMont
                     }));
 
-                    buscarViajeReal(newOrig, newDest, newFech);
+                    if (!searchParams.get('empresa')) {
+                        buscarViajeReal(newOrig, newDest, newFech);
+                    }
                 }
             })
             .catch(() => {
-                // Si falla el backend, intentamos buscar con lo que haya en URL
-                buscarViajeReal(viajeInfo.origen, viajeInfo.destino, viajeInfo.fecha);
+                if (!searchParams.get('empresa')) {
+                    buscarViajeReal(viajeInfo.origen, viajeInfo.destino, viajeInfo.fecha);
+                }
             });
     }, [token]);
 
