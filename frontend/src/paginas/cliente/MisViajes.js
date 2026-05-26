@@ -2,19 +2,13 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contextos/AuthContext';
 import { useDepartamento } from '../../contextos/DepartamentoContext';
-import { obtenerReservas, obtenerBoletos, verificarExpiradas, actualizarEstadoReserva } from '../../data/mockStorage';
-import { SUCURSALES_MOCK, VIAJES_SUCURSAL_MOCK } from '../../data/mockDiscoveryDB';
+import { obtenerBoletos } from '../../data/mockStorage';
+import { getReservasByUsuario, updateReservaEstado } from '../../servicios/api';
 import { QRCodeSVG } from 'qrcode.react';
 import TicketCard, { getTemaEmpresa, getLogoEmpresa } from '../../componentes/TicketCard';
 
 const FONT = "'Inter', 'Rajdhani', system-ui, sans-serif";
 
-// ── viajeId → sucursal map ────────────────────────────────────────────────
-const VIAJE_A_SUCURSAL = {};
-Object.entries(VIAJES_SUCURSAL_MOCK).forEach(([sucId, viajes]) => {
-    const suc = SUCURSALES_MOCK.find(s => s.id === sucId);
-    if (suc) viajes.forEach(v => { VIAJE_A_SUCURSAL[v.id] = suc; });
-});
 
 // ── Paleta por empresa ────────────────────────────────────────────────────
 const EMPRESA_PALETAS = [
@@ -159,16 +153,10 @@ const TarjetaReserva = ({ reserva, ahora, tema, onCancelar }) => {
     const completado = new Date(reserva.fechaSalida) < ahora && reserva.estado !== 'cancelada';
     const cancelada  = reserva.estado === 'cancelada';
 
-    // Lookup empresa
-    const sucursalIdFromViaje = reserva.viajeId?.replace(/-v\d+$/, '');
-    const suc =
-        SUCURSALES_MOCK.find(s => s.id === reserva.sucursalId) ||
-        VIAJE_A_SUCURSAL[reserva.viajeId] ||
-        SUCURSALES_MOCK.find(s => s.id === sucursalIdFromViaje) ||
-        null;
-    const rawNombre = suc?.nombre || reserva.sucursalNombre || null;
+    // Empresa viene directo de Supabase
+    const rawNombre = reserva.sucursalNombre || null;
     const nombreEmpresa = (rawNombre && rawNombre !== 'Empresa') ? rawNombre : null;
-    const deptEmpresa   = suc?.departamento || null;
+    const deptEmpresa   = null;
 
     // Colores de empresa — siempre definidos (fallback hash)
     const col = getColoresCard(nombreEmpresa, reserva.id);
@@ -306,11 +294,10 @@ const MisViajes = () => {
     const [busqueda, setBusqueda] = useState('');
     const ahora = new Date();
 
-    const cargar = useCallback(() => {
-        verificarExpiradas();
-        const todas = obtenerReservas();
-        const mias  = todas.filter(r => r.pasajeroCI === perfil?.ci || r.pasajeroNombre?.toLowerCase() === (perfil?.nombreCompleto || '').toLowerCase());
-        setReservas(mias.sort((a, b) => new Date(b.creadoEn) - new Date(a.creadoEn)));
+    const cargar = useCallback(async () => {
+        if (!perfil?.id) return;
+        const data = await getReservasByUsuario(perfil.id);
+        setReservas(data);
     }, [perfil]);
 
     useEffect(() => {
@@ -320,7 +307,7 @@ const MisViajes = () => {
         return () => clearInterval(t);
     }, [sesion, perfil, navigate, cargar]);
 
-    const handleCancelar = (id) => { actualizarEstadoReserva(id, 'cancelada'); cargar(); };
+    const handleCancelar = async (id) => { await updateReservaEstado(id, 'cancelada'); cargar(); };
 
     const nPend = reservas.filter(r => r.estado === 'pendiente_documentos' || r.estado === 'pendiente_efectivo').length;
 

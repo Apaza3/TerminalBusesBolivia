@@ -290,6 +290,36 @@ export async function getReservasSucursal(sucursalId) {
   }));
 }
 
+export async function getReservasByUsuario(usuarioId) {
+  const { data, error } = await supabase
+    .from('reservas')
+    .select(`
+      id, viaje_id, asientos, monto, estado, metodo_pago, created_at,
+      viajes(id, origen, destino, fecha_salida, sucursal_id,
+        sucursales(id, nombre),
+        buses(placa)
+      )
+    `)
+    .eq('usuario_id', usuarioId)
+    .order('created_at', { ascending: false });
+  if (error) return [];
+  return (data || []).map(r => ({
+    id:             r.id,
+    viajeId:        r.viaje_id,
+    sucursalId:     r.viajes?.sucursal_id   || null,
+    sucursalNombre: r.viajes?.sucursales?.nombre || null,
+    origen:         r.viajes?.origen        || '—',
+    destino:        r.viajes?.destino       || '—',
+    fechaSalida:    r.viajes?.fecha_salida  || null,
+    asientos:       r.asientos              || [],
+    busPlaca:       r.viajes?.buses?.placa  || null,
+    precio:         r.monto                 || 0,
+    metodoPago:     r.metodo_pago           || 'efectivo',
+    estado:         r.estado                || 'confirmada',
+    creadoEn:       r.created_at,
+  }));
+}
+
 export async function getAsientosOcupados(viajeId) {
   const { data, error } = await supabase
     .from('reservas').select('asientos').eq('viaje_id', viajeId).neq('estado', 'cancelada');

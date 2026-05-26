@@ -7,7 +7,7 @@ import { useAuth } from '../contextos/AuthContext';
 import { useDepartamento } from '../contextos/DepartamentoContext';
 import { useToast } from '../componentes/ToastNotifications';
 import { obtenerCliente } from '../data/mockClientDB';
-import { getViaje, buscarClientePorCI } from '../servicios/api';
+import { getViaje, buscarClientePorCI, getAsientosOcupados } from '../servicios/api';
 import {
     crearReserva,
     obtenerReservas,
@@ -969,13 +969,10 @@ const MapaAsientos = () => {
     useEffect(() => { seleccionadosRef.current = asientosSeleccionados; }, [asientosSeleccionados]);
 
     // ── Load seat state & poll every 3s ──────────────
-    const cargarAsientos = useCallback(() => {
+    const cargarAsientos = useCallback(async () => {
         liberarAsientosExpirados();
         verificarExpiradas();
-        const reservas = obtenerReservas(viajeId);
-        const ocupados = reservas
-            .filter(r => r.estado === 'confirmada' || r.estado === 'pendiente_efectivo' || r.estado === 'pendiente_documentos')
-            .flatMap(r => r.asientos);
+        const ocupados = await getAsientosOcupados(viajeId);
         setAsientosReservados(ocupados);
 
         const pendientes = obtenerAsientosPendientes(viajeId);
