@@ -206,6 +206,18 @@ function injectCSS() {
     document.head.appendChild(el);
 }
 
+const calcularDisplayEstado = (viaje) => {
+    const now = new Date();
+    const salida = new Date(viaje.fecha_salida || viaje.salida);
+    const diffMs = salida - now;
+    if (viaje.estado === 'en_viaje')   return { label: 'En Viaje',   color: '#3b82f6', canBook: false };
+    if (viaje.estado === 'completado') return { label: 'Completado', color: '#475569', canBook: false };
+    if (viaje.estado === 'cancelado')  return { label: 'Cancelado',  color: '#ef4444', canBook: false };
+    if (diffMs < 0)                    return { label: 'Partió',     color: '#475569', canBook: false };
+    if (diffMs < 60 * 60 * 1000)      return { label: 'Embarcando', color: '#f59e0b', canBook: true  };
+    return                                    { label: 'Disponible', color: '#10b981', canBook: true  };
+};
+
 const TarjetaViaje = ({ viaje, onSeleccionar }) => {
     injectCSS();
     const [hov, setHov] = useState(false);
@@ -215,6 +227,8 @@ const TarjetaViaje = ({ viaje, onSeleccionar }) => {
     const fondoDestino = getCiudadFondo(viaje.destino);
     const accent = viaje.colorAccent || viaje.sucursalColor || viaje.sucursales?.colorAccent || viaje.sucursales?.color_accent || '#3b82f6';
     const empresaNombre = viaje.sucursal_nombre || viaje.sucursalNombre || viaje.sucursales?.nombre || '';
+
+    const ds = calcularDisplayEstado(viaje);
 
     const pisos = viaje.buses?.pisos || viaje.pisos || 1;
     const tieneBano = viaje.buses?.tiene_bano || false;
@@ -236,11 +250,13 @@ const TarjetaViaje = ({ viaje, onSeleccionar }) => {
             className="tv-card"
             style={{
                 border: `1.5px solid ${dest.color}${hov ? 'cc' : '40'}`,
-                boxShadow: hov
+                boxShadow: hov && ds.canBook
                     ? `0 6px 32px ${dest.color}45, 0 0 0 1px ${dest.color}18`
                     : '0 2px 14px rgba(0,0,0,0.45)',
+                opacity: ds.canBook ? 1 : 0.62,
+                cursor: ds.canBook ? 'pointer' : 'default',
             }}
-            onClick={() => onSeleccionar?.(viaje)}
+            onClick={() => ds.canBook ? onSeleccionar?.(viaje) : undefined}
             onMouseEnter={() => setHov(true)}
             onMouseLeave={() => setHov(false)}
         >
@@ -259,6 +275,23 @@ const TarjetaViaje = ({ viaje, onSeleccionar }) => {
                 }} />
                 {!fondoDestino && <span className="tv-panel-emoji">{dest.emoji}</span>}
                 <div className="tv-panel-sep" style={{ background: `linear-gradient(90deg, transparent, ${dest.color}90, transparent)` }} />
+                {/* Estado badge */}
+                <div style={{
+                    position: 'absolute', top: 8, right: 8,
+                    background: `${ds.color}22`,
+                    border: `1px solid ${ds.color}80`,
+                    color: ds.color,
+                    borderRadius: 20,
+                    padding: '0.18rem 0.6rem',
+                    fontSize: '0.65rem',
+                    fontWeight: 800,
+                    letterSpacing: '0.07em',
+                    textTransform: 'uppercase',
+                    backdropFilter: 'blur(8px)',
+                    zIndex: 2,
+                }}>
+                    {ds.label}
+                </div>
             </div>
 
             {/* Trip content */}
@@ -327,19 +360,37 @@ const TarjetaViaje = ({ viaje, onSeleccionar }) => {
                 </div>
 
                 {/* CTA */}
-                <button
-                    className="tv-btn"
-                    style={{
-                        background: `linear-gradient(135deg, ${dest.acento}, ${dest.acento}cc)`,
-                        boxShadow: `0 0 18px ${dest.acento}55`,
-                        color: dest.text,
-                        pointerEvents: 'none',
-                    }}
-                    tabIndex={-1}
-                    aria-hidden="true"
-                >
-                    Seleccionar →
-                </button>
+                {ds.canBook ? (
+                    <button
+                        className="tv-btn"
+                        style={{
+                            background: `linear-gradient(135deg, ${dest.acento}, ${dest.acento}cc)`,
+                            boxShadow: `0 0 18px ${dest.acento}55`,
+                            color: dest.text,
+                            pointerEvents: 'none',
+                        }}
+                        tabIndex={-1}
+                        aria-hidden="true"
+                    >
+                        Seleccionar →
+                    </button>
+                ) : (
+                    <div style={{
+                        width: '100%',
+                        padding: '0.52rem',
+                        borderRadius: 10,
+                        fontWeight: 700,
+                        fontSize: '0.8rem',
+                        textAlign: 'center',
+                        letterSpacing: '0.04em',
+                        background: `${ds.color}18`,
+                        border: `1px solid ${ds.color}40`,
+                        color: ds.color,
+                        marginTop: 'auto',
+                    }}>
+                        {ds.label}
+                    </div>
+                )}
             </div>
         </div>
     );

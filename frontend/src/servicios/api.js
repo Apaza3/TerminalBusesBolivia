@@ -48,7 +48,7 @@ export async function buscarViajes(origen, destino, fecha) {
     `)
     .eq('origen', origen)
     .eq('destino', destino)
-    .in('estado', ['programado', 'autorizado'])
+    .in('estado', ['programado', 'autorizado', 'en_viaje'])
     .order('fecha_salida');
   if (fecha) {
     q = q.gte('fecha_salida', `${fecha}T00:00:00`).lte('fecha_salida', `${fecha}T23:59:59`);
@@ -194,9 +194,9 @@ export async function updateEstadoTripulacion(id, estado) {
 }
 
 export async function updatePrecioViaje(id, precio) {
-  const { data, error } = await supabase.from('viajes').update({ precio }).eq('id', id).select('id').single();
-  if (error) { console.error('updatePrecioViaje:', error.message); return null; }
-  return data;
+  const { error } = await supabase.from('viajes').update({ precio }).eq('id', id);
+  if (error) { console.error('updatePrecioViaje:', error.message); return { ok: false, error: error.message }; }
+  return { ok: true };
 }
 
 export async function updatePreciosGlobal(sucursalId, incremento) {
@@ -205,14 +205,136 @@ export async function updatePreciosGlobal(sucursalId, incremento) {
     .select('id,precio')
     .eq('sucursal_id', sucursalId)
     .in('estado', ['programado', 'autorizado']);
-  if (fetchErr) { console.error('updatePreciosGlobal:', fetchErr.message); return { total: 0 }; }
+  if (fetchErr) { console.error('updatePreciosGlobal:', fetchErr.message); return { ok: false, error: fetchErr.message }; }
   let total = 0;
   for (const v of viajes || []) {
     const nuevo = Math.max(0, (v.precio || 0) + incremento);
     const { error } = await supabase.from('viajes').update({ precio: nuevo }).eq('id', v.id);
     if (!error) total++;
   }
-  return { total };
+  return { ok: true, total };
+}
+
+export async function getTripulacionByUsuario(usuarioId) {
+  const { data, error } = await supabase
+    .from('tripulacion')
+    .select('id,nombre,ci,rol,estado')
+    .eq('usuario_id', usuarioId)
+    .single();
+  if (error) { console.error('getTripulacionByUsuario:', error.message); return null; }
+  return data;
+}
+
+export async function getViajesConductor(tripulacionId, dias = 1) {
+  const hoy = new Date().toISOString().split('T')[0];
+  const limite = new Date(Date.now() + dias * 86400000).toISOString().split('T')[0];
+  const { data, error } = await supabase
+    .from('viajes')
+    .select('id,origen,destino,fecha_salida,precio,duracion_estimada,estado,anden,sucursales(id,nombre),buses(id,placa,capacidad,pisos)')
+    .eq('conductor_id', tripulacionId)
+    .gte('fecha_salida', `${hoy}T00:00:00`)
+    .lte('fecha_salida', `${limite}T23:59:59`)
+    .order('fecha_salida');
+  if (error) { console.error('getViajesConductor:', error.message); return []; }
+  return data || [];
+}
+
+export async function getReservasViaje(viajeId) {
+  const { data, error } = await supabase
+    .from('reservas')
+    .select('id,asientos,estado,email_cliente,telefono_cliente,metodo_pago,usuarios(nombre_completo,ci)')
+    .eq('viaje_id', viajeId)
+    .neq('estado', 'cancelada');
+  if (error) { console.error('getReservasViaje:', error.message); return []; }
+  return (data || [])
+    .flatMap(r => (r.asientos || []).map(asiento => ({
+      asiento,
+      nombre: r.usuarios?.nombre_completo || r.email_cliente || 'Pasajero',
+      ci:     r.usuarios?.ci || '—',
+      telefono: r.telefono_cliente || '—',
+      email:    r.email_cliente || '',
+      reservaId: r.id,
+    })))
+    .sort((a, b) => a.asiento.localeCompare(b.asiento, undefined, { numeric: true }));
+}
+
+export async function updateViajeEstado(viajeId, estado) {
+  const { error } = await supabase.from('viajes').update({ estado }).eq('id', viajeId);
+  if (error) { console.error('updateViajeEstado:', error.message); return false; }
+  return true;
+}
+
+export async function getReservasSucursal(sucursalId) {
+  const inicio = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
+  const { data: vs } = await supabase
+    .from('viajes').select('id').eq('sucursal_id', sucursalId)
+    .gte('fecha_salida', `${inicio}T00:00:00`);
+  if (!vs?.length) return [];
+  const { data, error } = await supabase
+    .from('reservas')
+    .select('id,viaje_id,asientos,monto,estado,email_cliente,telefono_cliente,metodo_pago,creado_en,usuarios(nombre_completo,ci),viajes(origen,destino,fecha_salida)')
+    .in('viaje_id', vs.map(v => v.id))
+    .order('creado_en', { ascending: false })
+    .limit(200);
+  if (error) { console.error('getReservasSucursal:', error.message); return []; }
+  return (data || []).map(r => ({
+    ...r,
+    pasajeroNombre: r.usuarios?.nombre_completo || r.email_cliente || 'Pasajero',
+    pasajeroCI:     r.usuarios?.ci || '—',
+    origen:         r.viajes?.origen     || '',
+    destino:        r.viajes?.destino    || '',
+    fechaSalida:    r.viajes?.fecha_salida || '',
+    creadoEn:       r.creado_en,
+    precio:         r.monto,
+    metodoPago:     r.metodo_pago,
+  }));
+}
+
+export async function getAsientosOcupados(viajeId) {
+  const { data, error } = await supabase
+    .from('reservas').select('asientos').eq('viaje_id', viajeId).neq('estado', 'cancelada');
+  if (error) return [];
+  return (data || []).flatMap(r => r.asientos || []);
+}
+
+export async function crearReservaSupabase({ viajeId, usuarioId, asientos, monto, emailCliente, telefonoCliente, metodoPago }) {
+  const { data, error } = await supabase
+    .from('reservas')
+    .insert({
+      viaje_id:         viajeId,
+      usuario_id:       usuarioId   || null,
+      asientos,
+      monto,
+      email_cliente:    emailCliente    || '',
+      telefono_cliente: telefonoCliente || null,
+      metodo_pago:      metodoPago      || 'efectivo',
+      estado:           'confirmada',
+    })
+    .select('id').single();
+  if (error) { console.error('crearReservaSupabase:', error.message); return { error: error.message }; }
+  return { id: data.id };
+}
+
+export async function updateReservaEstado(reservaId, estado) {
+  const { error } = await supabase.from('reservas').update({ estado }).eq('id', reservaId);
+  if (error) { console.error('updateReservaEstado:', error.message); return false; }
+  return true;
+}
+
+export async function getViajesHistoricosSucursal(sucursalId, dias = 30) {
+  const inicio = new Date(Date.now() - dias * 86400000).toISOString().split('T')[0];
+  const hoy    = new Date().toISOString().split('T')[0];
+  const { data, error } = await supabase
+    .from('viajes')
+    .select('id,origen,destino,fecha_salida,precio,duracion_estimada,estado,buses(placa,capacidad)')
+    .eq('sucursal_id', sucursalId)
+    .lt('fecha_salida', `${hoy}T00:00:00`)
+    .gte('fecha_salida', `${inicio}T00:00:00`)
+    .in('estado', ['completado', 'en_viaje', 'cancelado'])
+    .order('fecha_salida', { ascending: false })
+    .limit(120);
+  if (error) { console.error('getViajesHistoricosSucursal:', error.message); return []; }
+  return data || [];
 }
 
 export async function getViajesPorCiudad(ciudad, dias = 30) {

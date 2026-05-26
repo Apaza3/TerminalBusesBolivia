@@ -1,18 +1,33 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { SUCURSALES_MOCK, obtenerViajesSucursal } from '../data/mockDiscoveryDB';
+import { buscarViajes as apiBuscarViajes } from '../servicios/api';
 import { useDepartamento } from '../contextos/DepartamentoContext';
 import gsap from 'gsap';
 
-const CIUDADES = ['Cobija', 'Cochabamba', 'La Paz', 'Oruro', 'Potosí', 'Santa Cruz', 'Sucre', 'Tarija', 'Trinidad'];
+const CIUDADES = ['Beni', 'Chuquisaca', 'Cobija', 'Cochabamba', 'La Paz', 'Oruro', 'Potosí', 'Santa Cruz', 'Tarija'];
 
 const AMENIDADES_OPCIONES = ['WiFi', 'Bus Cama', 'Baño', 'TV', 'Aire Acondicionado'];
+
+const calcularDisplayEstado = (viaje) => {
+  const now = new Date();
+  const salida = new Date(viaje.fecha_salida);
+  const diffMs = salida - now;
+
+  if (viaje.estado === 'en_viaje')   return { label: 'En Viaje',   color: '#3b82f6', canBook: false };
+  if (viaje.estado === 'completado') return { label: 'Completado', color: '#475569', canBook: false };
+  if (viaje.estado === 'cancelado')  return { label: 'Cancelado',  color: '#ef4444', canBook: false };
+
+  if (diffMs < 0)                    return { label: 'Partió',     color: '#475569', canBook: false };
+  if (diffMs < 60 * 60 * 1000)      return { label: 'Embarcando', color: '#f59e0b', canBook: true  };
+  return                                    { label: 'Disponible', color: '#10b981', canBook: true  };
+};
 
 const BuscadorViajes = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const { tema } = useDepartamento();
     const rootRef = useRef(null);
+    const pollRef = useRef(null);
 
     const [origen, setOrigen] = useState(searchParams.get('origen') || '');
     const [destino, setDestino] = useState(searchParams.get('destino') || '');
@@ -20,11 +35,12 @@ const BuscadorViajes = () => {
     const [cantidadBoletos, setCantidadBoletos] = useState(1);
     const [precioMax, setPrecioMax] = useState('');
     const [amenidadesSeleccionadas, setAmenidadesSeleccionadas] = useState([]);
-    const [ordenamiento, setOrdenamiento] = useState('precio'); // precio | calidad | hora
+    const [ordenamiento, setOrdenamiento] = useState('precio');
     const [resultados, setResultados] = useState([]);
     const [buscado, setBuscado] = useState(false);
     const [cargando, setCargando] = useState(false);
     const [mostrarFiltros, setMostrarFiltros] = useState(false);
+    const [ultimaActualizacion, setUltimaActualizacion] = useState(null);
 
     const fechaMin = new Date().toISOString().split('T')[0];
 
@@ -36,78 +52,47 @@ const BuscadorViajes = () => {
         return () => ctx.revert();
     }, []);
 
-    // gemini: los viajes son recurrentes semanalmente.
-    // Se proyecta cada viaje al próximo día de la semana que coincida con su día original.
-    // La fecha del mock solo importa para el día de la semana y la hora.
-    const proyectarAProximaOcurrencia = (salidaISO) => {
-        const original = new Date(salidaISO);
-        const diasSemanaOriginal = original.getDay(); // 0=dom, 1=lun...
-        const ahora = new Date();
-        const hoy = ahora.getDay();
-        let diasDiff = diasSemanaOriginal - hoy;
-        if (diasDiff < 0) diasDiff += 7;
-        // Si es el mismo día pero la hora ya pasó, proyectar a la siguiente semana
-        if (diasDiff === 0 && original.getHours() * 60 + original.getMinutes() <= ahora.getHours() * 60 + ahora.getMinutes()) {
-            diasDiff = 7;
+    const aplicarFiltrosYOrden = useCallback((datos) => {
+        let filtrados = [...datos];
+        if (precioMax) filtrados = filtrados.filter(v => v.precio <= parseFloat(precioMax));
+        if (amenidadesSeleccionadas.length > 0) {
+            filtrados = filtrados.filter(v =>
+                amenidadesSeleccionadas.every(a => (v.sucursales?.amenidades || []).includes(a))
+            );
         }
-        const proyectado = new Date(ahora);
-        proyectado.setDate(ahora.getDate() + diasDiff);
-        proyectado.setHours(original.getHours(), original.getMinutes(), 0, 0);
-        return proyectado.toISOString();
-    };
+        if (ordenamiento === 'precio') filtrados.sort((a, b) => a.precio - b.precio);
+        else if (ordenamiento === 'calidad') filtrados.sort((a, b) => (b.sucursales?.ranking || 0) - (a.sucursales?.ranking || 0));
+        else if (ordenamiento === 'hora') filtrados.sort((a, b) => new Date(a.fecha_salida) - new Date(b.fecha_salida));
+        return filtrados;
+    }, [precioMax, amenidadesSeleccionadas, ordenamiento]);
 
-    const buscarViajes = () => {
+    const ejecutarBusqueda = useCallback(async (silencioso = false) => {
         if (!origen || !destino) return;
-        setCargando(true);
-        setBuscado(true);
+        if (!silencioso) { setCargando(true); setBuscado(true); }
 
-        setTimeout(() => {
-            let todos = SUCURSALES_MOCK.flatMap(s =>
-                obtenerViajesSucursal(s.id).map(v => ({
-                    ...v,
-                    // gemini: reemplazar fecha pasada del mock con la próxima ocurrencia del mismo día/hora
-                    salida: proyectarAProximaOcurrencia(v.salida),
-                    sucursalNombre: s.nombre,
-                    sucursalEmoji: s.logoEmoji,
-                    sucursalColor: s.colorAccent,
-                    ranking: s.ranking,
-                    amenidades: s.amenidades,
-                }))
-            );
+        const datos = await apiBuscarViajes(origen, destino, fecha || null);
+        const filtrados = aplicarFiltrosYOrden(datos);
+        setResultados(filtrados);
+        setUltimaActualizacion(new Date());
 
-            todos = todos.filter(v =>
-                v.origen.toLowerCase() === origen.toLowerCase() &&
-                v.destino.toLowerCase() === destino.toLowerCase()
-            );
-
-            if (fecha) {
-                // gemini: comparar solo el día de la semana, no la fecha exacta
-                const diaFiltro = new Date(fecha + 'T00:00:00').getDay();
-                todos = todos.filter(v => new Date(v.salida).getDay() === diaFiltro);
-            }
-            if (precioMax) {
-                todos = todos.filter(v => v.precio <= parseFloat(precioMax));
-            }
-            if (amenidadesSeleccionadas.length > 0) {
-                todos = todos.filter(v =>
-                    amenidadesSeleccionadas.every(a => v.amenidades?.includes(a))
-                );
-            }
-
-            if (ordenamiento === 'precio') todos.sort((a, b) => a.precio - b.precio);
-            else if (ordenamiento === 'calidad') todos.sort((a, b) => b.ranking - a.ranking);
-            else if (ordenamiento === 'hora') todos.sort((a, b) => new Date(a.salida) - new Date(b.salida));
-
-            setResultados(todos);
+        if (!silencioso) {
             setCargando(false);
-
             setTimeout(() => {
-                gsap.from('[data-b="card"]', {
-                    y: 20, opacity: 0, stagger: 0.06, duration: 0.4, ease: 'power2.out',
-                });
+                gsap.from('[data-b="card"]', { y: 20, opacity: 0, stagger: 0.06, duration: 0.4, ease: 'power2.out' });
             }, 50);
-        }, 500);
-    };
+        }
+    }, [origen, destino, fecha, aplicarFiltrosYOrden]);
+
+    // Polling cada 60s cuando hay resultados activos
+    useEffect(() => {
+        if (pollRef.current) clearInterval(pollRef.current);
+        if (buscado && origen && destino) {
+            pollRef.current = setInterval(() => ejecutarBusqueda(true), 60000);
+        }
+        return () => { if (pollRef.current) clearInterval(pollRef.current); };
+    }, [buscado, origen, destino, ejecutarBusqueda]);
+
+    const handleBuscar = () => ejecutarBusqueda(false);
 
     const toggleAmenidad = (a) => {
         setAmenidadesSeleccionadas(prev =>
@@ -152,6 +137,11 @@ const BuscadorViajes = () => {
                     </h1>
                     <p style={{ margin: 0, color: '#475569', fontSize: '0.88rem' }}>
                         Encuentra tu próximo destino · Bolivia
+                        {ultimaActualizacion && (
+                            <span style={{ marginLeft: '0.75rem', fontSize: '0.75rem', color: '#334155' }}>
+                                · Act. {ultimaActualizacion.toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                        )}
                     </p>
                 </div>
             </div>
@@ -178,7 +168,7 @@ const BuscadorViajes = () => {
                             </select>
                         </div>
 
-                        {/* Swap button */}
+                        {/* Swap */}
                         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', paddingBottom: '0.1rem', maxWidth: 48, margin: '0 auto' }}>
                             <button onClick={() => { const tmp = origen; setOrigen(destino); setDestino(tmp); }} style={{
                                 width: 36, height: 36, borderRadius: '50%', border: `1px solid ${tema.color}50`,
@@ -254,7 +244,7 @@ const BuscadorViajes = () => {
                         </div>
 
                         <button
-                            onClick={buscarViajes}
+                            onClick={handleBuscar}
                             disabled={!origen || !destino || cargando}
                             style={{
                                 marginLeft: 'auto', padding: '0.6rem 1.75rem',
@@ -269,7 +259,7 @@ const BuscadorViajes = () => {
                         </button>
                     </div>
 
-                    {/* Advanced filters panel */}
+                    {/* Advanced filters */}
                     {mostrarFiltros && (
                         <div style={{
                             marginTop: '1rem', padding: '1rem', background: '#07111f',
@@ -342,107 +332,123 @@ const BuscadorViajes = () => {
                         </div>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                            {resultados.map(viaje => (
-                                <div key={viaje.id} data-b="card" style={{
-                                    background: '#0d1a2e', borderRadius: '14px',
-                                    border: `1px solid ${viaje.sucursalColor || tema.color}22`,
-                                    overflow: 'hidden', transition: 'all 0.2s',
-                                    cursor: 'pointer',
-                                }}
-                                    onMouseEnter={e => {
-                                        e.currentTarget.style.borderColor = `${viaje.sucursalColor || tema.color}70`;
-                                        e.currentTarget.style.transform = 'translateY(-2px)';
-                                        e.currentTarget.style.boxShadow = `0 8px 30px rgba(0,0,0,0.3)`;
-                                    }}
-                                    onMouseLeave={e => {
-                                        e.currentTarget.style.borderColor = `${viaje.sucursalColor || tema.color}22`;
-                                        e.currentTarget.style.transform = 'translateY(0)';
-                                        e.currentTarget.style.boxShadow = 'none';
-                                    }}>
-                                    {/* Color accent bar */}
-                                    <div style={{ height: 3, background: `linear-gradient(90deg, ${viaje.sucursalColor || tema.color} 0%, transparent 100%)` }} />
+                            {resultados.map(viaje => {
+                                const ds = calcularDisplayEstado(viaje);
+                                const suc = viaje.sucursales;
+                                const color = suc?.colorAccent || tema.color;
+                                const isGrey = !ds.canBook;
 
-                                    <div style={{ padding: '1.25rem 1.5rem', display: 'grid', gridTemplateColumns: '1fr auto', gap: '1rem', alignItems: 'center' }}>
-                                        <div>
-                                            {/* Company */}
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.75rem' }}>
-                                                <div style={{
-                                                    width: 36, height: 36, borderRadius: '8px',
-                                                    background: `${viaje.sucursalColor || '#3b82f6'}18`,
-                                                    border: `1px solid ${viaje.sucursalColor || '#3b82f6'}35`,
-                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                    fontSize: '1.1rem',
-                                                }}>
-                                                    {viaje.sucursalEmoji || '🚌'}
-                                                </div>
-                                                <div>
-                                                    <div style={{ fontWeight: 700, color: '#f1f5f9', fontSize: '0.92rem' }}>{viaje.sucursalNombre}</div>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                                        {[1, 2, 3, 4, 5].map(s => (
-                                                            <span key={s} style={{ fontSize: '0.6rem', color: s <= Math.round(viaje.ranking) ? starColor(viaje.ranking) : '#1e293b' }}>★</span>
-                                                        ))}
-                                                        <span style={{ fontSize: '0.72rem', color: '#64748b', marginLeft: '0.25rem' }}>{viaje.ranking}</span>
+                                return (
+                                    <div key={viaje.id} data-b="card" style={{
+                                        background: '#0d1a2e', borderRadius: '14px',
+                                        border: `1px solid ${isGrey ? '#1e293b' : color + '22'}`,
+                                        overflow: 'hidden', transition: 'all 0.2s',
+                                        opacity: isGrey ? 0.65 : 1,
+                                        cursor: ds.canBook ? 'pointer' : 'default',
+                                    }}
+                                        onMouseEnter={e => { if (ds.canBook) { e.currentTarget.style.borderColor = `${color}70`; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = `0 8px 30px rgba(0,0,0,0.3)`; } }}
+                                        onMouseLeave={e => { e.currentTarget.style.borderColor = isGrey ? '#1e293b' : `${color}22`; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}>
+
+                                        {/* Accent bar — grey if departed */}
+                                        <div style={{ height: 3, background: isGrey ? '#1e293b' : `linear-gradient(90deg, ${color} 0%, transparent 100%)` }} />
+
+                                        <div style={{ padding: '1.25rem 1.5rem', display: 'grid', gridTemplateColumns: '1fr auto', gap: '1rem', alignItems: 'center' }}>
+                                            <div>
+                                                {/* Company + state badge */}
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.75rem' }}>
+                                                    <div style={{
+                                                        width: 36, height: 36, borderRadius: '8px',
+                                                        background: `${color}18`, border: `1px solid ${color}35`,
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem',
+                                                    }}>
+                                                        {suc?.logoEmoji || '🚌'}
+                                                    </div>
+                                                    <div style={{ flex: 1 }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                            <span style={{ fontWeight: 700, color: '#f1f5f9', fontSize: '0.92rem' }}>{suc?.nombre || '—'}</span>
+                                                            <span style={{
+                                                                fontSize: '0.66rem', fontWeight: 700, padding: '0.15rem 0.5rem',
+                                                                borderRadius: '999px', border: `1px solid ${ds.color}50`,
+                                                                background: `${ds.color}18`, color: ds.color,
+                                                                textTransform: 'uppercase', letterSpacing: '0.05em',
+                                                            }}>{ds.label}</span>
+                                                        </div>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.1rem' }}>
+                                                            {[1, 2, 3, 4, 5].map(s => (
+                                                                <span key={s} style={{ fontSize: '0.6rem', color: s <= Math.round(suc?.ranking || 0) ? starColor(suc?.ranking) : '#1e293b' }}>★</span>
+                                                            ))}
+                                                            <span style={{ fontSize: '0.72rem', color: '#64748b', marginLeft: '0.25rem' }}>{suc?.ranking}</span>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
 
-                                            {/* Route */}
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.6rem' }}>
-                                                <span style={{ fontWeight: 700, color: '#f1f5f9', fontSize: '1rem' }}>{viaje.origen}</span>
-                                                <div style={{ flex: 1, maxWidth: 80, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                                    <div style={{ flex: 1, height: 1, background: `${viaje.sucursalColor || tema.color}50` }} />
-                                                    <span style={{ fontSize: '0.7rem', color: viaje.sucursalColor || tema.color }}>✈</span>
-                                                    <div style={{ flex: 1, height: 1, background: `${viaje.sucursalColor || tema.color}50` }} />
+                                                {/* Route */}
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.6rem' }}>
+                                                    <span style={{ fontWeight: 700, color: '#f1f5f9', fontSize: '1rem' }}>{viaje.origen}</span>
+                                                    <div style={{ flex: 1, maxWidth: 80, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                                        <div style={{ flex: 1, height: 1, background: `${color}50` }} />
+                                                        <span style={{ fontSize: '0.7rem', color: color }}>✈</span>
+                                                        <div style={{ flex: 1, height: 1, background: `${color}50` }} />
+                                                    </div>
+                                                    <span style={{ fontWeight: 700, color: '#f1f5f9', fontSize: '1rem' }}>{viaje.destino}</span>
                                                 </div>
-                                                <span style={{ fontWeight: 700, color: '#f1f5f9', fontSize: '1rem' }}>{viaje.destino}</span>
-                                            </div>
 
-                                            {/* Time & duration */}
-                                            <div style={{ display: 'flex', gap: '1rem', fontSize: '0.78rem', color: '#64748b', marginBottom: '0.6rem' }}>
-                                                <span>🕐 {new Date(viaje.salida).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' })}</span>
-                                                <span>📅 {new Date(viaje.salida).toLocaleDateString('es-BO', { day: 'numeric', month: 'short' })}</span>
-                                                {viaje.duracion_estimada && <span>⏱ {viaje.duracion_estimada}</span>}
-                                            </div>
-
-                                            {/* Amenidades */}
-                                            <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
-                                                {(viaje.amenidades || []).map(a => (
-                                                    <span key={a} style={{
-                                                        fontSize: '0.68rem', color: '#475569',
-                                                        background: '#07111f', padding: '0.15rem 0.5rem',
-                                                        borderRadius: '4px', border: '1px solid #1e293b',
-                                                    }}>{a}</span>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        {/* Price + CTA */}
-                                        <div style={{ textAlign: 'right' }}>
-                                            <div style={{ fontSize: '0.72rem', color: '#475569', marginBottom: '0.25rem' }}>por persona</div>
-                                            <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#10b981', lineHeight: 1 }}>
-                                                Bs {viaje.precio}
-                                            </div>
-                                            {cantidadBoletos > 1 && (
-                                                <div style={{ fontSize: '0.72rem', color: '#64748b', marginBottom: '0.75rem' }}>
-                                                    Total: Bs {viaje.precio * cantidadBoletos}
+                                                {/* Time & duration */}
+                                                <div style={{ display: 'flex', gap: '1rem', fontSize: '0.78rem', color: '#64748b', marginBottom: '0.6rem' }}>
+                                                    <span>🕐 {new Date(viaje.fecha_salida).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' })}</span>
+                                                    <span>📅 {new Date(viaje.fecha_salida).toLocaleDateString('es-BO', { day: 'numeric', month: 'short' })}</span>
+                                                    {viaje.duracion_estimada && <span>⏱ {viaje.duracion_estimada}</span>}
+                                                    {viaje.buses?.pisos > 1 && <span>🚌 {viaje.buses.pisos} pisos</span>}
                                                 </div>
-                                            )}
-                                            <button onClick={() => handleSeleccionar(viaje)} style={{
-                                                background: viaje.sucursalColor || tema.color,
-                                                color: '#fff', border: 'none', borderRadius: '10px',
-                                                padding: '0.6rem 1.25rem', fontWeight: 700, cursor: 'pointer',
-                                                fontSize: '0.85rem', marginTop: '0.5rem',
-                                                boxShadow: `0 4px 15px ${viaje.sucursalColor || tema.color}50`,
-                                                transition: 'transform 0.15s',
-                                            }}
-                                                onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.04)'}
-                                                onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
-                                                Elegir →
-                                            </button>
+
+                                                {/* Amenidades */}
+                                                <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+                                                    {(suc?.amenidades || []).map(a => (
+                                                        <span key={a} style={{
+                                                            fontSize: '0.68rem', color: '#475569',
+                                                            background: '#07111f', padding: '0.15rem 0.5rem',
+                                                            borderRadius: '4px', border: '1px solid #1e293b',
+                                                        }}>{a}</span>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {/* Price + CTA */}
+                                            <div style={{ textAlign: 'right' }}>
+                                                <div style={{ fontSize: '0.72rem', color: '#475569', marginBottom: '0.25rem' }}>por persona</div>
+                                                <div style={{ fontSize: '1.6rem', fontWeight: 800, color: isGrey ? '#334155' : '#10b981', lineHeight: 1 }}>
+                                                    Bs {viaje.precio}
+                                                </div>
+                                                {cantidadBoletos > 1 && (
+                                                    <div style={{ fontSize: '0.72rem', color: '#64748b', marginBottom: '0.75rem' }}>
+                                                        Total: Bs {viaje.precio * cantidadBoletos}
+                                                    </div>
+                                                )}
+                                                {ds.canBook ? (
+                                                    <button onClick={() => handleSeleccionar(viaje)} style={{
+                                                        background: color, color: '#fff', border: 'none', borderRadius: '10px',
+                                                        padding: '0.6rem 1.25rem', fontWeight: 700, cursor: 'pointer',
+                                                        fontSize: '0.85rem', marginTop: '0.5rem',
+                                                        boxShadow: `0 4px 15px ${color}50`, transition: 'transform 0.15s',
+                                                    }}
+                                                        onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.04)'}
+                                                        onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
+                                                        Elegir →
+                                                    </button>
+                                                ) : (
+                                                    <div style={{
+                                                        marginTop: '0.5rem', padding: '0.6rem 1.25rem',
+                                                        background: '#1e293b', color: '#475569',
+                                                        borderRadius: '10px', fontSize: '0.82rem', fontWeight: 600,
+                                                    }}>
+                                                        {ds.label}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </>
                 )}

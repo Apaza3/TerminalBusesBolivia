@@ -2,11 +2,13 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contextos/AuthContext';
 import { DEPARTAMENTOS } from '../../contextos/DepartamentoContext';
-import { obtenerReservas, obtenerVentas, crearReserva, obtenerAsientosPendientes, obtenerNotificaciones, marcarNotificacionLeida, marcarTodasLeidas, actualizarEstadoReserva, crearBoletos } from '../../data/mockStorage';
-import { SUCURSALES_MOCK, obtenerViajesSucursal } from '../../data/mockDiscoveryDB';
+import { obtenerNotificaciones, marcarNotificacionLeida, marcarTodasLeidas, crearBoletos } from '../../data/mockStorage';
 import PanelDisponibilidad from '../../componentes/PanelDisponibilidad';
 import FragmentoDept from '../../componentes/FragmentoDept';
-import { getViajesSucursalProximos, updatePrecioViaje, updatePreciosGlobal } from '../../servicios/api';
+import {
+    getViajesSucursalProximos, updatePrecioViaje, updatePreciosGlobal,
+    getReservasSucursal, getAsientosOcupados, crearReservaSupabase, updateReservaEstado,
+} from '../../servicios/api';
 import { jsPDF } from 'jspdf';
 import TicketCard, { getTemaEmpresa, getLogoEmpresa } from '../../componentes/TicketCard';
 import gsap from 'gsap';
@@ -27,12 +29,7 @@ const getIconoEmpresa = (nombre) => {
 
 const COLS_ASIENTO = ['A', 'B', 'C', 'D'];
 
-const esPasado = (salida, ahora) => {
-    const d = new Date(salida);
-    const ahoraMin = ahora.getHours() * 60 + ahora.getMinutes();
-    const salidaMin = d.getHours() * 60 + d.getMinutes();
-    return salidaMin < ahoraMin;
-};
+const esPasado = (fechaSalida) => new Date(fechaSalida) < new Date();
 
 const PanelCajero = () => {
     const navigate = useNavigate();
@@ -72,7 +69,7 @@ const PanelCajero = () => {
     const [datosTarjeta, setDatosTarjeta] = useState({ numero: '', expiry: '', cvv: '' });
     const [mensajeBoleto, setMensajeBoleto] = useState(null);
     const [boletoCreado, setBoletoCreado] = useState(null);
-    const [bloqueados, setBloqueados] = useState([]);
+    const [asientosOcupados, setAsientosOcupados] = useState([]);
     const [notifs, setNotifs] = useState([]);
     const [aprobados, setAprobados] = useState({}); // { [reservaId]: { boletos, nombreEmpresa, email } }
     const [pdfEnProceso, setPdfEnProceso] = useState(null); // reservaId | null
@@ -90,31 +87,27 @@ const PanelCajero = () => {
         return () => clearInterval(iv);
     }, []);
 
-    const recargar = useCallback(() => {
-        const sid = perfil?.sucursal_id || null;
-        setReservas(obtenerReservas(null, sid));
-        setVentas(obtenerVentas(sid));
-        const todos = SUCURSALES_MOCK
-            .filter(s => !s.departamento || s.departamento === deptNombre)
-            .flatMap(s => obtenerViajesSucursal(s.id))
-            .filter(v => v.origen === deptNombre);
-        setViajes(todos);
-    }, [deptNombre, perfil?.sucursal_id]);
-
-    const sincronizarAsientos = useCallback(() => {
-        if (!boleto.viajeId) return;
-        const ahora = Date.now();
-        const pendientes = obtenerAsientosPendientes(boleto.viajeId);
-        setBloqueados(pendientes.filter(p => p.expiraEn > ahora).map(p => p.asiento));
-    }, [boleto.viajeId]);
+    const recargar = useCallback(async () => {
+        const sid = perfil?.sucursal_id;
+        if (sid) {
+            getReservasSucursal(sid).then(setReservas);
+        }
+    }, [perfil?.sucursal_id]);
 
     useEffect(() => { recargar(); }, [recargar]);
 
+    // Cargar viajes reales cuando se abre crear-boleto
     useEffect(() => {
-        sincronizarAsientos();
-        const iv = setInterval(sincronizarAsientos, 3000);
-        return () => clearInterval(iv);
-    }, [sincronizarAsientos]);
+        if (tab === 'crear-boleto' && perfil?.sucursal_id) {
+            getViajesSucursalProximos(perfil.sucursal_id).then(setViajes);
+        }
+    }, [tab, perfil?.sucursal_id]);
+
+    // Cargar asientos ocupados cuando cambia el viaje seleccionado
+    useEffect(() => {
+        if (!boleto.viajeId) { setAsientosOcupados([]); return; }
+        getAsientosOcupados(boleto.viajeId).then(setAsientosOcupados);
+    }, [boleto.viajeId]);
 
     const cargarNotifs = useCallback(() => {
         const lista = obtenerNotificaciones({ para: 'cajero', sucursalId: perfil?.sucursal_id });
@@ -163,23 +156,24 @@ const PanelCajero = () => {
         r.id?.includes(busqueda)
     );
 
-    const totalIngresos = ventas.reduce((acc, v) => acc + (v.monto || 0), 0);
-    const totalBoletos = ventas.reduce((acc, v) => acc + (v.boletos || 0), 0);
+    const totalIngresos = reservas.reduce((acc, r) => acc + (r.precio || 0), 0);
+    const totalBoletos  = reservas.reduce((acc, r) => acc + (r.asientos?.length || 0), 0);
 
     const viajeSeleccionado = viajes.find(v => v.id === boleto.viajeId);
 
     const handleSeleccionarViaje = (v) => {
-        if (esPasado(v.salida, horaActual)) return;
+        if (esPasado(v.fecha_salida)) return;
         setBoleto(prev => ({
             ...prev,
             viajeId: v.id,
             origen: v.origen,
             destino: v.destino,
             precio: v.precio,
-            fechaSalida: v.salida,
+            busPlaca: v.buses?.placa || '—',
+            fechaSalida: v.fecha_salida,
             asientosSeleccionados: [],
         }));
-        setPasoCrear('form');
+        setPasoActivo(2);
     };
 
     const toggleAsiento = (id) => {
@@ -194,10 +188,6 @@ const PanelCajero = () => {
         });
     };
 
-    const asientosOcupados = boleto.viajeId
-        ? obtenerReservas(boleto.viajeId).flatMap(r => r.asientos)
-        : [];
-
     const handleIrAPago = (e) => {
         e.preventDefault();
         setMensajeBoleto(null);
@@ -207,33 +197,40 @@ const PanelCajero = () => {
         setPasoCrear('pago');
     };
 
-    const handleConfirmarPago = () => {
-        const resultado = crearReserva({
-            viajeId: boleto.viajeId,
-            pasajeroNombre: boleto.pasajeroNombre,
-            pasajeroCI: boleto.pasajeroCI,
-            pasajeroTelefono: boleto.pasajeroTelefono,
-            pasajeroEmail: boleto.pasajeroEmail,
-            asientos: boleto.asientosSeleccionados,
-            busPlaca: boleto.busPlaca,
-            origen: boleto.origen,
-            destino: boleto.destino,
-            precio: boleto.precio * boleto.asientosSeleccionados.length,
-            fechaSalida: boleto.fechaSalida,
-            metodoPago: boleto.metodoPago,
-            sucursalId: perfil?.sucursal_id || null,
-            empresaId: perfil?.sucursal_id || null,
+    const handleConfirmarPago = async () => {
+        const monto = boleto.precio * boleto.asientosSeleccionados.length;
+        const resultado = await crearReservaSupabase({
+            viajeId:         boleto.viajeId,
+            usuarioId:       perfil?.rol === 'cliente' ? perfil.id : null,
+            asientos:        boleto.asientosSeleccionados,
+            monto,
+            emailCliente:    boleto.pasajeroEmail,
+            telefonoCliente: boleto.pasajeroTelefono,
+            metodoPago:      boleto.metodoPago,
         });
 
         if (resultado.error) {
-            setMensajeBoleto({ tipo: 'error', texto: resultado.mensaje });
+            setMensajeBoleto({ tipo: 'error', texto: resultado.error });
         } else {
+            const reservaCompleta = {
+                id: resultado.id,
+                viajeId:        boleto.viajeId,
+                origen:         boleto.origen,
+                destino:        boleto.destino,
+                fechaSalida:    boleto.fechaSalida,
+                pasajeroNombre: boleto.pasajeroNombre,
+                pasajeroCI:     boleto.pasajeroCI,
+                asientos:       boleto.asientosSeleccionados,
+                precio:         monto,
+                metodoPago:     boleto.metodoPago,
+                busPlaca:       boleto.busPlaca,
+            };
             const pasajerosObj = boleto.asientosSeleccionados.reduce((acc, asiento) => {
                 acc[asiento] = { nombre: boleto.pasajeroNombre, ci: boleto.pasajeroCI, email: boleto.pasajeroEmail };
                 return acc;
             }, {});
-            const bs = crearBoletos(resultado, pasajerosObj);
-            setBoletoCreado(resultado);
+            const bs = crearBoletos(reservaCompleta, pasajerosObj);
+            setBoletoCreado(reservaCompleta);
             setBoletosEmitidos(bs || []);
             setPagado(true);
             recargar();
@@ -254,18 +251,14 @@ const PanelCajero = () => {
 
     const pendientesValidacion = reservas.filter(r => r.estado === 'pendiente_documentos');
 
-    const handleAprobarReserva = (reservaId) => {
+    const handleAprobarReserva = async (reservaId) => {
         const reserva = reservas.find(r => r.id === reservaId);
         if (!reserva) return;
-        actualizarEstadoReserva(reservaId, 'confirmada');
-        const bs = crearBoletos(reserva, reserva.pasajeros || {});
-        const nombreEmpresa = reserva.sucursalNombre || sucursalNombre || '';
-        const comprador = Object.values(reserva.pasajeros || {})[0];
-        const email = comprador?.email || reserva.pasajeroEmail || null;
-        setAprobados(prev => ({ ...prev, [reservaId]: { boletos: bs, nombreEmpresa, email } }));
-        if (email) {
-            setTimeout(() => alert(`📧 Boletos enviados a ${email}`), 400);
-        }
+        await updateReservaEstado(reservaId, 'confirmada');
+        const bs = crearBoletos(reserva, {});
+        const email = reserva.email_cliente || null;
+        setAprobados(prev => ({ ...prev, [reservaId]: { boletos: bs, nombreEmpresa: sucursalNombre, email } }));
+        if (email) setTimeout(() => alert(`📧 Boletos enviados a ${email}`), 400);
         recargar();
     };
 
@@ -295,8 +288,8 @@ const PanelCajero = () => {
         setPdfEnProceso(null);
     };
 
-    const handleRechazarReserva = (reservaId) => {
-        actualizarEstadoReserva(reservaId, 'cancelada');
+    const handleRechazarReserva = async (reservaId) => {
+        await updateReservaEstado(reservaId, 'cancelada');
         recargar();
     };
 
@@ -1015,7 +1008,7 @@ const PanelCajero = () => {
                                                 </div>
                                             )}
                                             {viajes.map(v => {
-                                                const pasado = esPasado(v.salida, horaActual);
+                                                const pasado = esPasado(v.fecha_salida);
                                                 const seleccionado = boleto.viajeId === v.id;
                                                 return (
                                                     <div key={v.id} onClick={() => handleSeleccionarViaje(v)} title={pasado ? 'Viaje ya salió' : ''} style={{
@@ -1030,7 +1023,7 @@ const PanelCajero = () => {
                                                             {pasado && <span style={{ fontSize: '0.65rem', color: '#475569', background: '#1e293b', borderRadius: 4, padding: '0.1rem 0.4rem' }}>Salió</span>}
                                                             {seleccionado && !pasado && <span style={{ fontSize: '0.65rem', background: `${tema.color}30`, color: tema.acento, borderRadius: 4, padding: '0.1rem 0.4rem', fontWeight: 700 }}>✓</span>}
                                                         </div>
-                                                        <div style={{ color: pasado ? '#334155' : '#64748b', fontSize: '0.75rem', marginTop: '0.25rem' }}>{new Date(v.salida).toLocaleString('es-BO')}</div>
+                                                        <div style={{ color: pasado ? '#334155' : '#64748b', fontSize: '0.75rem', marginTop: '0.25rem' }}>{new Date(v.fecha_salida).toLocaleString('es-BO')}</div>
                                                         <div style={{ color: pasado ? '#334155' : '#10b981', fontWeight: 700, fontSize: '0.9rem', marginTop: '0.35rem' }}>Bs {v.precio}/asiento</div>
                                                     </div>
                                                 );
