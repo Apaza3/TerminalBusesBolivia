@@ -1368,12 +1368,6 @@ const MapaAsientos = () => {
         setPaso('ticket');
     };
 
-    const simularPagoQR = () => {
-        if (!qrToken) return;
-        actualizarEstadoQR(qrToken, 'pagado');
-        toast.mostrar('Pago QR simulado confirmado.', 'exito');
-    };
-
     const handleDownloadPDF = async () => {
         if (!boletos.length) return;
         toast.mostrar('Generando PDF...', 'info');
@@ -2406,7 +2400,6 @@ const MapaAsientos = () => {
 
                                                                 {/* Botones */}
                                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: 'auto' }}>
-                                                                    <button onClick={simularPagoQR} style={{ ...btnPrimario, background: `linear-gradient(135deg, ${QR_BLUE} 0%, ${qrAccent} 50%, ${te?.c1 || QR_BLUE} 100%)`, color: '#0B1120', fontWeight: 900, fontFamily: "Arial,'Helvetica Neue',sans-serif", textTransform: 'uppercase', letterSpacing: '0.06em', boxShadow: `0 0 20px ${qrAccent}45` }}>SIMULAR PAGO EXITOSO</button>
                                                                     <button onClick={cerrarModal} style={{ ...btnPrimario, background: `linear-gradient(135deg, ${QR_BLUE} 0%, ${qrAccent} 50%, ${te?.c1 || QR_BLUE} 100%)`, color: '#0B1120', fontWeight: 900, fontFamily: "Arial,'Helvetica Neue',sans-serif", textTransform: 'uppercase', letterSpacing: '0.06em', boxShadow: `0 0 20px ${qrAccent}45`, margin: '0 auto', display: 'block' }}>← CAMBIAR MÉTODO</button>
                                                                 </div>
                                                             </div>
