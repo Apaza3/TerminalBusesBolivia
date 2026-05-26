@@ -94,14 +94,15 @@ const Empresas = () => {
         <div style={{ minHeight: '100vh', background: '#07111f', color: '#dde5f0', fontFamily: "'Inter', system-ui, sans-serif", position: 'relative' }}>
             {/* Fondo departamento */}
             <div style={{
-                position: 'fixed', top: 76, left: 0, right: 0, bottom: 0, zIndex: 0,
+                position: 'fixed', top: 0, left: 0, right: 0, height: '120vh', zIndex: 0,
                 backgroundImage: `url(${getDeptFondo(departamento)})`,
-                backgroundSize: isMobile ? '300%' : 'cover', backgroundPosition: 'center',
+                backgroundSize: 'cover', backgroundPosition: 'center',
                 backgroundRepeat: 'no-repeat',
                 opacity: 0.19,
                 filter: 'blur(6px)',
                 transition: 'background-image 0.6s',
                 pointerEvents: 'none',
+                transform: 'translate3d(0, 0, 0)', // gemini: acelera por hardware y evita saltos de scroll en móviles
             }} />
 
             {/* ══ NAVBAR ══════════════════════════════════════════════ */}

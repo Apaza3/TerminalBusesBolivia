@@ -3,11 +3,7 @@
  */
 import { supabase } from './supabase';
 
-// DB usa "Beni"/"Pando"/"Chuquisaca"; el contexto usa "Trinidad"/"Cobija"/"Sucre"
-const DB_TO_DEPT = {
-  'Beni': 'Trinidad', 'Pando': 'Cobija', 'Chuquisaca': 'Sucre',
-};
-const normDept = (nombre) => DB_TO_DEPT[nombre] || nombre || '';
+const normDept = (nombre) => nombre || '';
 
 // ── Sucursales ────────────────────────────────────────────
 export async function getSucursales() {

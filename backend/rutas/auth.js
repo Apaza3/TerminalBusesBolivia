@@ -36,12 +36,18 @@ router.post('/login-ci', async (req, res) => {
     const { ci, password } = req.body;
     if (!ci || !password) return res.status(400).json({ error: 'CI y password requeridos.' });
 
-    const { data: usuario } = await supabaseAdmin
+    const ciNorm = String(ci).trim();
+
+    const { data: usuario, error: buscarError } = await supabaseAdmin
         .from('usuarios')
         .select('email, activo')
-        .eq('ci', ci)
-        .single();
+        .eq('ci', ciNorm)
+        .maybeSingle();
 
+    if (buscarError) {
+        console.error('[login-ci] Error buscando CI:', buscarError);
+        return res.status(500).json({ error: 'Error interno al buscar usuario.' });
+    }
     if (!usuario) return res.status(404).json({ error: 'CI no registrado.' });
     if (!usuario.activo) return res.status(403).json({ error: 'Cuenta suspendida.' });
 
@@ -73,12 +79,29 @@ router.post('/registro', async (req, res) => {
         return res.status(400).json({ error: 'email, password, nombre_completo y CI son requeridos.' });
     }
 
+    const ciNorm = String(ci).trim();
+
     // Verificar CI duplicado
-    const { data: existente } = await supabaseAdmin.from('usuarios').select('id').eq('ci', ci).single();
+    const { data: existente, error: buscarError } = await supabaseAdmin
+        .from('usuarios')
+        .select('id')
+        .eq('ci', ciNorm)
+        .maybeSingle();
+
+    if (buscarError) {
+        console.error('[registro] Error verificando CI:', buscarError);
+        return res.status(500).json({ error: 'Error interno al verificar CI.' });
+    }
     if (existente) return res.status(409).json({ error: 'CI ya registrado.' });
 
+    // Verificar email duplicado en Auth
+    const { data: { users: usersConEmail } } = await supabaseAdmin.auth.admin.listUsers();
+    const emailExiste = usersConEmail?.some(u => u.email === email.toLowerCase().trim());
+    // Eliminar fila huérfana en usuarios si existe con ese email (inconsistencia previa)
+    await supabaseAdmin.from('usuarios').delete().eq('email', email.toLowerCase().trim());
+
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-        email,
+        email: email.toLowerCase().trim(),
         password,
         email_confirm: true
     });
@@ -86,17 +109,19 @@ router.post('/registro', async (req, res) => {
 
     const { data: perfil, error: perfilError } = await supabaseAdmin
         .from('usuarios')
-        .insert({ id: authData.user.id, email, nombre_completo, ci, telefono, rol: 'cliente' })
+        .upsert({ id: authData.user.id, email: email.toLowerCase().trim(), nombre_completo, ci: ciNorm, telefono, rol: 'cliente', activo: true })
         .select()
         .single();
 
     if (perfilError) {
+        console.error('[registro] Error al crear perfil:', perfilError);
         await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
-        return res.status(500).json({ error: 'Error al crear perfil.' });
+        return res.status(500).json({ error: `Error al crear perfil: ${perfilError.message}` });
     }
 
     res.status(201).json({ exito: true, usuario: perfil });
 });
+
 
 // POST /api/auth/refresh — renovar token
 router.post('/refresh', async (req, res) => {
@@ -140,6 +165,51 @@ router.post('/recuperar-password', async (req, res) => {
 
     if (error) return res.status(500).json({ error: 'Error al enviar email.' });
     res.json({ exito: true, mensaje: 'Si el correo existe, recibirás instrucciones.' });
+});
+
+// GET /api/auth/verificar-ci/:ci — verifica si un CI ya está registrado
+router.get('/verificar-ci/:ci', async (req, res) => {
+    const ci = String(req.params.ci).trim();
+    const { data, error } = await supabaseAdmin
+        .from('usuarios')
+        .select('id')
+        .eq('ci', ci)
+        .maybeSingle();
+    if (error) return res.status(500).json({ error: 'Error al verificar CI.' });
+    res.json({ existe: data !== null });
+});
+
+// GET /api/auth/debug-ci/:ci — TEMPORAL: diagnóstico de estado de CI en DB
+router.get('/debug-ci/:ci', async (req, res) => {
+    const ci = String(req.params.ci).trim();
+
+    // Buscar con maybeSingle (sin error si no existe)
+    const { data: usuario, error: err1 } = await supabaseAdmin
+        .from('usuarios')
+        .select('id, email, ci, activo, rol, nombre_completo')
+        .eq('ci', ci)
+        .maybeSingle();
+
+    // Buscar sin limit por si hay duplicados
+    const { data: todos, error: err2 } = await supabaseAdmin
+        .from('usuarios')
+        .select('id, email, ci, activo, rol')
+        .eq('ci', ci);
+
+    // Buscar con ilike por si el CI tiene espacios/capitalización distinta
+    const { data: ilike } = await supabaseAdmin
+        .from('usuarios')
+        .select('id, email, ci, activo')
+        .ilike('ci', `%${ci}%`);
+
+    res.json({
+        ci_buscado: ci,
+        resultado_maybeSingle: usuario,
+        error_maybeSingle: err1?.message,
+        todos_con_ese_ci: todos,
+        error_todos: err2?.message,
+        similares_ilike: ilike,
+    });
 });
 
 module.exports = router;

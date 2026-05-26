@@ -22,37 +22,39 @@ import {
     crearReservaConEstado,
     verificarExpiradas,
 } from '../data/mockStorage';
+// gemini: importar API_BASE para consultar estado del QR desde el backend (compartido entre PC y celular)
+import { API_BASE } from '../config';
 import '../estilos/escritorio/mapa-asientos.css';
 
 const PISO2_COLS = [780, 715, 650, 585, 520, 455, 390, 325, 260, 195, 130];
 const PISO1_COLS = [715, 650, 585, 520, 455];
-const SEAT_ROWS  = [25, 60, 105, 140];
+const SEAT_ROWS = [25, 60, 105, 140];
 
 const DEPT = {
-    'La Paz':     { color: '#2563eb', bg: '#08122a', acento: '#93c5fd' },
+    'La Paz': { color: '#2563eb', bg: '#08122a', acento: '#93c5fd' },
     'Cochabamba': { color: '#059669', bg: '#061510', acento: '#6ee7b7' },
     'Santa Cruz': { color: '#d97706', bg: '#140c03', acento: '#fcd34d' },
-    'Oruro':      { color: '#7c3aed', bg: '#0d071e', acento: '#c4b5fd' },
-    'Potosí':     { color: '#64748b', bg: '#090c11', acento: '#cbd5e1' },
-    'Sucre':      { color: '#b45309', bg: '#120a03', acento: '#fde68a' },
-    'Tarija':     { color: '#be123c', bg: '#120408', acento: '#fda4af' },
-    'Trinidad':   { color: '#0d9488', bg: '#040f0e', acento: '#99f6e4' },
-    'Cobija':     { color: '#65a30d', bg: '#071003', acento: '#bef264' },
+    'Oruro': { color: '#7c3aed', bg: '#0d071e', acento: '#c4b5fd' },
+    'Potosí': { color: '#64748b', bg: '#090c11', acento: '#cbd5e1' },
+    'Sucre': { color: '#b45309', bg: '#120a03', acento: '#fde68a' },
+    'Tarija': { color: '#be123c', bg: '#120408', acento: '#fda4af' },
+    'Trinidad': { color: '#0d9488', bg: '#040f0e', acento: '#99f6e4' },
+    'Cobija': { color: '#65a30d', bg: '#071003', acento: '#bef264' },
 };
 
 
 // Paleta rica por departamento destino (para el header de ruta)
 const DEPT_PALETA = {
-    'La Paz':     { primary: '#00F0FF', secondary: '#FF2A85', bandera1: '#E63946', bandera2: '#2A9D8F', primaryText: '#0B1120' },
-    'Oruro':      { primary: '#FF6B00', secondary: '#D90429', bandera1: '#D90429', bandera2: '#FF6B00', primaryText: '#FFFFFF' },
-    'Potosí':     { primary: '#90E0EF', secondary: '#C1121F', bandera1: '#C1121F', bandera2: '#E2E8F0', primaryText: '#0B1120' },
+    'La Paz': { primary: '#00F0FF', secondary: '#FF2A85', bandera1: '#E63946', bandera2: '#2A9D8F', primaryText: '#0B1120' },
+    'Oruro': { primary: '#FF6B00', secondary: '#D90429', bandera1: '#D90429', bandera2: '#FF6B00', primaryText: '#FFFFFF' },
+    'Potosí': { primary: '#90E0EF', secondary: '#C1121F', bandera1: '#C1121F', bandera2: '#E2E8F0', primaryText: '#0B1120' },
     'Cochabamba': { primary: '#00F0FF', secondary: '#7209B7', bandera1: '#48CAE4', bandera2: '#0077B6', primaryText: '#0B1120' },
     'Chuquisaca': { primary: '#EF233C', secondary: '#F8FAFC', bandera1: '#F8FAFC', bandera2: '#EF233C', primaryText: '#FFFFFF' },
-    'Sucre':      { primary: '#EF233C', secondary: '#F8FAFC', bandera1: '#F8FAFC', bandera2: '#EF233C', primaryText: '#FFFFFF' },
-    'Tarija':     { primary: '#70E000', secondary: '#9D0208', bandera1: '#9D0208', bandera2: '#F8FAFC', primaryText: '#0B1120' },
+    'Sucre': { primary: '#EF233C', secondary: '#F8FAFC', bandera1: '#F8FAFC', bandera2: '#EF233C', primaryText: '#FFFFFF' },
+    'Tarija': { primary: '#70E000', secondary: '#9D0208', bandera1: '#9D0208', bandera2: '#F8FAFC', primaryText: '#0B1120' },
     'Santa Cruz': { primary: '#39FF14', secondary: '#FFD166', bandera1: '#06D6A0', bandera2: '#F8FAFC', primaryText: '#0B1120' },
-    'Beni':       { primary: '#FEE440', secondary: '#00BBF9', bandera1: '#38B000', bandera2: '#FEE440', primaryText: '#0B1120' },
-    'Pando':      { primary: '#06D6A0', secondary: '#118AB2', bandera1: '#FFFFFF', bandera2: '#06D6A0', primaryText: '#0B1120' },
+    'Beni': { primary: '#FEE440', secondary: '#00BBF9', bandera1: '#38B000', bandera2: '#FEE440', primaryText: '#0B1120' },
+    'Pando': { primary: '#06D6A0', secondary: '#118AB2', bandera1: '#FFFFFF', bandera2: '#06D6A0', primaryText: '#0B1120' },
 };
 const getDeptPaleta = (destino) => {
     const key = Object.keys(DEPT_PALETA).find(k => destino?.toLowerCase().includes(k.toLowerCase()));
@@ -140,7 +142,7 @@ function injectGeminiCSS() {
     if (_geminiCssOk || typeof document === 'undefined') return;
     _geminiCssOk = true;
     const el = document.createElement('style');
-    el.setAttribute('data-gbn','1');
+    el.setAttribute('data-gbn', '1');
     el.textContent = GEMINI_CSS;
     document.head.appendChild(el);
 }
@@ -163,7 +165,7 @@ const BusPerfilGemini = ({ onSelectPiso, color1 = '#394285', color2 = '#48256a',
     if (pisos === 1) {
         const wFill1 = hovBus ? '#fde047' : '#363f46';
         const wGlow1 = hovBus ? 'url(#gbn1Glow)' : undefined;
-        const wCls1  = isMobile && !hovBus ? 'gbn-win-blink' : '';
+        const wCls1 = isMobile && !hovBus ? 'gbn-win-blink' : '';
         return (
             <div style={{ width: '100%', maxWidth: 1000, margin: '0 auto', filter: 'drop-shadow(0 12px 22px rgba(0,0,0,0.3))' }}>
                 <svg viewBox="0 0 1000 275" style={{ width: '100%', height: 'auto' }}>
@@ -373,15 +375,15 @@ const BusPerfilGemini = ({ onSelectPiso, color1 = '#394285', color2 = '#48256a',
 
             </svg>
 
-                <div style={{
-                    textAlign: 'center', marginTop: '0.6rem', marginBottom: '0.4rem',
-                    color: '#ffffff', fontSize: '0.82rem', letterSpacing: '0.18em',
-                    textTransform: 'uppercase', fontFamily: "'Courier New', monospace", fontWeight: 700,
-                    textShadow: '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 10px #000',
-                    animation: 'ma-neon 2.5s ease-in-out infinite',
-                }}>
-                    {isMobile ? '👆 toca el piso deseado para seleccionarlo' : '🖱 pasa el cursor sobre el piso deseado'}
-                </div>
+            <div style={{
+                textAlign: 'center', marginTop: '0.6rem', marginBottom: '0.4rem',
+                color: '#ffffff', fontSize: '0.82rem', letterSpacing: '0.18em',
+                textTransform: 'uppercase', fontFamily: "'Courier New', monospace", fontWeight: 700,
+                textShadow: '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 10px #000',
+                animation: 'ma-neon 2.5s ease-in-out infinite',
+            }}>
+                {isMobile ? '👆 toca el piso deseado para seleccionarlo' : '🖱 pasa el cursor sobre el piso deseado'}
+            </div>
         </div>
     );
 };
@@ -393,11 +395,11 @@ const GeminiSeatMap = ({ piso, totalPisos = 1, reservados, bloqueados, seleccion
 
     const ROWS = ['A', 'B', 'C', 'D'];
 
-    const seatLibre     = temaEmpresa ? lighten(temaEmpresa.c1, 0.62) : '#646368';
-    const seatSelected  = temaEmpresa ? temaEmpresa.c1 : colorAccent;
+    const seatLibre = temaEmpresa ? lighten(temaEmpresa.c1, 0.62) : '#646368';
+    const seatSelected = temaEmpresa ? temaEmpresa.c1 : colorAccent;
     const seatBloqueado = temaEmpresa ? darken(temaEmpresa.c2, 0.35) : '#4c1d95';
-    const seatOcupado   = temaEmpresa ? darken(temaEmpresa.c1, 0.30) : '#7f1d1d';
-    const seatHover     = temaEmpresa ? darken(temaEmpresa.c1, 0.55) : '#0056b3';
+    const seatOcupado = temaEmpresa ? darken(temaEmpresa.c1, 0.30) : '#7f1d1d';
+    const seatHover = temaEmpresa ? darken(temaEmpresa.c1, 0.55) : '#0056b3';
 
     const [hoveredId, setHoveredId] = useState(null);
 
@@ -423,20 +425,22 @@ const GeminiSeatMap = ({ piso, totalPisos = 1, reservados, bloqueados, seleccion
         ? { position: 'relative', width: mobileW, height: containerH, overflow: 'hidden', margin: '0 auto' }
         : { width: '100%', overflowX: 'auto' };
     const svgStyle = isMob
-        ? { position: 'absolute', width: mobRendH, height: mobileW,
+        ? {
+            position: 'absolute', width: mobRendH, height: mobileW,
             left: -(mobRendH - mobileW) / 2, top: (mobRendH - mobileW) / 2 - topOffset,
-            transform: 'rotate(-90deg)', transformOrigin: 'center center' }
+            transform: 'rotate(-90deg)', transformOrigin: 'center center'
+        }
         : { width: '100%', minWidth: 360, height: 'auto' };
 
     const SeatRect = ({ id, x, y }) => {
         const locked = reservados.includes(id) || bloqueados.includes(id);
         const hov = hoveredId === id;
         let fill;
-        if (reservados.includes(id))        fill = seatOcupado;
-        else if (bloqueados.includes(id))   fill = seatBloqueado;
-        else if (seleccionados.includes(id))fill = seatSelected;
-        else if (!isMob && hov && !locked)  fill = seatHover;
-        else                                fill = seatLibre;
+        if (reservados.includes(id)) fill = seatOcupado;
+        else if (bloqueados.includes(id)) fill = seatBloqueado;
+        else if (seleccionados.includes(id)) fill = seatSelected;
+        else if (!isMob && hov && !locked) fill = seatHover;
+        else fill = seatLibre;
         const label = /^P[12]/.test(id) ? id.slice(2) : id;
         const tx = x + SW / 2, ty = y + SH / 2 + (isMob ? 2 : 5);
         const tRot = isMob ? `rotate(90 ${tx} ${ty})` : undefined;
@@ -457,10 +461,10 @@ const GeminiSeatMap = ({ piso, totalPisos = 1, reservados, bloqueados, seleccion
     };
 
     const LEGEND = [
-        { fill: seatLibre,     label: 'Libre' },
-        { fill: seatSelected,  label: 'Seleccionado' },
+        { fill: seatLibre, label: 'Libre' },
+        { fill: seatSelected, label: 'Seleccionado' },
         { fill: seatBloqueado, label: 'Bloqueado' },
-        { fill: seatOcupado,   label: 'Ocupado' },
+        { fill: seatOcupado, label: 'Ocupado' },
     ];
     const Legend = () => (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.55rem 1rem', marginTop: '0.85rem', padding: '0 0.25rem' }}>
@@ -494,42 +498,42 @@ const GeminiSeatMap = ({ piso, totalPisos = 1, reservados, bloqueados, seleccion
         return (
             <div>
                 <div style={wrapperStyle}>
-                <svg viewBox={svgViewBox} style={svgStyle}>
-                    {/* Planta del bus */}
-                    <rect x={isMob?494:40} y={isMob?2:20} width={isMob?476:930} height={isMob?116:150} rx="20" fill="#2e3748" stroke={lighten(temaEmpresa?.c1 || '#6b7280', 0.35)} strokeWidth="2"/>
-                    {/* Cabina conductor (arriba-derecha: filas A+B) */}
-                    <path d={isMob ? "M 950 2 A 20 20 0 0 1 970 22 L 970 53 L 925 53 C 915 53 915 2 925 2 Z" : "M 950 20 A 20 20 0 0 1 970 40 L 970 95 L 870 95 C 860 95 860 20 870 20 Z"} fill="#8896a8"/>
-                    <text x={isMob?945:920} y={isMob?29:57} textAnchor="middle" dominantBaseline="middle"
-                        transform={isMob ? "rotate(90 945 29)" : undefined}
-                        fontFamily="Arial,'Helvetica Neue',sans-serif" fontSize="13" fontWeight="700" letterSpacing="1.5"
-                        stroke="#000" strokeWidth="2.5" strokeLinejoin="round" fill="none" pointerEvents="none">CABINA</text>
-                    <text x={isMob?945:920} y={isMob?29:57} textAnchor="middle" dominantBaseline="middle"
-                        transform={isMob ? "rotate(90 945 29)" : undefined}
-                        fontFamily="Arial,'Helvetica Neue',sans-serif" fontSize="13" fontWeight="700" letterSpacing="1.5"
-                        fill="#ffffff" pointerEvents="none">CABINA</text>
-                    {/* Puerta (abajo-derecha: filas C+D) */}
-                    <rect x={isMob?925:870} y={isMob?65:100} width={isMob?42:95} height={isMob?47:65} rx="8" fill="#e2e8f0" stroke="#cbd5e1" strokeWidth="1.5"/>
-                    <text x={isMob?946:917} y={isMob?88:133} textAnchor="middle" dominantBaseline="middle"
-                        transform={isMob ? "rotate(90 946 88)" : undefined}
-                        fontFamily="Arial,'Helvetica Neue',sans-serif" fontSize={isMob?10:14} fontWeight="700" letterSpacing="1.5"
-                        stroke="#000" strokeWidth="3" strokeLinejoin="round" fill="none" pointerEvents="none">PUERTA</text>
-                    <text x={isMob?946:917} y={isMob?88:133} textAnchor="middle" dominantBaseline="middle"
-                        transform={isMob ? "rotate(90 946 88)" : undefined}
-                        fontFamily="Arial,'Helvetica Neue',sans-serif" fontSize={isMob?10:14} fontWeight="700" letterSpacing="1.5"
-                        fill="#94a3b8" pointerEvents="none">PUERTA</text>
-                    {/* Baño trasero */}
-                    <rect x={isMob?496:45} y={isMob?65:100} width={isMob?35:75} height={isMob?47:65} rx="8" fill="#8896a8" stroke="#a0aec0" strokeWidth="1.5"/>
-                    <text x={isMob?513:82} y={isMob?88:133} textAnchor="middle" dominantBaseline="middle"
-                        transform={isMob ? "rotate(90 513 88)" : undefined}
-                        fontFamily="Arial,'Helvetica Neue',sans-serif" fontSize={isMob?10:14} fontWeight="700" letterSpacing="1.5"
-                        stroke="#000" strokeWidth="3" strokeLinejoin="round" fill="none" pointerEvents="none">BAÑO</text>
-                    <text x={isMob?513:82} y={isMob?88:133} textAnchor="middle" dominantBaseline="middle"
-                        transform={isMob ? "rotate(90 513 88)" : undefined}
-                        fontFamily="Arial,'Helvetica Neue',sans-serif" fontSize={isMob?10:14} fontWeight="700" letterSpacing="1.5"
-                        fill="#ffffff" pointerEvents="none">BAÑO</text>
-                    {/* Asientos */}
-                    {seats.map(s => <SeatRect key={s.id} id={s.id} x={s.x} y={s.y} />)}
-                </svg>
+                    <svg viewBox={svgViewBox} style={svgStyle}>
+                        {/* Planta del bus */}
+                        <rect x={isMob ? 494 : 40} y={isMob ? 2 : 20} width={isMob ? 476 : 930} height={isMob ? 116 : 150} rx="20" fill="#2e3748" stroke={lighten(temaEmpresa?.c1 || '#6b7280', 0.35)} strokeWidth="2" />
+                        {/* Cabina conductor (arriba-derecha: filas A+B) */}
+                        <path d={isMob ? "M 950 2 A 20 20 0 0 1 970 22 L 970 53 L 925 53 C 915 53 915 2 925 2 Z" : "M 950 20 A 20 20 0 0 1 970 40 L 970 95 L 870 95 C 860 95 860 20 870 20 Z"} fill="#8896a8" />
+                        <text x={isMob ? 945 : 920} y={isMob ? 29 : 57} textAnchor="middle" dominantBaseline="middle"
+                            transform={isMob ? "rotate(90 945 29)" : undefined}
+                            fontFamily="Arial,'Helvetica Neue',sans-serif" fontSize="13" fontWeight="700" letterSpacing="1.5"
+                            stroke="#000" strokeWidth="2.5" strokeLinejoin="round" fill="none" pointerEvents="none">CABINA</text>
+                        <text x={isMob ? 945 : 920} y={isMob ? 29 : 57} textAnchor="middle" dominantBaseline="middle"
+                            transform={isMob ? "rotate(90 945 29)" : undefined}
+                            fontFamily="Arial,'Helvetica Neue',sans-serif" fontSize="13" fontWeight="700" letterSpacing="1.5"
+                            fill="#ffffff" pointerEvents="none">CABINA</text>
+                        {/* Puerta (abajo-derecha: filas C+D) */}
+                        <rect x={isMob ? 925 : 870} y={isMob ? 65 : 100} width={isMob ? 42 : 95} height={isMob ? 47 : 65} rx="8" fill="#e2e8f0" stroke="#cbd5e1" strokeWidth="1.5" />
+                        <text x={isMob ? 946 : 917} y={isMob ? 88 : 133} textAnchor="middle" dominantBaseline="middle"
+                            transform={isMob ? "rotate(90 946 88)" : undefined}
+                            fontFamily="Arial,'Helvetica Neue',sans-serif" fontSize={isMob ? 10 : 14} fontWeight="700" letterSpacing="1.5"
+                            stroke="#000" strokeWidth="3" strokeLinejoin="round" fill="none" pointerEvents="none">PUERTA</text>
+                        <text x={isMob ? 946 : 917} y={isMob ? 88 : 133} textAnchor="middle" dominantBaseline="middle"
+                            transform={isMob ? "rotate(90 946 88)" : undefined}
+                            fontFamily="Arial,'Helvetica Neue',sans-serif" fontSize={isMob ? 10 : 14} fontWeight="700" letterSpacing="1.5"
+                            fill="#94a3b8" pointerEvents="none">PUERTA</text>
+                        {/* Baño trasero */}
+                        <rect x={isMob ? 496 : 45} y={isMob ? 65 : 100} width={isMob ? 35 : 75} height={isMob ? 47 : 65} rx="8" fill="#8896a8" stroke="#a0aec0" strokeWidth="1.5" />
+                        <text x={isMob ? 513 : 82} y={isMob ? 88 : 133} textAnchor="middle" dominantBaseline="middle"
+                            transform={isMob ? "rotate(90 513 88)" : undefined}
+                            fontFamily="Arial,'Helvetica Neue',sans-serif" fontSize={isMob ? 10 : 14} fontWeight="700" letterSpacing="1.5"
+                            stroke="#000" strokeWidth="3" strokeLinejoin="round" fill="none" pointerEvents="none">BAÑO</text>
+                        <text x={isMob ? 513 : 82} y={isMob ? 88 : 133} textAnchor="middle" dominantBaseline="middle"
+                            transform={isMob ? "rotate(90 513 88)" : undefined}
+                            fontFamily="Arial,'Helvetica Neue',sans-serif" fontSize={isMob ? 10 : 14} fontWeight="700" letterSpacing="1.5"
+                            fill="#ffffff" pointerEvents="none">BAÑO</text>
+                        {/* Asientos */}
+                        {seats.map(s => <SeatRect key={s.id} id={s.id} x={s.x} y={s.y} />)}
+                    </svg>
                 </div>
                 <Legend />
             </div>
@@ -552,23 +556,23 @@ const GeminiSeatMap = ({ piso, totalPisos = 1, reservados, bloqueados, seleccion
         return (
             <div>
                 <div style={wrapperStyle}>
-                <svg viewBox={svgViewBox} style={svgStyle}>
-                    <g transform={isMob ? undefined : "translate(-72 0)"}>
-                    <rect x={isMob?492:195} y={isMob?2:20} width={isMob?370:755} height={isMob?116:150} rx="20" fill="#2e3748" stroke={lighten(temaEmpresa?.c1 || '#6b7280', 0.35)} strokeWidth="2"/>
-                    {/* Escalera — x=730, solo zona C+D (filas inferiores); A3+B3 quedan libres encima */}
-                    <rect x={isMob?760:730} y={isMob?65:98} width={isMob?22:55} height={isMob?47:75} rx="6" fill="#8896a8"/>
-                    {(isMob ? [69,79,89,99,109] : [110,125,140,155,168]).map(ly => (
-                        <line key={ly} x1={isMob?760:730} y1={ly} x2={isMob?782:785} y2={ly} stroke="#9ab0c5" strokeWidth="1"/>
-                    ))}
-                    <text x={isMob?771:757} y={isMob?89:135} textAnchor="middle" dominantBaseline="middle" transform={isMob ? "rotate(90 771 89)" : "rotate(-90 757 135)"}
-                        fontFamily="Arial, 'Helvetica Neue', sans-serif" fontSize={isMob?9:13} fontWeight="700" letterSpacing="1.5"
-                        stroke="#000" strokeWidth="3.5" strokeLinejoin="round" fill="none" pointerEvents="none">ESCALERA</text>
-                    <text x={isMob?771:757} y={isMob?89:135} textAnchor="middle" dominantBaseline="middle" transform={isMob ? "rotate(90 771 89)" : "rotate(-90 757 135)"}
-                        fontFamily="Arial, 'Helvetica Neue', sans-serif" fontSize={isMob?9:13} fontWeight="700" letterSpacing="1.5"
-                        fill="#ffffff" pointerEvents="none">ESCALERA</text>
-                    {seats2.map(s => <SeatRect key={s.id} id={s.id} x={s.x} y={s.y} />)}
-                    </g>
-                </svg>
+                    <svg viewBox={svgViewBox} style={svgStyle}>
+                        <g transform={isMob ? undefined : "translate(-72 0)"}>
+                            <rect x={isMob ? 492 : 195} y={isMob ? 2 : 20} width={isMob ? 370 : 755} height={isMob ? 116 : 150} rx="20" fill="#2e3748" stroke={lighten(temaEmpresa?.c1 || '#6b7280', 0.35)} strokeWidth="2" />
+                            {/* Escalera — x=730, solo zona C+D (filas inferiores); A3+B3 quedan libres encima */}
+                            <rect x={isMob ? 760 : 730} y={isMob ? 65 : 98} width={isMob ? 22 : 55} height={isMob ? 47 : 75} rx="6" fill="#8896a8" />
+                            {(isMob ? [69, 79, 89, 99, 109] : [110, 125, 140, 155, 168]).map(ly => (
+                                <line key={ly} x1={isMob ? 760 : 730} y1={ly} x2={isMob ? 782 : 785} y2={ly} stroke="#9ab0c5" strokeWidth="1" />
+                            ))}
+                            <text x={isMob ? 771 : 757} y={isMob ? 89 : 135} textAnchor="middle" dominantBaseline="middle" transform={isMob ? "rotate(90 771 89)" : "rotate(-90 757 135)"}
+                                fontFamily="Arial, 'Helvetica Neue', sans-serif" fontSize={isMob ? 9 : 13} fontWeight="700" letterSpacing="1.5"
+                                stroke="#000" strokeWidth="3.5" strokeLinejoin="round" fill="none" pointerEvents="none">ESCALERA</text>
+                            <text x={isMob ? 771 : 757} y={isMob ? 89 : 135} textAnchor="middle" dominantBaseline="middle" transform={isMob ? "rotate(90 771 89)" : "rotate(-90 757 135)"}
+                                fontFamily="Arial, 'Helvetica Neue', sans-serif" fontSize={isMob ? 9 : 13} fontWeight="700" letterSpacing="1.5"
+                                fill="#ffffff" pointerEvents="none">ESCALERA</text>
+                            {seats2.map(s => <SeatRect key={s.id} id={s.id} x={s.x} y={s.y} />)}
+                        </g>
+                    </svg>
                 </div>
                 <Legend />
             </div>
@@ -588,48 +592,48 @@ const GeminiSeatMap = ({ piso, totalPisos = 1, reservados, bloqueados, seleccion
     return (
         <div>
             <div style={wrapperStyle}>
-            <svg viewBox={svgViewBox} style={svgStyle}>
-                <rect x={isMob?585:50} y={isMob?2:20} width={isMob?360:900} height={isMob?116:150} rx="20" fill="#2e3748" stroke={lighten(temaEmpresa?.c1 || '#6b7280', 0.35)} strokeWidth="2"/>
-                {/* Cabina (extremo derecho, full height, arcos matchan rx=20 del bus rect) */}
-                <path d={isMob ? "M 925 2 A 20 20 0 0 1 945 22 L 945 98 A 20 20 0 0 1 925 118 L 898 118 L 898 2 Z" : "M 945 25 L 945 165 C 945 165 910 165 900 165 C 890 165 890 25 900 25 L 945 25 Z"} fill="#8896a8"/>
-                <text x={isMob?922:917} y={isMob?60:100} textAnchor="middle" dominantBaseline="middle" transform={isMob ? "rotate(90 922 60)" : "rotate(-90 917 100)"}
-                    fontFamily="Arial, 'Helvetica Neue', sans-serif" fontSize="13" fontWeight="700" letterSpacing="2"
-                    stroke="#000" strokeWidth="3" strokeLinejoin="round" fill="none" pointerEvents="none">CABINA</text>
-                <text x={isMob?922:917} y={isMob?60:100} textAnchor="middle" dominantBaseline="middle" transform={isMob ? "rotate(90 922 60)" : "rotate(-90 917 100)"}
-                    fontFamily="Arial, 'Helvetica Neue', sans-serif" fontSize="13" fontWeight="700" letterSpacing="2"
-                    fill="#ffffff" pointerEvents="none">CABINA</text>
-                {/* Baño (zona A+B): mobile x=856–895(w=39), desktop x=795–865 */}
-                <rect x={isMob?856:795} y={isMob?10:30} width={isMob?39:70} height={isMob?36:65} rx="6" fill="#8896a8" stroke="#a0aec0" strokeWidth="1.5"/>
-                <text x={isMob?876:830} y={isMob?28:63} textAnchor="middle" dominantBaseline="middle"
-                    transform={isMob ? "rotate(90 876 28)" : undefined}
-                    fontFamily="Arial, 'Helvetica Neue', sans-serif" fontSize={isMob?11:14} fontWeight="700" letterSpacing={isMob?"0.5":"2"}
-                    stroke="#000" strokeWidth="3" strokeLinejoin="round" fill="none" pointerEvents="none">BAÑO</text>
-                <text x={isMob?876:830} y={isMob?28:63} textAnchor="middle" dominantBaseline="middle"
-                    transform={isMob ? "rotate(90 876 28)" : undefined}
-                    fontFamily="Arial, 'Helvetica Neue', sans-serif" fontSize={isMob?11:14} fontWeight="700" letterSpacing={isMob?"0.5":"2"}
-                    fill="#ffffff" pointerEvents="none">BAÑO</text>
-                {/* Escalera (zona C+D): mobile x=856–895(w=39), desktop x=795–850 */}
-                <rect x={isMob?856:795} y={isMob?68:115} width={isMob?39:55} height={isMob?38:45} rx="4" fill="#8896a8"/>
-                <text x={isMob?876:822} y={isMob?87:137} textAnchor="middle" dominantBaseline="middle"
-                    transform={isMob ? "rotate(90 876 87)" : undefined}
-                    fontFamily="Arial, 'Helvetica Neue', sans-serif" fontSize="8" fontWeight="700" letterSpacing="0.5"
-                    stroke="#000" strokeWidth="2.5" strokeLinejoin="round" fill="none" pointerEvents="none">ESCALERA</text>
-                <text x={isMob?876:822} y={isMob?87:137} textAnchor="middle" dominantBaseline="middle"
-                    transform={isMob ? "rotate(90 876 87)" : undefined}
-                    fontFamily="Arial, 'Helvetica Neue', sans-serif" fontSize="8" fontWeight="700" letterSpacing="0.5"
-                    fill="#ffffff" pointerEvents="none">ESCALERA</text>
-                {/* Bodega: mobile x=600–688(w=88), desktop x=70–430 */}
-                <rect x={isMob?600:70} y={isMob?5:30} width={isMob?88:360} height={isMob?110:130} rx="8" fill="#8896a8" stroke="#a0aec0" strokeWidth="1.5" strokeDasharray="8 4"/>
-                <text x={isMob?644:250} y={isMob?60:100} textAnchor="middle" dominantBaseline="middle"
-                    transform={isMob ? "rotate(90 644 60)" : undefined}
-                    fontFamily="Arial, 'Helvetica Neue', sans-serif" fontSize={isMob?12:18} fontWeight="700" letterSpacing={isMob?"2":"3"}
-                    stroke="#000" strokeWidth="3" strokeLinejoin="round" fill="none" pointerEvents="none">BODEGA</text>
-                <text x={isMob?644:250} y={isMob?60:100} textAnchor="middle" dominantBaseline="middle"
-                    transform={isMob ? "rotate(90 644 60)" : undefined}
-                    fontFamily="Arial, 'Helvetica Neue', sans-serif" fontSize={isMob?12:18} fontWeight="700" letterSpacing={isMob?"2":"3"}
-                    fill="#ffffff" pointerEvents="none">BODEGA</text>
-                {seatsInf.map(s => <SeatRect key={s.id} id={s.id} x={s.x} y={s.y} />)}
-            </svg>
+                <svg viewBox={svgViewBox} style={svgStyle}>
+                    <rect x={isMob ? 585 : 50} y={isMob ? 2 : 20} width={isMob ? 360 : 900} height={isMob ? 116 : 150} rx="20" fill="#2e3748" stroke={lighten(temaEmpresa?.c1 || '#6b7280', 0.35)} strokeWidth="2" />
+                    {/* Cabina (extremo derecho, full height, arcos matchan rx=20 del bus rect) */}
+                    <path d={isMob ? "M 925 2 A 20 20 0 0 1 945 22 L 945 98 A 20 20 0 0 1 925 118 L 898 118 L 898 2 Z" : "M 945 25 L 945 165 C 945 165 910 165 900 165 C 890 165 890 25 900 25 L 945 25 Z"} fill="#8896a8" />
+                    <text x={isMob ? 922 : 917} y={isMob ? 60 : 100} textAnchor="middle" dominantBaseline="middle" transform={isMob ? "rotate(90 922 60)" : "rotate(-90 917 100)"}
+                        fontFamily="Arial, 'Helvetica Neue', sans-serif" fontSize="13" fontWeight="700" letterSpacing="2"
+                        stroke="#000" strokeWidth="3" strokeLinejoin="round" fill="none" pointerEvents="none">CABINA</text>
+                    <text x={isMob ? 922 : 917} y={isMob ? 60 : 100} textAnchor="middle" dominantBaseline="middle" transform={isMob ? "rotate(90 922 60)" : "rotate(-90 917 100)"}
+                        fontFamily="Arial, 'Helvetica Neue', sans-serif" fontSize="13" fontWeight="700" letterSpacing="2"
+                        fill="#ffffff" pointerEvents="none">CABINA</text>
+                    {/* Baño (zona A+B): mobile x=856–895(w=39), desktop x=795–865 */}
+                    <rect x={isMob ? 856 : 795} y={isMob ? 10 : 30} width={isMob ? 39 : 70} height={isMob ? 36 : 65} rx="6" fill="#8896a8" stroke="#a0aec0" strokeWidth="1.5" />
+                    <text x={isMob ? 876 : 830} y={isMob ? 28 : 63} textAnchor="middle" dominantBaseline="middle"
+                        transform={isMob ? "rotate(90 876 28)" : undefined}
+                        fontFamily="Arial, 'Helvetica Neue', sans-serif" fontSize={isMob ? 11 : 14} fontWeight="700" letterSpacing={isMob ? "0.5" : "2"}
+                        stroke="#000" strokeWidth="3" strokeLinejoin="round" fill="none" pointerEvents="none">BAÑO</text>
+                    <text x={isMob ? 876 : 830} y={isMob ? 28 : 63} textAnchor="middle" dominantBaseline="middle"
+                        transform={isMob ? "rotate(90 876 28)" : undefined}
+                        fontFamily="Arial, 'Helvetica Neue', sans-serif" fontSize={isMob ? 11 : 14} fontWeight="700" letterSpacing={isMob ? "0.5" : "2"}
+                        fill="#ffffff" pointerEvents="none">BAÑO</text>
+                    {/* Escalera (zona C+D): mobile x=856–895(w=39), desktop x=795–850 */}
+                    <rect x={isMob ? 856 : 795} y={isMob ? 68 : 115} width={isMob ? 39 : 55} height={isMob ? 38 : 45} rx="4" fill="#8896a8" />
+                    <text x={isMob ? 876 : 822} y={isMob ? 87 : 137} textAnchor="middle" dominantBaseline="middle"
+                        transform={isMob ? "rotate(90 876 87)" : undefined}
+                        fontFamily="Arial, 'Helvetica Neue', sans-serif" fontSize="8" fontWeight="700" letterSpacing="0.5"
+                        stroke="#000" strokeWidth="2.5" strokeLinejoin="round" fill="none" pointerEvents="none">ESCALERA</text>
+                    <text x={isMob ? 876 : 822} y={isMob ? 87 : 137} textAnchor="middle" dominantBaseline="middle"
+                        transform={isMob ? "rotate(90 876 87)" : undefined}
+                        fontFamily="Arial, 'Helvetica Neue', sans-serif" fontSize="8" fontWeight="700" letterSpacing="0.5"
+                        fill="#ffffff" pointerEvents="none">ESCALERA</text>
+                    {/* Bodega: mobile x=600–688(w=88), desktop x=70–430 */}
+                    <rect x={isMob ? 600 : 70} y={isMob ? 5 : 30} width={isMob ? 88 : 360} height={isMob ? 110 : 130} rx="8" fill="#8896a8" stroke="#a0aec0" strokeWidth="1.5" strokeDasharray="8 4" />
+                    <text x={isMob ? 644 : 250} y={isMob ? 60 : 100} textAnchor="middle" dominantBaseline="middle"
+                        transform={isMob ? "rotate(90 644 60)" : undefined}
+                        fontFamily="Arial, 'Helvetica Neue', sans-serif" fontSize={isMob ? 12 : 18} fontWeight="700" letterSpacing={isMob ? "2" : "3"}
+                        stroke="#000" strokeWidth="3" strokeLinejoin="round" fill="none" pointerEvents="none">BODEGA</text>
+                    <text x={isMob ? 644 : 250} y={isMob ? 60 : 100} textAnchor="middle" dominantBaseline="middle"
+                        transform={isMob ? "rotate(90 644 60)" : undefined}
+                        fontFamily="Arial, 'Helvetica Neue', sans-serif" fontSize={isMob ? 12 : 18} fontWeight="700" letterSpacing={isMob ? "2" : "3"}
+                        fill="#ffffff" pointerEvents="none">BODEGA</text>
+                    {seatsInf.map(s => <SeatRect key={s.id} id={s.id} x={s.x} y={s.y} />)}
+                </svg>
             </div>
             <Legend />
         </div>
@@ -672,10 +676,10 @@ const TarjetaForm = ({ onConfirm, onCancelar, monto, tarjetaAccent = '#d97706', 
         textTransform: 'uppercase', letterSpacing: '0.1em',
     };
 
-    const cW  = isMob ? 247 : 310;   // front card width
-    const cH  = isMob ? 156 : 200;   // front card height (ratio 1.586)
-    const bW  = isMob ? 255 : 320;   // back card width
-    const bH  = isMob ? 156 : 200;
+    const cW = isMob ? 247 : 310;   // front card width
+    const cH = isMob ? 156 : 200;   // front card height (ratio 1.586)
+    const bW = isMob ? 255 : 320;   // back card width
+    const bH = isMob ? 156 : 200;
     const ctH = isMob ? 181 : 290;   // container height
 
     return (
@@ -744,10 +748,10 @@ const TarjetaForm = ({ onConfirm, onCancelar, monto, tarjetaAccent = '#d97706', 
                                     <span style={{ ...txtStroke, fontFamily: INTER, fontSize: isMob ? '0.58rem' : '0.7rem', fontWeight: 300, letterSpacing: '0.1em', textTransform: 'uppercase', opacity: 0.85 }}>TBB</span>
                                 </div>
                                 {/* Chip EMV */}
-                                <svg width={isMob?32:42} height={isMob?24:32} viewBox="0 0 42 32" fill="none" style={{ filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.4))' }}>
-                                    <rect width="42" height="32" rx="6" fill="#F4D03F"/>
-                                    <path d="M12 0 V32 M30 0 V32 M0 12 H12 M30 12 H42 M0 20 H12 M30 20 H42" stroke="#B7950B" strokeWidth="1.5" opacity="0.5"/>
-                                    <rect x="17" y="6" width="8" height="20" rx="2" stroke="#B7950B" strokeWidth="1.5" opacity="0.5"/>
+                                <svg width={isMob ? 32 : 42} height={isMob ? 24 : 32} viewBox="0 0 42 32" fill="none" style={{ filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.4))' }}>
+                                    <rect width="42" height="32" rx="6" fill="#F4D03F" />
+                                    <path d="M12 0 V32 M30 0 V32 M0 12 H12 M30 12 H42 M0 20 H12 M30 20 H42" stroke="#B7950B" strokeWidth="1.5" opacity="0.5" />
+                                    <rect x="17" y="6" width="8" height="20" rx="2" stroke="#B7950B" strokeWidth="1.5" opacity="0.5" />
                                 </svg>
                                 {/* Número */}
                                 <div style={{ ...txtStroke, fontFamily: 'monospace', fontSize: isMob ? '0.82rem' : '1.1rem', letterSpacing: isMob ? '2px' : '4px', fontWeight: 600, whiteSpace: 'nowrap' }}>
@@ -937,8 +941,10 @@ const MapaAsientos = () => {
     const seatPollRef = useRef(null);
     const qrTimerRef = useRef(null);
     const seleccionadosRef = useRef([]);
-    const boletoRefsMap        = useRef({});
+    const boletoRefsMap = useRef({});
     const boletoRefsDesktopMap = useRef({});
+    // gemini: ref para WebSocket de deteccion de pago QR en tiempo real
+    const wsQrRef = useRef(null);
 
     // Unique session ID for this MapaAsientos instance — persists within tab, isolates
     // seat blocking so the same user's own blocked seats are never shown as "blocked by others"
@@ -1029,18 +1035,59 @@ const MapaAsientos = () => {
         } catch { sessionStorage.removeItem('tbb_pending_seats'); }
     }, [sesion]); // eslint-disable-line
 
-    // ── QR polling ────────────────────────────────────
+    // ── QR polling + WebSocket listener ───────────────────────────
+    // gemini: Dual detection:
+    //   1. WebSocket en tiempo real (si el backend está corriendo)
+    //   2. Polling HTTP como fallback cada 2s
     useEffect(() => {
         if (!pollingQr || !qrToken) return;
-        pollingRef.current = setInterval(() => {
-            const estado = obtenerEstadoQR(qrToken);
-            if (estado?.estado === 'pagado') {
+
+        // Canal WebSocket para detectar qr_pago broadcast del backend
+        const wsHost = window.location.hostname;
+        const ws = new WebSocket(`ws://${wsHost}:4000`);
+        wsQrRef.current = ws;
+        ws.onmessage = (evt) => {
+            try {
+                const msg = JSON.parse(evt.data);
+                if (msg.tipo === 'qr_pago' && msg.data?.token === qrToken && msg.data?.estado === 'pagado') {
+                    clearInterval(pollingRef.current);
+                    ws.close();
+                    setPollingQr(false);
+                    actualizarEstadoQR(qrToken, 'pagado');
+                    finalizarReserva('qr');
+                }
+            } catch { /* mensaje WS no parseable */ }
+        };
+
+        // Polling HTTP como fallback
+        pollingRef.current = setInterval(async () => {
+            // 1. Verificar localStorage (flujo original - misma PC)
+            const estadoLocal = obtenerEstadoQR(qrToken);
+            if (estadoLocal?.estado === 'pagado') {
                 clearInterval(pollingRef.current);
                 setPollingQr(false);
                 finalizarReserva('qr');
+                return;
             }
+            // 2. Verificar backend (flujo móvil - celular en red local)
+            try {
+                const res = await fetch(`${API_BASE}/qr/${qrToken}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data?.estado === 'pagado') {
+                        clearInterval(pollingRef.current);
+                        setPollingQr(false);
+                        // Sincronizar localStorage para consistencia
+                        actualizarEstadoQR(qrToken, 'pagado');
+                        finalizarReserva('qr');
+                    }
+                }
+            } catch { /* backend no disponible, solo usamos localStorage */ }
         }, 2000);
-        return () => clearInterval(pollingRef.current);
+        return () => {
+            clearInterval(pollingRef.current);
+            if (wsQrRef.current) { wsQrRef.current.close(); wsQrRef.current = null; }
+        };
     }, [pollingQr, qrToken]); // eslint-disable-line
 
     // ── Efectivo countdown ────────────────────────────
@@ -1278,6 +1325,18 @@ const MapaAsientos = () => {
         setMetodoPago('qr');
         setPollingQr(true);
         setQrExpiraEn(Date.now() + 10 * 60 * 1000);
+        // gemini: registrar token en backend para que el celular en red local pueda consultarlo
+        fetch(`${API_BASE}/qr/registrar`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                token,
+                monto: datos.totalMonto,
+                origen: datos.origen,
+                destino: datos.destino,
+                fecha: datos.salida,
+            }),
+        }).catch(() => { /* backend no disponible, el token solo existe en localStorage */ });
     };
 
     const handlePendienteDocumentos = () => {
@@ -1344,7 +1403,7 @@ const MapaAsientos = () => {
             const px = tw / 600;                // mm per pixel
             const pt = (fpx) => Math.max(5, fpx * px / 0.352778);
             const X = (ppx) => mg + ppx * px;
-            const hex2rgb = (h) => { const c=(h||'#888').replace('#',''); return c.length===6?[parseInt(c.slice(0,2),16),parseInt(c.slice(2,4),16),parseInt(c.slice(4,6),16)]:[136,136,136]; };
+            const hex2rgb = (h) => { const c = (h || '#888').replace('#', ''); return c.length === 6 ? [parseInt(c.slice(0, 2), 16), parseInt(c.slice(2, 4), 16), parseInt(c.slice(4, 6), 16)] : [136, 136, 136]; };
 
             const c1 = hex2rgb(te?.c1 || '#555555');
             const c3 = hex2rgb(te?.c3 || '#111111');
@@ -1355,145 +1414,145 @@ const MapaAsientos = () => {
                 const ty = (297 - th) / 2;
                 const Y = (ppx) => ty + ppx * px;
 
-                const tipo    = b.esInfante?'NIÑO':b.llevaAnimales?'ANIMALES':b.lleva1000?'DINERO':b.llevaProductos?'COMIDA':'NORMAL';
-                const tipoRGB = b.esInfante?[245,158,11]:b.llevaAnimales?[56,189,248]:b.lleva1000?[34,197,94]:b.llevaProductos?[168,85,247]:[209,213,219];
-                const bNum    = (b.id||'').slice(-10).toUpperCase();
-                const qrVal   = JSON.stringify({id:b.id,asiento:b.asiento,pasajero:b.pasajeroNombre,ci:b.pasajeroCI,origen:b.origen,destino:b.destino,salida:b.fechaSalida,bus:b.busPlaca});
-                const fecha   = b.fechaSalida?new Date(b.fechaSalida).toLocaleDateString('es-BO',{day:'2-digit',month:'2-digit',year:'numeric'}):'—';
-                const hora    = b.fechaSalida?new Date(b.fechaSalida).toLocaleTimeString('es-BO',{hour:'2-digit',minute:'2-digit'}):'—';
-                const qrDU    = await QRLib.toDataURL(qrVal,{width:300,margin:1,color:{dark:'#111111',light:'#ffffff'}});
+                const tipo = b.esInfante ? 'NIÑO' : b.llevaAnimales ? 'ANIMALES' : b.lleva1000 ? 'DINERO' : b.llevaProductos ? 'COMIDA' : 'NORMAL';
+                const tipoRGB = b.esInfante ? [245, 158, 11] : b.llevaAnimales ? [56, 189, 248] : b.lleva1000 ? [34, 197, 94] : b.llevaProductos ? [168, 85, 247] : [209, 213, 219];
+                const bNum = (b.id || '').slice(-10).toUpperCase();
+                const qrVal = JSON.stringify({ id: b.id, asiento: b.asiento, pasajero: b.pasajeroNombre, ci: b.pasajeroCI, origen: b.origen, destino: b.destino, salida: b.fechaSalida, bus: b.busPlaca });
+                const fecha = b.fechaSalida ? new Date(b.fechaSalida).toLocaleDateString('es-BO', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—';
+                const hora = b.fechaSalida ? new Date(b.fechaSalida).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' }) : '—';
+                const qrDU = await QRLib.toDataURL(qrVal, { width: 300, margin: 1, color: { dark: '#111111', light: '#ffffff' } });
 
                 // ── Fondo ticket ──
-                pdf.setFillColor(244,246,248);
+                pdf.setFillColor(244, 246, 248);
                 pdf.roundedRect(mg, ty, tw, th, 2, 2, 'F');
 
                 // ── Franja tipo ──
                 pdf.setFillColor(...tipoRGB);
-                pdf.rect(mg, ty, tw, 18*px, 'F');
-                pdf.setTextColor(255,255,255); pdf.setFont('helvetica','bold'); pdf.setFontSize(pt(9));
-                pdf.text(tipo, X(300), ty+18*px*0.65, {align:'center'});
+                pdf.rect(mg, ty, tw, 18 * px, 'F');
+                pdf.setTextColor(255, 255, 255); pdf.setFont('helvetica', 'bold'); pdf.setFontSize(pt(9));
+                pdf.text(tipo, X(300), ty + 18 * px * 0.65, { align: 'center' });
 
                 // ── Ondas decorativas ──
                 pdf.setFillColor(...c3);
-                pdf.lines([[432*px*0.58, 0],[0-(432*px*0.58), 0]], mg, Y(360), null, 'F', true); // fallback: just draw
+                pdf.lines([[432 * px * 0.58, 0], [0 - (432 * px * 0.58), 0]], mg, Y(360), null, 'F', true); // fallback: just draw
                 // Triangle wave 1
-                const tw1x = [mg, X(432*0.58), mg];
-                const tw1y = [Y(360), Y(360), Y(360-128*0.28)];
+                const tw1x = [mg, X(432 * 0.58), mg];
+                const tw1y = [Y(360), Y(360), Y(360 - 128 * 0.28)];
                 pdf.setFillColor(...c3);
                 pdf.saveGraphicsState();
                 try {
                     // Use polygon path
-                    const p1 = `${(mg*2.834645).toFixed(2)} ${((ty+(360*px-(128*px*0.28)))*2.834645).toFixed(2)} m ${(mg*2.834645).toFixed(2)} ${((ty+360*px)*2.834645).toFixed(2)} l ${(X(432*0.58)*2.834645).toFixed(2)} ${((ty+360*px)*2.834645).toFixed(2)} l f`;
+                    const p1 = `${(mg * 2.834645).toFixed(2)} ${((ty + (360 * px - (128 * px * 0.28))) * 2.834645).toFixed(2)} m ${(mg * 2.834645).toFixed(2)} ${((ty + 360 * px) * 2.834645).toFixed(2)} l ${(X(432 * 0.58) * 2.834645).toFixed(2)} ${((ty + 360 * px) * 2.834645).toFixed(2)} l f`;
                     pdf.internal.write(p1);
-                } catch (_) {}
+                } catch (_) { }
                 pdf.setFillColor(...c1);
                 try {
-                    const p2 = `${(mg*2.834645).toFixed(2)} ${((ty+(360*px-(128*px*0.62)))*2.834645).toFixed(2)} m ${(mg*2.834645).toFixed(2)} ${((ty+360*px)*2.834645).toFixed(2)} l ${(X(432*0.58*0.6)*2.834645).toFixed(2)} ${((ty+360*px)*2.834645).toFixed(2)} l f`;
+                    const p2 = `${(mg * 2.834645).toFixed(2)} ${((ty + (360 * px - (128 * px * 0.62))) * 2.834645).toFixed(2)} m ${(mg * 2.834645).toFixed(2)} ${((ty + 360 * px) * 2.834645).toFixed(2)} l ${(X(432 * 0.58 * 0.6) * 2.834645).toFixed(2)} ${((ty + 360 * px) * 2.834645).toFixed(2)} l f`;
                     pdf.internal.write(p2);
-                } catch (_) {}
+                } catch (_) { }
                 pdf.restoreGraphicsState();
 
                 // ── Nombre empresa ──
-                const empresaStr = (empresaNombre||'TERMINAL BUSES BOLIVIA').toUpperCase();
-                pdf.setTextColor(...c1); pdf.setFont('helvetica','bold'); pdf.setFontSize(pt(34));
-                pdf.text(empresaStr, X(30), Y(18+30), {baseline:'top'});
+                const empresaStr = (empresaNombre || 'TERMINAL BUSES BOLIVIA').toUpperCase();
+                pdf.setTextColor(...c1); pdf.setFont('helvetica', 'bold'); pdf.setFontSize(pt(34));
+                pdf.text(empresaStr, X(30), Y(18 + 30), { baseline: 'top' });
                 const nameW = pdf.getTextWidth(empresaStr);
                 pdf.setFillColor(...c1);
-                pdf.rect(X(30)+nameW+14*px, Y(18+30)+pt(34)*0.352778*0.15, 60*px, 14*px, 'F');
+                pdf.rect(X(30) + nameW + 14 * px, Y(18 + 30) + pt(34) * 0.352778 * 0.15, 60 * px, 14 * px, 'F');
 
-                let cy = Y(18+30+(34+14)*1);
+                let cy = Y(18 + 30 + (34 + 14) * 1);
 
                 // ── Fila 1: NOMBRE / TIPO / BUS ──
-                const col1=X(30), col2=X(210), col3=X(320);
+                const col1 = X(30), col2 = X(210), col3 = X(320);
                 pdf.setTextColor(...c1); pdf.setFontSize(pt(10));
-                pdf.text('NOMBRE',col1,cy,{baseline:'top'}); pdf.text('TIPO DE BOLETO',col2,cy,{baseline:'top'}); pdf.text('BUS',col3,cy,{baseline:'top'});
-                cy += (10+3)*px;
-                pdf.setTextColor(26,26,26); pdf.setFontSize(pt(15));
-                pdf.text((b.pasajeroNombre||'—').toUpperCase(),col1,cy,{baseline:'top'});
-                pdf.text(tipo,col2,cy,{baseline:'top'});
-                pdf.text((b.busPlaca||'—').toUpperCase(),col3,cy,{baseline:'top'});
-                cy += (15+12)*px;
+                pdf.text('NOMBRE', col1, cy, { baseline: 'top' }); pdf.text('TIPO DE BOLETO', col2, cy, { baseline: 'top' }); pdf.text('BUS', col3, cy, { baseline: 'top' });
+                cy += (10 + 3) * px;
+                pdf.setTextColor(26, 26, 26); pdf.setFontSize(pt(15));
+                pdf.text((b.pasajeroNombre || '—').toUpperCase(), col1, cy, { baseline: 'top' });
+                pdf.text(tipo, col2, cy, { baseline: 'top' });
+                pdf.text((b.busPlaca || '—').toUpperCase(), col3, cy, { baseline: 'top' });
+                cy += (15 + 12) * px;
 
                 // ── Fila 2: RUTA / CI ──
                 pdf.setTextColor(...c1); pdf.setFontSize(pt(10));
-                pdf.text('RUTA',col1,cy,{baseline:'top'}); pdf.text('C.I.',X(320),cy,{baseline:'top'});
-                cy += (10+3)*px;
-                pdf.setTextColor(17,17,17); pdf.setFontSize(pt(19));
-                pdf.text(`${(b.origen||'—').toUpperCase()} -> ${(b.destino||'—').toUpperCase()}`,col1,cy,{baseline:'top'});
-                pdf.text((b.pasajeroCI||'—').toString(),X(320),cy,{baseline:'top'});
-                cy += (19+10)*px;
+                pdf.text('RUTA', col1, cy, { baseline: 'top' }); pdf.text('C.I.', X(320), cy, { baseline: 'top' });
+                cy += (10 + 3) * px;
+                pdf.setTextColor(17, 17, 17); pdf.setFontSize(pt(19));
+                pdf.text(`${(b.origen || '—').toUpperCase()} -> ${(b.destino || '—').toUpperCase()}`, col1, cy, { baseline: 'top' });
+                pdf.text((b.pasajeroCI || '—').toString(), X(320), cy, { baseline: 'top' });
+                cy += (19 + 10) * px;
 
                 // ── Fila 3: SALIDA / LLEGADA ──
                 pdf.setTextColor(...c1); pdf.setFontSize(pt(10));
-                pdf.text('SALIDA',col1,cy,{baseline:'top'}); pdf.text('LLEGADA',X(240),cy,{baseline:'top'});
-                cy += (10+3)*px;
-                pdf.setTextColor(34,34,34); pdf.setFont('helvetica','normal'); pdf.setFontSize(pt(13));
-                pdf.text(`${fecha}  ${hora}`,col1,cy,{baseline:'top'});
-                pdf.setTextColor(187,187,187); pdf.setFont('helvetica','italic');
-                pdf.text('POR CONFIRMAR',X(240),cy,{baseline:'top'});
+                pdf.text('SALIDA', col1, cy, { baseline: 'top' }); pdf.text('LLEGADA', X(240), cy, { baseline: 'top' });
+                cy += (10 + 3) * px;
+                pdf.setTextColor(34, 34, 34); pdf.setFont('helvetica', 'normal'); pdf.setFontSize(pt(13));
+                pdf.text(`${fecha}  ${hora}`, col1, cy, { baseline: 'top' });
+                pdf.setTextColor(187, 187, 187); pdf.setFont('helvetica', 'italic');
+                pdf.text('POR CONFIRMAR', X(240), cy, { baseline: 'top' });
 
                 // ── Asiento + N° boleto ──
                 const bY = Y(344); // bottom content (360-16)
-                pdf.setTextColor(255,255,255); pdf.setFont('helvetica','bold'); pdf.setFontSize(pt(64));
-                pdf.text((b.asiento||'—').toString(), X(30), bY, {baseline:'bottom'});
+                pdf.setTextColor(255, 255, 255); pdf.setFont('helvetica', 'bold'); pdf.setFontSize(pt(64));
+                pdf.text((b.asiento || '—').toString(), X(30), bY, { baseline: 'bottom' });
                 pdf.setFontSize(pt(9));
-                pdf.text('NÚMERO DE BOLETO', X(105), bY-(22+2)*px, {baseline:'bottom'});
+                pdf.text('NÚMERO DE BOLETO', X(105), bY - (22 + 2) * px, { baseline: 'bottom' });
                 pdf.setFontSize(pt(21));
-                pdf.text(bNum, X(105), bY, {baseline:'bottom'});
+                pdf.text(bNum, X(105), bY, { baseline: 'bottom' });
 
                 // ── QR main ──
-                const qrMSz = 92*px;
-                const qrMX = X(432-22-92), qrMY = Y(360-18-92);
-                pdf.setFillColor(255,255,255);
-                pdf.rect(qrMX-6*px, qrMY-6*px, qrMSz+12*px, qrMSz+12*px, 'F');
-                pdf.addImage(qrDU,'PNG',qrMX,qrMY,qrMSz,qrMSz);
+                const qrMSz = 92 * px;
+                const qrMX = X(432 - 22 - 92), qrMY = Y(360 - 18 - 92);
+                pdf.setFillColor(255, 255, 255);
+                pdf.rect(qrMX - 6 * px, qrMY - 6 * px, qrMSz + 12 * px, qrMSz + 12 * px, 'F');
+                pdf.addImage(qrDU, 'PNG', qrMX, qrMY, qrMSz, qrMSz);
 
                 // ── Línea de corte ──
-                pdf.setDrawColor(180,180,180); pdf.setLineDashPattern([2,1.5],0); pdf.setLineWidth(0.3);
-                pdf.line(X(432), ty, X(432), ty+th);
-                pdf.setLineDashPattern([],0);
+                pdf.setDrawColor(180, 180, 180); pdf.setLineDashPattern([2, 1.5], 0); pdf.setLineWidth(0.3);
+                pdf.line(X(432), ty, X(432), ty + th);
+                pdf.setLineDashPattern([], 0);
                 // Muescas
-                pdf.setFillColor(255,255,255);
-                pdf.circle(X(432), ty, 18*px*0.5, 'F');
-                pdf.circle(X(432), ty+th, 18*px*0.5, 'F');
+                pdf.setFillColor(255, 255, 255);
+                pdf.circle(X(432), ty, 18 * px * 0.5, 'F');
+                pdf.circle(X(432), ty + th, 18 * px * 0.5, 'F');
 
                 // ── STUB ──
-                const sX = X(432+24);
-                let sy = Y(18+30);
+                const sX = X(432 + 24);
+                let sy = Y(18 + 30);
 
-                pdf.setTextColor(...c1); pdf.setFont('helvetica','bold'); pdf.setFontSize(pt(9));
-                pdf.text('NOMBRE',sX,sy,{baseline:'top'}); sy+=(9+2)*px;
-                pdf.setTextColor(26,26,26); pdf.setFontSize(pt(13));
-                pdf.text((b.pasajeroNombre||'—').toUpperCase().slice(0,20),sX,sy,{baseline:'top'}); sy+=(13+10)*px;
-
-                pdf.setTextColor(...c1); pdf.setFontSize(pt(9));
-                pdf.text('RUTA',sX,sy,{baseline:'top'}); pdf.text('C.I.',sX+90*px,sy,{baseline:'top'}); sy+=(9+2)*px;
-                pdf.setTextColor(34,34,34); pdf.setFontSize(pt(10));
-                const rutaLines=pdf.splitTextToSize(`${(b.origen||'—')} -> ${(b.destino||'—')}`.toUpperCase(),85*px);
-                pdf.text(rutaLines,sX,sy,{baseline:'top'});
-                pdf.text((b.pasajeroCI||'—').toString(),sX+90*px,sy,{baseline:'top'});
-                sy+=(rutaLines.length*10*1.35+10)*px;
+                pdf.setTextColor(...c1); pdf.setFont('helvetica', 'bold'); pdf.setFontSize(pt(9));
+                pdf.text('NOMBRE', sX, sy, { baseline: 'top' }); sy += (9 + 2) * px;
+                pdf.setTextColor(26, 26, 26); pdf.setFontSize(pt(13));
+                pdf.text((b.pasajeroNombre || '—').toUpperCase().slice(0, 20), sX, sy, { baseline: 'top' }); sy += (13 + 10) * px;
 
                 pdf.setTextColor(...c1); pdf.setFontSize(pt(9));
-                pdf.text('SALIDA',sX,sy,{baseline:'top'}); sy+=(9+2)*px;
-                pdf.setTextColor(51,51,51); pdf.setFont('helvetica','normal'); pdf.setFontSize(pt(11));
-                pdf.text(`${fecha}  ${hora}`,sX,sy,{baseline:'top'});
+                pdf.text('RUTA', sX, sy, { baseline: 'top' }); pdf.text('C.I.', sX + 90 * px, sy, { baseline: 'top' }); sy += (9 + 2) * px;
+                pdf.setTextColor(34, 34, 34); pdf.setFontSize(pt(10));
+                const rutaLines = pdf.splitTextToSize(`${(b.origen || '—')} -> ${(b.destino || '—')}`.toUpperCase(), 85 * px);
+                pdf.text(rutaLines, sX, sy, { baseline: 'top' });
+                pdf.text((b.pasajeroCI || '—').toString(), sX + 90 * px, sy, { baseline: 'top' });
+                sy += (rutaLines.length * 10 * 1.35 + 10) * px;
+
+                pdf.setTextColor(...c1); pdf.setFontSize(pt(9));
+                pdf.text('SALIDA', sX, sy, { baseline: 'top' }); sy += (9 + 2) * px;
+                pdf.setTextColor(51, 51, 51); pdf.setFont('helvetica', 'normal'); pdf.setFontSize(pt(11));
+                pdf.text(`${fecha}  ${hora}`, sX, sy, { baseline: 'top' });
 
                 // Stub footer
                 const sfY = Y(344);
-                pdf.setTextColor(26,26,26); pdf.setFont('helvetica','bold');
-                pdf.setFontSize(pt(8)); pdf.text('NÚMERO DE BOLETO',sX,sfY-(40+11+6)*px,{baseline:'bottom'});
-                pdf.setFontSize(pt(11)); pdf.text(bNum,sX,sfY-40*px,{baseline:'bottom'});
-                pdf.setFontSize(pt(38)); pdf.text((b.asiento||'—').toString(),sX,sfY,{baseline:'bottom'});
+                pdf.setTextColor(26, 26, 26); pdf.setFont('helvetica', 'bold');
+                pdf.setFontSize(pt(8)); pdf.text('NÚMERO DE BOLETO', sX, sfY - (40 + 11 + 6) * px, { baseline: 'bottom' });
+                pdf.setFontSize(pt(11)); pdf.text(bNum, sX, sfY - 40 * px, { baseline: 'bottom' });
+                pdf.setFontSize(pt(38)); pdf.text((b.asiento || '—').toString(), sX, sfY, { baseline: 'bottom' });
 
                 // QR stub
-                const qrSSz=72*px, qrSX=X(600-20-72), qrSY=Y(360-16-72);
-                pdf.setFillColor(255,255,255);
-                pdf.rect(qrSX-5*px,qrSY-5*px,qrSSz+10*px,qrSSz+10*px,'F');
-                pdf.addImage(qrDU,'PNG',qrSX,qrSY,qrSSz,qrSSz);
+                const qrSSz = 72 * px, qrSX = X(600 - 20 - 72), qrSY = Y(360 - 16 - 72);
+                pdf.setFillColor(255, 255, 255);
+                pdf.rect(qrSX - 5 * px, qrSY - 5 * px, qrSSz + 10 * px, qrSSz + 10 * px, 'F');
+                pdf.addImage(qrDU, 'PNG', qrSX, qrSY, qrSSz, qrSSz);
             }
 
-            pdf.save(`boletos-tbb-${(reservaGenerada?.id||'').slice(-8)}.pdf`);
+            pdf.save(`boletos-tbb-${(reservaGenerada?.id || '').slice(-8)}.pdf`);
             toast.mostrar('PDF descargado.', 'exito');
         } // fin if(false)
     };
@@ -1522,23 +1581,23 @@ const MapaAsientos = () => {
         : dp
             ? [dp.primary, dp.secondary, dp.bandera1, dp.bandera2]
             : [colorEmpresa, '#93c5fd', '#64748b', '#334155'];
-    const ANIMS_FL = ['ma-flt-a','ma-flt-b','ma-flt-c','ma-flt-d'];
+    const ANIMS_FL = ['ma-flt-a', 'ma-flt-b', 'ma-flt-c', 'ma-flt-d'];
     const FL_SHAPES = [
-        { l:'2%',   t:'10%', w:340, h:110, rx:'22px',           rot:-20, ci:0, op:0.10, an:0, dur:18, dl:0   },
-        { l:'60%',  t:'18%', w:300, h:95,  rx:'18px',           rot:14,  ci:1, op:0.09, an:1, dur:22, dl:1.8 },
-        { l:'65%',  t:'52%', w:360, h:115, rx:'24px',           rot:-9,  ci:0, op:0.08, an:2, dur:20, dl:3.2 },
-        { l:'-4%',  t:'62%', w:310, h:100, rx:'20px',           rot:24,  ci:1, op:0.10, an:3, dur:25, dl:0.7 },
-        { l:'28%',  t:'82%', w:270, h:88,  rx:'20px',           rot:-15, ci:2, op:0.09, an:0, dur:23, dl:2.1 },
-        { l:'45%',  t:'-3%', w:380, h:105, rx:'26px',           rot:8,   ci:3, op:0.07, an:1, dur:28, dl:1.2 },
-        { l:'18%',  t:'4%',  w:190, h:190, rx:'28px',           rot:28,  ci:2, op:0.09, an:2, dur:19, dl:1   },
-        { l:'72%',  t:'28%', w:170, h:170, rx:'24px',           rot:-33, ci:0, op:0.08, an:3, dur:26, dl:3.8 },
-        { l:'42%',  t:'68%', w:210, h:210, rx:'32px',           rot:17,  ci:1, op:0.07, an:0, dur:21, dl:0.9 },
-        { l:'52%',  t:'88%', w:155, h:155, rx:'26px',           rot:-22, ci:3, op:0.09, an:1, dur:17, dl:2.7 },
-        { l:'-2%',  t:'44%', w:175, h:175, rx:'30px',           rot:38,  ci:2, op:0.08, an:2, dur:30, dl:0.4 },
-        { l:'82%',  t:'68%', w:210, h:230, rx:'0% 60% 60% 60%', rot:12,  ci:2, op:0.08, an:3, dur:24, dl:1.4 },
-        { l:'-5%',  t:'30%', w:190, h:215, rx:'60% 0% 60% 60%', rot:-27, ci:3, op:0.09, an:0, dur:20, dl:4.1 },
-        { l:'38%',  t:'38%', w:175, h:195, rx:'60% 60% 0% 60%', rot:44,  ci:0, op:0.07, an:1, dur:27, dl:0.6 },
-        { l:'78%',  t:'-2%', w:180, h:200, rx:'60% 60% 60% 0%', rot:-18, ci:1, op:0.08, an:2, dur:22, dl:2.3 },
+        { l: '2%', t: '10%', w: 340, h: 110, rx: '22px', rot: -20, ci: 0, op: 0.10, an: 0, dur: 18, dl: 0 },
+        { l: '60%', t: '18%', w: 300, h: 95, rx: '18px', rot: 14, ci: 1, op: 0.09, an: 1, dur: 22, dl: 1.8 },
+        { l: '65%', t: '52%', w: 360, h: 115, rx: '24px', rot: -9, ci: 0, op: 0.08, an: 2, dur: 20, dl: 3.2 },
+        { l: '-4%', t: '62%', w: 310, h: 100, rx: '20px', rot: 24, ci: 1, op: 0.10, an: 3, dur: 25, dl: 0.7 },
+        { l: '28%', t: '82%', w: 270, h: 88, rx: '20px', rot: -15, ci: 2, op: 0.09, an: 0, dur: 23, dl: 2.1 },
+        { l: '45%', t: '-3%', w: 380, h: 105, rx: '26px', rot: 8, ci: 3, op: 0.07, an: 1, dur: 28, dl: 1.2 },
+        { l: '18%', t: '4%', w: 190, h: 190, rx: '28px', rot: 28, ci: 2, op: 0.09, an: 2, dur: 19, dl: 1 },
+        { l: '72%', t: '28%', w: 170, h: 170, rx: '24px', rot: -33, ci: 0, op: 0.08, an: 3, dur: 26, dl: 3.8 },
+        { l: '42%', t: '68%', w: 210, h: 210, rx: '32px', rot: 17, ci: 1, op: 0.07, an: 0, dur: 21, dl: 0.9 },
+        { l: '52%', t: '88%', w: 155, h: 155, rx: '26px', rot: -22, ci: 3, op: 0.09, an: 1, dur: 17, dl: 2.7 },
+        { l: '-2%', t: '44%', w: 175, h: 175, rx: '30px', rot: 38, ci: 2, op: 0.08, an: 2, dur: 30, dl: 0.4 },
+        { l: '82%', t: '68%', w: 210, h: 230, rx: '0% 60% 60% 60%', rot: 12, ci: 2, op: 0.08, an: 3, dur: 24, dl: 1.4 },
+        { l: '-5%', t: '30%', w: 190, h: 215, rx: '60% 0% 60% 60%', rot: -27, ci: 3, op: 0.09, an: 0, dur: 20, dl: 4.1 },
+        { l: '38%', t: '38%', w: 175, h: 195, rx: '60% 60% 0% 60%', rot: 44, ci: 0, op: 0.07, an: 1, dur: 27, dl: 0.6 },
+        { l: '78%', t: '-2%', w: 180, h: 200, rx: '60% 60% 60% 0%', rot: -18, ci: 1, op: 0.08, an: 2, dur: 22, dl: 2.3 },
     ];
 
     // ── Render ────────────────────────────────────────
@@ -1546,7 +1605,8 @@ const MapaAsientos = () => {
         <div style={{ background: '#07111f', minHeight: '100vh', color: '#f1f5f9', padding: 'clamp(0.75rem, 3vw, 1.5rem)', paddingTop: isMobile ? '6px' : '20px', position: 'relative' }}>
 
             {/* Fondo radial */}
-            <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none',
+            <div style={{
+                position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none',
                 background: te ? `
                     radial-gradient(ellipse 60% 80% at 0% 50%,   ${te.c1}28 0%, transparent 65%),
                     radial-gradient(ellipse 60% 80% at 100% 50%, ${te.c2}22 0%, transparent 65%),
@@ -1590,6 +1650,8 @@ const MapaAsientos = () => {
                         ? `0 4px 28px ${dp.bandera1}40, 0 0 0 1px ${dp.primary}30`
                         : `0 4px 20px ${destDept.color}18`,
                     display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem',
+                    // gemini: bajado 80px en desktop (50+30) porque se subió demasiado arriba
+                    marginTop: isMobile ? 0 : '80px',
                 }}>
                     {/* Back */}
                     <button onClick={() => navigate('/sucursal/' + (viaje?.sucursalId || viaje?.sucursales?.id || ''))} style={{
@@ -1603,8 +1665,8 @@ const MapaAsientos = () => {
                         onMouseLeave={e => { e.currentTarget.style.background = '#dc2626'; }}
                     >
                         <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M9 14L4 9l5-5"/>
-                            <path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>
+                            <path d="M9 14L4 9l5-5" />
+                            <path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" />
                         </svg>
                     </button>
                     {/* Divider */}
@@ -1658,115 +1720,130 @@ const MapaAsientos = () => {
                     borderRadius: 12, padding: isMobile ? '0.5rem 0.75rem 0.4rem' : '1rem 1.2rem 0.7rem',
                 }}>
                     {/* Esquinas decorativas */}
-                    {[['0%','0%','1px 0 0 1px'],['100%','0%','1px 0 0 1px'],['0%','100%','0 0 1px 1px'],['100%','100%','0 0 1px 1px']].map(([l,t,br],k) => (
-                        <div key={k} style={{ position:'absolute', left:l, top:t, width:10, height:10,
-                            border:`2px solid ${te ? te.c1 : colorEmpresa}`, borderRadius:br, transform: k===1||k===3 ? 'translateX(-100%)' : undefined }} />
+                    {[['0%', '0%', '1px 0 0 1px'], ['100%', '0%', '1px 0 0 1px'], ['0%', '100%', '0 0 1px 1px'], ['100%', '100%', '0 0 1px 1px']].map(([l, t, br], k) => (
+                        <div key={k} style={{
+                            position: 'absolute', left: l, top: t, width: 10, height: 10,
+                            border: `2px solid ${te ? te.c1 : colorEmpresa}`, borderRadius: br, transform: k === 1 || k === 3 ? 'translateX(-100%)' : undefined
+                        }} />
                     ))}
                     {/* Badge PASO X/5 */}
-                    <div style={{ position:'absolute', top:-10, right:16,
-                        background:'#040d1a', border:`1px solid ${te ? te.c1 : colorEmpresa}55`,
-                        borderRadius:6, padding:'0 8px', fontSize:'0.58rem', fontFamily:"'Courier New',monospace",
-                        color: te ? te.c1 : colorEmpresa, letterSpacing:'0.15em', fontWeight:700,
-                        animation:'ma-neon 2.5s ease-in-out infinite' }}>
+                    <div style={{
+                        position: 'absolute', top: -10, right: 16,
+                        background: '#040d1a', border: `1px solid ${te ? te.c1 : colorEmpresa}55`,
+                        borderRadius: 6, padding: '0 8px', fontSize: '0.58rem', fontFamily: "'Courier New',monospace",
+                        color: te ? te.c1 : colorEmpresa, letterSpacing: '0.15em', fontWeight: 700,
+                        animation: 'ma-neon 2.5s ease-in-out infinite'
+                    }}>
                         PASO {pasoIdx + 1}/{PASOS_LABELS.length}
                     </div>
 
-                    <div style={{ display:'flex', alignItems:'center' }}>
-                    {PASOS_LABELS.map((label, i) => {
-                        const completado = i < pasoIdx;
-                        const actual     = i === pasoIdx;
-                        const clr1 = te ? te.c1 : colorEmpresa;
-                        const clr2 = te ? te.c2 : colorEmpresa;
-                        const nodeSize = actual ? (isMobile ? 32 : 44) : (isMobile ? 26 : 36);
-                        return (
-                            <React.Fragment key={label}>
-                                <div style={{ display:'flex', flexDirection:'column', alignItems:'center', flex:'0 0 auto',
-                                    cursor: completado ? 'pointer' : 'default', minWidth: actual ? (isMobile ? 38 : 52) : (isMobile ? 30 : 44) }}
-                                    onClick={() => { if (completado && paso !== 'ticket') setPaso(PASOS_KEYS[i]); }}>
-                                    {/* Nodo diamante */}
-                                    <div style={{ position:'relative', width:nodeSize, height:nodeSize, marginBottom: 6 }}>
-                                        {/* Anillo pulso (solo actual) */}
-                                        {actual && (
-                                            <div style={{ position:'absolute', inset:-5, borderRadius:6,
-                                                border:`1px solid ${clr1}88`,
-                                                transform:'rotate(45deg)',
-                                                animation:'ma-ring-pulse 1.8s ease-out infinite' }} />
-                                        )}
-                                        {/* Diamante principal */}
-                                        <div className="ma-diamond" style={{
-                                            width:'100%', height:'100%',
-                                            transform:'rotate(45deg)',
-                                            borderRadius: actual ? 8 : 6,
-                                            background: actual
-                                                ? `linear-gradient(135deg, ${clr1}, ${clr2})`
-                                                : completado
-                                                    ? `linear-gradient(135deg, ${clr1}cc, ${clr2}88)`
-                                                    : 'linear-gradient(135deg,#0a1628,#0d1f38)',
-                                            border: `2px solid ${actual ? clr1 : completado ? clr1+'88' : '#1e3a5f55'}`,
-                                            boxShadow: actual
-                                                ? `0 0 18px ${clr1}88, inset 0 0 10px ${clr2}44`
-                                                : completado ? `0 0 8px ${clr1}44` : 'none',
-                                            overflow:'hidden', position:'relative',
-                                        }}>
-                                            {/* Shimmer scan (solo actual) */}
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                        {PASOS_LABELS.map((label, i) => {
+                            const completado = i < pasoIdx;
+                            const actual = i === pasoIdx;
+                            const clr1 = te ? te.c1 : colorEmpresa;
+                            const clr2 = te ? te.c2 : colorEmpresa;
+                            const nodeSize = actual ? (isMobile ? 32 : 44) : (isMobile ? 26 : 36);
+                            return (
+                                <React.Fragment key={label}>
+                                    <div style={{
+                                        display: 'flex', flexDirection: 'column', alignItems: 'center', flex: '0 0 auto',
+                                        cursor: completado ? 'pointer' : 'default', minWidth: actual ? (isMobile ? 38 : 52) : (isMobile ? 30 : 44)
+                                    }}
+                                        onClick={() => { if (completado && paso !== 'ticket') setPaso(PASOS_KEYS[i]); }}>
+                                        {/* Nodo diamante */}
+                                        <div style={{ position: 'relative', width: nodeSize, height: nodeSize, marginBottom: 6 }}>
+                                            {/* Anillo pulso (solo actual) */}
                                             {actual && (
-                                                <div style={{ position:'absolute', top:0, bottom:0, width:'50%',
-                                                    background:`linear-gradient(90deg,transparent,${clr2}88,transparent)`,
-                                                    animation:'ma-scan 1.6s linear infinite', pointerEvents:'none' }} />
+                                                <div style={{
+                                                    position: 'absolute', inset: -5, borderRadius: 6,
+                                                    border: `1px solid ${clr1}88`,
+                                                    transform: 'rotate(45deg)',
+                                                    animation: 'ma-ring-pulse 1.8s ease-out infinite'
+                                                }} />
                                             )}
-                                            {/* Icono — contra-rotado */}
-                                            <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center',
-                                                transform:'rotate(-45deg)',
-                                                fontFamily:"'Courier New',monospace", fontWeight:900,
-                                                fontSize: actual ? '1rem' : '0.8rem',
-                                                color: actual || completado ? '#fff' : '#1e3a5f',
-                                            }}>
-                                                {completado && paso === 'ticket'
-                                                    ? <svg width={actual?14:11} height={actual?14:11} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                            {/* Diamante principal */}
+                                            <div className="ma-diamond" style={{
+                                                width: '100%', height: '100%',
+                                                transform: 'rotate(45deg)',
+                                                borderRadius: actual ? 8 : 6,
+                                                background: actual
+                                                    ? `linear-gradient(135deg, ${clr1}, ${clr2})`
                                                     : completado
-                                                        ? <span style={{ animation:'ma-check-pop 0.3s ease-out', display:'inline-block' }}>✓</span>
-                                                        : i + 1
-                                                }
+                                                        ? `linear-gradient(135deg, ${clr1}cc, ${clr2}88)`
+                                                        : 'linear-gradient(135deg,#0a1628,#0d1f38)',
+                                                border: `2px solid ${actual ? clr1 : completado ? clr1 + '88' : '#1e3a5f55'}`,
+                                                boxShadow: actual
+                                                    ? `0 0 18px ${clr1}88, inset 0 0 10px ${clr2}44`
+                                                    : completado ? `0 0 8px ${clr1}44` : 'none',
+                                                overflow: 'hidden', position: 'relative',
+                                            }}>
+                                                {/* Shimmer scan (solo actual) */}
+                                                {actual && (
+                                                    <div style={{
+                                                        position: 'absolute', top: 0, bottom: 0, width: '50%',
+                                                        background: `linear-gradient(90deg,transparent,${clr2}88,transparent)`,
+                                                        animation: 'ma-scan 1.6s linear infinite', pointerEvents: 'none'
+                                                    }} />
+                                                )}
+                                                {/* Icono — contra-rotado */}
+                                                <div style={{
+                                                    position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                    transform: 'rotate(-45deg)',
+                                                    fontFamily: "'Courier New',monospace", fontWeight: 900,
+                                                    fontSize: actual ? '1rem' : '0.8rem',
+                                                    color: actual || completado ? '#fff' : '#1e3a5f',
+                                                }}>
+                                                    {completado && paso === 'ticket'
+                                                        ? <svg width={actual ? 14 : 11} height={actual ? 14 : 11} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+                                                        : completado
+                                                            ? <span style={{ animation: 'ma-check-pop 0.3s ease-out', display: 'inline-block' }}>✓</span>
+                                                            : i + 1
+                                                    }
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                    {/* Label */}
-                                    {!isMobile && (
-                                    <div style={{
-                                        fontSize:'0.58rem', fontWeight: actual ? 800 : completado ? 600 : 400,
-                                        color: actual ? clr1 : completado ? clr1+'cc' : '#1e3a5f',
-                                        whiteSpace:'nowrap', letterSpacing:'0.1em',
-                                        textTransform:'uppercase', fontFamily:"'Courier New',monospace",
-                                        textShadow: actual ? `0 0 10px ${clr1}99` : 'none',
-                                        transition:'color 0.3s',
-                                    }}>
-                                        {label}
-                                    </div>
-                                    )}
-                                </div>
-                                {/* Conector */}
-                                {i < PASOS_LABELS.length - 1 && (
-                                    <div style={{ flex:1, minWidth:8, margin:'0 2px 22px', height:2,
-                                        background:'#0d1f38', position:'relative', overflow:'hidden', borderRadius:99 }}>
-                                        <div style={{
-                                            position:'absolute', inset:0, borderRadius:99,
-                                            background:`linear-gradient(90deg, ${clr1}, ${clr2})`,
-                                            transform:`scaleX(${i < pasoIdx ? 1 : 0})`,
-                                            transformOrigin:'left',
-                                            transition:'transform 0.5s cubic-bezier(0.4,0,0.2,1)',
-                                        }} />
-                                        {/* Dot viajero en el último completado */}
-                                        {i === pasoIdx - 1 && (
-                                            <div style={{ position:'absolute', top:'50%', right:0,
-                                                transform:'translateY(-50%)',
-                                                width:6, height:6, borderRadius:'50%',
-                                                background:clr2, boxShadow:`0 0 8px ${clr2}` }} />
+                                        {/* Label */}
+                                        {!isMobile && (
+                                            <div style={{
+                                                fontSize: '0.58rem', fontWeight: actual ? 800 : completado ? 600 : 400,
+                                                color: actual ? clr1 : completado ? clr1 + 'cc' : '#1e3a5f',
+                                                whiteSpace: 'nowrap', letterSpacing: '0.1em',
+                                                textTransform: 'uppercase', fontFamily: "'Courier New',monospace",
+                                                textShadow: actual ? `0 0 10px ${clr1}99` : 'none',
+                                                transition: 'color 0.3s',
+                                            }}>
+                                                {label}
+                                            </div>
                                         )}
                                     </div>
-                                )}
-                            </React.Fragment>
-                        );
-                    })}
+                                    {/* Conector */}
+                                    {i < PASOS_LABELS.length - 1 && (
+                                        <div style={{
+                                            flex: 1, minWidth: 8, margin: '0 2px 22px', height: 2,
+                                            background: '#0d1f38', position: 'relative', overflow: 'hidden', borderRadius: 99
+                                        }}>
+                                            <div style={{
+                                                position: 'absolute', inset: 0, borderRadius: 99,
+                                                background: `linear-gradient(90deg, ${clr1}, ${clr2})`,
+                                                transform: `scaleX(${i < pasoIdx ? 1 : 0})`,
+                                                transformOrigin: 'left',
+                                                transition: 'transform 0.5s cubic-bezier(0.4,0,0.2,1)',
+                                            }} />
+                                            {/* Dot viajero en el último completado */}
+                                            {i === pasoIdx - 1 && (
+                                                <div style={{
+                                                    position: 'absolute', top: '50%', right: 0,
+                                                    transform: 'translateY(-50%)',
+                                                    width: 6, height: 6, borderRadius: '50%',
+                                                    background: clr2, boxShadow: `0 0 8px ${clr2}`
+                                                }} />
+                                            )}
+                                        </div>
+                                    )}
+                                </React.Fragment>
+                            );
+                        })}
                     </div>
                 </div>
 
@@ -1802,16 +1879,16 @@ const MapaAsientos = () => {
 
                                 {/* Full-width seat map */}
                                 <div style={{ overflowX: isMobile ? 'auto' : 'visible', WebkitOverflowScrolling: 'touch' }}>
-                                <GeminiSeatMap
-                                    piso={pisoSeleccionado}
-                                    totalPisos={pisos}
-                                    reservados={asientosReservados}
-                                    bloqueados={asientosBloqueados}
-                                    seleccionados={asientosSeleccionados}
-                                    onToggle={toggleAsiento}
-                                    colorAccent={colorEmpresa}
-                                    temaEmpresa={te}
-                                />
+                                    <GeminiSeatMap
+                                        piso={pisoSeleccionado}
+                                        totalPisos={pisos}
+                                        reservados={asientosReservados}
+                                        bloqueados={asientosBloqueados}
+                                        seleccionados={asientosSeleccionados}
+                                        onToggle={toggleAsiento}
+                                        colorAccent={colorEmpresa}
+                                        temaEmpresa={te}
+                                    />
 
                                 </div>{/* end scroll wrapper */}
 
@@ -1893,149 +1970,149 @@ const MapaAsientos = () => {
                                         gridTemplateColumns: (!isMobile && asientosSeleccionados.length >= 2) ? '1fr 1fr' : '1fr',
                                         gap: '1rem',
                                     }}>
-                                    {asientosSeleccionados.map((seat, idx) => {
-                                        const datos = datosPasajeros[seat] || {};
-                                        const esComprador = idx === 0;
-                                        const isInfante = datos.esInfante;
-                                        const tieneDeclaracion = datos.lleva1000 || datos.llevaAnimales || datos.llevaProductos;
-                                        const baseBg = te?.bg || '#0d1a2e';
-                                        // Color por estado — prioridad: infante > lleva1000 > animales > productos > normal
-                                        const CARD_STATES = isInfante
-                                            ? { tint: 'rgba(245,158,11,0.13)', border: '#b45309', badge: '#f59e0b', glow: 'rgba(245,158,11,0.15)', label: 'INFANTE' }
-                                            : datos.llevaAnimales
-                                            ? { tint: 'rgba(56,189,248,0.11)',  border: '#0369a1', badge: '#38bdf8', glow: 'rgba(56,189,248,0.15)',   label: '⚠ ANIMALES' }
-                                            : datos.lleva1000
-                                            ? { tint: 'rgba(34,197,94,0.11)',   border: '#15803d', badge: '#22c55e', glow: 'rgba(34,197,94,0.15)',    label: '⚠ EFECTIVO' }
-                                            : datos.llevaProductos
-                                            ? { tint: 'rgba(168,85,247,0.11)',  border: '#6b21a8', badge: '#a855f7', glow: 'rgba(168,85,247,0.15)',   label: '⚠ PRODUCTOS' }
-                                            : { tint: te ? te.c1 + '12' : 'rgba(37,99,235,0.08)', border: te ? te.c1 + '55' : '#1e3a8a', badge: te?.c1 || '#2563eb', glow: te ? te.c1 + '15' : 'transparent', label: `ASIENTO ${seat}` };
-                                        const cardBg     = `${baseBg}`;
-                                        const cardBorder = CARD_STATES.border;
-                                        const badgeBg    = CARD_STATES.badge;
-                                        const badgeLabel = CARD_STATES.label;
-                                        return (
-                                            <div key={seat} style={{
-                                                background: `linear-gradient(135deg, ${cardBg} 0%, ${cardBg} 60%, ${CARD_STATES.tint})`,
-                                                borderRadius: '14px', padding: '1.25rem',
-                                                border: `1px solid ${cardBorder}`,
-                                                boxShadow: `0 2px 20px ${CARD_STATES.glow}`,
-                                                transition: 'all 0.3s',
-                                            }}>
-                                                {/* Card header */}
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                                                        <span style={{
-                                                            background: badgeBg, color: 'white',
-                                                            fontSize: '0.68rem', fontWeight: 700,
-                                                            fontFamily: "Arial, 'Helvetica Neue', sans-serif",
-                                                            letterSpacing: '0.08em', textTransform: 'uppercase',
-                                                            padding: '0.25rem 0.65rem', borderRadius: '6px',
-                                                        }}>{badgeLabel}</span>
-                                                        {esComprador && (
+                                        {asientosSeleccionados.map((seat, idx) => {
+                                            const datos = datosPasajeros[seat] || {};
+                                            const esComprador = idx === 0;
+                                            const isInfante = datos.esInfante;
+                                            const tieneDeclaracion = datos.lleva1000 || datos.llevaAnimales || datos.llevaProductos;
+                                            const baseBg = te?.bg || '#0d1a2e';
+                                            // Color por estado — prioridad: infante > lleva1000 > animales > productos > normal
+                                            const CARD_STATES = isInfante
+                                                ? { tint: 'rgba(245,158,11,0.13)', border: '#b45309', badge: '#f59e0b', glow: 'rgba(245,158,11,0.15)', label: 'INFANTE' }
+                                                : datos.llevaAnimales
+                                                    ? { tint: 'rgba(56,189,248,0.11)', border: '#0369a1', badge: '#38bdf8', glow: 'rgba(56,189,248,0.15)', label: '⚠ ANIMALES' }
+                                                    : datos.lleva1000
+                                                        ? { tint: 'rgba(34,197,94,0.11)', border: '#15803d', badge: '#22c55e', glow: 'rgba(34,197,94,0.15)', label: '⚠ EFECTIVO' }
+                                                        : datos.llevaProductos
+                                                            ? { tint: 'rgba(168,85,247,0.11)', border: '#6b21a8', badge: '#a855f7', glow: 'rgba(168,85,247,0.15)', label: '⚠ PRODUCTOS' }
+                                                            : { tint: te ? te.c1 + '12' : 'rgba(37,99,235,0.08)', border: te ? te.c1 + '55' : '#1e3a8a', badge: te?.c1 || '#2563eb', glow: te ? te.c1 + '15' : 'transparent', label: `ASIENTO ${seat}` };
+                                            const cardBg = `${baseBg}`;
+                                            const cardBorder = CARD_STATES.border;
+                                            const badgeBg = CARD_STATES.badge;
+                                            const badgeLabel = CARD_STATES.label;
+                                            return (
+                                                <div key={seat} style={{
+                                                    background: `linear-gradient(135deg, ${cardBg} 0%, ${cardBg} 60%, ${CARD_STATES.tint})`,
+                                                    borderRadius: '14px', padding: '1.25rem',
+                                                    border: `1px solid ${cardBorder}`,
+                                                    boxShadow: `0 2px 20px ${CARD_STATES.glow}`,
+                                                    transition: 'all 0.3s',
+                                                }}>
+                                                    {/* Card header */}
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                                                             <span style={{
-                                                                color: '#10b981', fontSize: '0.65rem', fontWeight: 700,
+                                                                background: badgeBg, color: 'white',
+                                                                fontSize: '0.68rem', fontWeight: 700,
                                                                 fontFamily: "Arial, 'Helvetica Neue', sans-serif",
-                                                                letterSpacing: '0.1em', textTransform: 'uppercase',
-                                                                border: '1px solid #10b98140', padding: '0.2rem 0.5rem', borderRadius: '5px',
-                                                            }}>COMPRADOR</span>
+                                                                letterSpacing: '0.08em', textTransform: 'uppercase',
+                                                                padding: '0.25rem 0.65rem', borderRadius: '6px',
+                                                            }}>{badgeLabel}</span>
+                                                            {esComprador && (
+                                                                <span style={{
+                                                                    color: '#10b981', fontSize: '0.65rem', fontWeight: 700,
+                                                                    fontFamily: "Arial, 'Helvetica Neue', sans-serif",
+                                                                    letterSpacing: '0.1em', textTransform: 'uppercase',
+                                                                    border: '1px solid #10b98140', padding: '0.2rem 0.5rem', borderRadius: '5px',
+                                                                }}>COMPRADOR</span>
+                                                            )}
+                                                        </div>
+                                                        {tieneDeclaracion && !isInfante && (
+                                                            <span style={{ color: '#f87171', fontSize: '0.68rem', fontWeight: 700, fontFamily: "Arial, 'Helvetica Neue', sans-serif", letterSpacing: '0.06em', textTransform: 'uppercase' }}>DECLARACIÓN REQUERIDA</span>
                                                         )}
                                                     </div>
-                                                    {tieneDeclaracion && !isInfante && (
-                                                        <span style={{ color: '#f87171', fontSize: '0.68rem', fontWeight: 700, fontFamily: "Arial, 'Helvetica Neue', sans-serif", letterSpacing: '0.06em', textTransform: 'uppercase' }}>DECLARACIÓN REQUERIDA</span>
-                                                    )}
-                                                </div>
 
-                                                {/* Row 1: CI + Nombre */}
-                                                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '0.7rem', marginBottom: '0.7rem' }}>
-                                                    <div>
-                                                        <label style={lbl}>CI <span style={{ color: '#ef4444' }}>*</span></label>
-                                                        <input type="text" value={datos.ci || ''} onChange={e => handleCIChange(seat, e.target.value)}
-                                                            placeholder="Número de CI" style={{ ...inp, borderColor: te ? te.c1 + '50' : '#1e3a5f' }} />
-                                                    </div>
-                                                    <div>
-                                                        <label style={lbl}>Nombre Completo <span style={{ color: '#ef4444' }}>*</span></label>
-                                                        <input type="text" value={datos.nombre || ''} onChange={e => handlePasajeroChange(seat, 'nombre', e.target.value)}
-                                                            placeholder="Nombre del pasajero" style={inp} />
-                                                    </div>
-                                                </div>
-
-                                                {/* Row 2: Teléfono + Email (comprador) */}
-                                                {esComprador && (
+                                                    {/* Row 1: CI + Nombre */}
                                                     <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '0.7rem', marginBottom: '0.7rem' }}>
                                                         <div>
-                                                            <label style={lbl}>Teléfono / WhatsApp</label>
-                                                            <input type="tel" value={datos.telefono || ''} onChange={e => handlePasajeroChange(seat, 'telefono', e.target.value)}
-                                                                placeholder="Ej. 67146215" style={inp} />
+                                                            <label style={lbl}>CI <span style={{ color: '#ef4444' }}>*</span></label>
+                                                            <input type="text" value={datos.ci || ''} onChange={e => handleCIChange(seat, e.target.value)}
+                                                                placeholder="Número de CI" style={{ ...inp, borderColor: te ? te.c1 + '50' : '#1e3a5f' }} />
                                                         </div>
                                                         <div>
-                                                            <label style={lbl}>Correo electrónico <span style={{ color: '#ef4444' }}>*</span></label>
-                                                            <input type="email" value={datos.email || ''} onChange={e => handlePasajeroChange(seat, 'email', e.target.value)}
-                                                                placeholder="correo@ejemplo.com" style={inp} />
+                                                            <label style={lbl}>Nombre Completo <span style={{ color: '#ef4444' }}>*</span></label>
+                                                            <input type="text" value={datos.nombre || ''} onChange={e => handlePasajeroChange(seat, 'nombre', e.target.value)}
+                                                                placeholder="Nombre del pasajero" style={inp} />
                                                         </div>
                                                     </div>
-                                                )}
 
-                                                {/* Infant toggle — no comprador */}
-                                                {!esComprador && (
-                                                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#94a3b8', fontSize: '0.78rem', cursor: 'pointer', marginBottom: '0.5rem', fontFamily: "Arial, 'Helvetica Neue', sans-serif", textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                                        <input type="checkbox" checked={isInfante}
-                                                            onChange={e => handlePasajeroChange(seat, 'esInfante', e.target.checked)}
-                                                            style={{ accentColor: '#f59e0b', width: '16px', height: '16px' }} />
-                                                        Pasajero infante (menor de edad)
-                                                    </label>
-                                                )}
-
-                                                {isInfante && (
-                                                    <div style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid #b4530950', borderRadius: '10px', padding: '0.75rem', marginBottom: '0.75rem' }}>
-                                                        <p style={{ color: '#fbbf24', fontSize: '0.75rem', margin: 0, fontWeight: 700, fontFamily: "Arial, 'Helvetica Neue', sans-serif", textTransform: 'uppercase', letterSpacing: '0.05em' }}>VALIDACIÓN PRESENCIAL REQUERIDA</p>
-                                                        <p style={{ color: '#fcd34d', fontSize: '0.7rem', margin: '0.3rem 0 0', fontFamily: "Arial, 'Helvetica Neue', sans-serif" }}>
-                                                            El menor debe presentar certificado de nacimiento o CI en sucursal antes del viaje.
-                                                        </p>
-                                                    </div>
-                                                )}
-
-                                                {/* Declaraciones */}
-                                                <div style={{ borderTop: `1px solid ${cardBorder}50`, paddingTop: '0.75rem', marginTop: '0.5rem', display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-                                                    <div style={{ flex: 1 }}>
-                                                        <p style={{ color: '#64748b', fontSize: '0.68rem', marginBottom: '0.5rem', margin: '0 0 0.5rem', fontFamily: "Arial, 'Helvetica Neue', sans-serif", textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700 }}>DECLARACIONES (MARQUE SI APLICA)</p>
-                                                        {[
-                                                            { key: 'lleva1000',     label: 'Lleva más de $1,000 en efectivo', accent: '#22c55e' },
-                                                            { key: 'llevaAnimales', label: 'Lleva animales',                   accent: '#38bdf8' },
-                                                            { key: 'llevaProductos',label: 'Lleva productos por más de $1,000',accent: '#a855f7' },
-                                                        ].map(d => (
-                                                            <label key={d.key} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: isInfante ? '#475569' : '#94a3b8', fontSize: '0.78rem', cursor: isInfante ? 'not-allowed' : 'pointer', marginBottom: '0.35rem', fontFamily: "Arial, 'Helvetica Neue', sans-serif", opacity: isInfante ? 0.4 : 1 }}>
-                                                                <input type="checkbox" checked={datos[d.key] || false}
-                                                                    disabled={isInfante}
-                                                                    onChange={e => handlePasajeroChange(seat, d.key, e.target.checked)}
-                                                                    style={{ accentColor: d.accent, width: '15px', height: '15px', cursor: isInfante ? 'not-allowed' : 'pointer' }} />
-                                                                {d.label}
-                                                            </label>
-                                                        ))}
-                                                        {tieneDeclaracion && (
-                                                            <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid #7f1d1d80', borderRadius: '9px', padding: '0.65rem', marginTop: '0.5rem', color: '#fca5a5', fontSize: '0.73rem', fontFamily: "Arial, 'Helvetica Neue', sans-serif" }}>
-                                                                ⚠ Debe declarar sus pertenencias en sucursal antes del viaje.
+                                                    {/* Row 2: Teléfono + Email (comprador) */}
+                                                    {esComprador && (
+                                                        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '0.7rem', marginBottom: '0.7rem' }}>
+                                                            <div>
+                                                                <label style={lbl}>Teléfono / WhatsApp</label>
+                                                                <input type="tel" value={datos.telefono || ''} onChange={e => handlePasajeroChange(seat, 'telefono', e.target.value)}
+                                                                    placeholder="Ej. 67146215" style={inp} />
                                                             </div>
+                                                            <div>
+                                                                <label style={lbl}>Correo electrónico <span style={{ color: '#ef4444' }}>*</span></label>
+                                                                <input type="email" value={datos.email || ''} onChange={e => handlePasajeroChange(seat, 'email', e.target.value)}
+                                                                    placeholder="correo@ejemplo.com" style={inp} />
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Infant toggle — no comprador */}
+                                                    {!esComprador && (
+                                                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#94a3b8', fontSize: '0.78rem', cursor: 'pointer', marginBottom: '0.5rem', fontFamily: "Arial, 'Helvetica Neue', sans-serif", textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                                            <input type="checkbox" checked={isInfante}
+                                                                onChange={e => handlePasajeroChange(seat, 'esInfante', e.target.checked)}
+                                                                style={{ accentColor: '#f59e0b', width: '16px', height: '16px' }} />
+                                                            Pasajero infante (menor de edad)
+                                                        </label>
+                                                    )}
+
+                                                    {isInfante && (
+                                                        <div style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid #b4530950', borderRadius: '10px', padding: '0.75rem', marginBottom: '0.75rem' }}>
+                                                            <p style={{ color: '#fbbf24', fontSize: '0.75rem', margin: 0, fontWeight: 700, fontFamily: "Arial, 'Helvetica Neue', sans-serif", textTransform: 'uppercase', letterSpacing: '0.05em' }}>VALIDACIÓN PRESENCIAL REQUERIDA</p>
+                                                            <p style={{ color: '#fcd34d', fontSize: '0.7rem', margin: '0.3rem 0 0', fontFamily: "Arial, 'Helvetica Neue', sans-serif" }}>
+                                                                El menor debe presentar certificado de nacimiento o CI en sucursal antes del viaje.
+                                                            </p>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Declaraciones */}
+                                                    <div style={{ borderTop: `1px solid ${cardBorder}50`, paddingTop: '0.75rem', marginTop: '0.5rem', display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+                                                        <div style={{ flex: 1 }}>
+                                                            <p style={{ color: '#64748b', fontSize: '0.68rem', marginBottom: '0.5rem', margin: '0 0 0.5rem', fontFamily: "Arial, 'Helvetica Neue', sans-serif", textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700 }}>DECLARACIONES (MARQUE SI APLICA)</p>
+                                                            {[
+                                                                { key: 'lleva1000', label: 'Lleva más de $1,000 en efectivo', accent: '#22c55e' },
+                                                                { key: 'llevaAnimales', label: 'Lleva animales', accent: '#38bdf8' },
+                                                                { key: 'llevaProductos', label: 'Lleva productos por más de $1,000', accent: '#a855f7' },
+                                                            ].map(d => (
+                                                                <label key={d.key} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: isInfante ? '#475569' : '#94a3b8', fontSize: '0.78rem', cursor: isInfante ? 'not-allowed' : 'pointer', marginBottom: '0.35rem', fontFamily: "Arial, 'Helvetica Neue', sans-serif", opacity: isInfante ? 0.4 : 1 }}>
+                                                                    <input type="checkbox" checked={datos[d.key] || false}
+                                                                        disabled={isInfante}
+                                                                        onChange={e => handlePasajeroChange(seat, d.key, e.target.checked)}
+                                                                        style={{ accentColor: d.accent, width: '15px', height: '15px', cursor: isInfante ? 'not-allowed' : 'pointer' }} />
+                                                                    {d.label}
+                                                                </label>
+                                                            ))}
+                                                            {tieneDeclaracion && (
+                                                                <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid #7f1d1d80', borderRadius: '9px', padding: '0.65rem', marginTop: '0.5rem', color: '#fca5a5', fontSize: '0.73rem', fontFamily: "Arial, 'Helvetica Neue', sans-serif" }}>
+                                                                    ⚠ Debe declarar sus pertenencias en sucursal antes del viaje.
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        {/* Botón confirmar — solo en tarjeta única */}
+                                                        {asientosSeleccionados.length === 1 && (
+                                                            <button type="submit" style={{
+                                                                alignSelf: 'stretch', minWidth: '160px', padding: '0.75rem 1.25rem',
+                                                                background: te ? `linear-gradient(135deg, ${te.c1}, ${te.c2})` : '#10b981',
+                                                                color: 'white', border: 'none', borderRadius: '10px',
+                                                                fontFamily: "Arial, 'Helvetica Neue', sans-serif",
+                                                                fontWeight: 900, fontSize: '0.82rem', cursor: 'pointer',
+                                                                textTransform: 'uppercase', letterSpacing: '0.08em',
+                                                                boxShadow: te ? `0 0 16px ${te.c1}40` : '0 0 16px rgba(16,185,129,0.3)',
+                                                                transition: 'all 0.2s',
+                                                            }}>
+                                                                CONFIRMAR<br />DATOS →
+                                                            </button>
                                                         )}
                                                     </div>
-                                                    {/* Botón confirmar — solo en tarjeta única */}
-                                                    {asientosSeleccionados.length === 1 && (
-                                                        <button type="submit" style={{
-                                                            alignSelf: 'stretch', minWidth: '160px', padding: '0.75rem 1.25rem',
-                                                            background: te ? `linear-gradient(135deg, ${te.c1}, ${te.c2})` : '#10b981',
-                                                            color: 'white', border: 'none', borderRadius: '10px',
-                                                            fontFamily: "Arial, 'Helvetica Neue', sans-serif",
-                                                            fontWeight: 900, fontSize: '0.82rem', cursor: 'pointer',
-                                                            textTransform: 'uppercase', letterSpacing: '0.08em',
-                                                            boxShadow: te ? `0 0 16px ${te.c1}40` : '0 0 16px rgba(16,185,129,0.3)',
-                                                            transition: 'all 0.2s',
-                                                        }}>
-                                                            CONFIRMAR<br/>DATOS →
-                                                        </button>
-                                                    )}
                                                 </div>
-                                            </div>
-                                        );
-                                    })}
+                                            );
+                                        })}
                                     </div>
 
                                     {/* PDF declaration */}
@@ -2105,7 +2182,7 @@ const MapaAsientos = () => {
                                                 accent: efectivoAccent,
                                                 icon: (
                                                     <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                                                        <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/>
+                                                        <rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><line x1="1" y1="10" x2="23" y2="10" />
                                                     </svg>
                                                 ),
                                             },
@@ -2116,11 +2193,11 @@ const MapaAsientos = () => {
                                                 accent: te ? te.c1 : '#3b82f6',
                                                 icon: (
                                                     <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                                                        <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
-                                                        <rect x="5" y="5" width="3" height="3" fill="currentColor" stroke="none"/><rect x="16" y="5" width="3" height="3" fill="currentColor" stroke="none"/><rect x="5" y="16" width="3" height="3" fill="currentColor" stroke="none"/>
-                                                        <line x1="14" y1="14" x2="14" y2="14"/><line x1="17" y1="14" x2="17" y2="14"/><line x1="20" y1="14" x2="20" y2="14"/>
-                                                        <line x1="14" y1="17" x2="14" y2="17"/><line x1="20" y1="17" x2="20" y2="17"/>
-                                                        <line x1="14" y1="20" x2="14" y2="20"/><line x1="17" y1="20" x2="20" y2="20"/>
+                                                        <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="3" y="14" width="7" height="7" />
+                                                        <rect x="5" y="5" width="3" height="3" fill="currentColor" stroke="none" /><rect x="16" y="5" width="3" height="3" fill="currentColor" stroke="none" /><rect x="5" y="16" width="3" height="3" fill="currentColor" stroke="none" />
+                                                        <line x1="14" y1="14" x2="14" y2="14" /><line x1="17" y1="14" x2="17" y2="14" /><line x1="20" y1="14" x2="20" y2="14" />
+                                                        <line x1="14" y1="17" x2="14" y2="17" /><line x1="20" y1="17" x2="20" y2="17" />
+                                                        <line x1="14" y1="20" x2="14" y2="20" /><line x1="17" y1="20" x2="20" y2="20" />
                                                     </svg>
                                                 ),
                                             },
@@ -2131,9 +2208,9 @@ const MapaAsientos = () => {
                                                 accent: '#10b981',
                                                 icon: (
                                                     <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                                                        <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/>
-                                                        <line x1="5" y1="15" x2="9" y2="15"/><line x1="5" y1="17" x2="7" y2="17"/>
-                                                        <circle cx="17" cy="15" r="2" fill="currentColor" fillOpacity="0.3"/><circle cx="19.5" cy="15" r="2" fill="currentColor" fillOpacity="0.5"/>
+                                                        <rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><line x1="1" y1="10" x2="23" y2="10" />
+                                                        <line x1="5" y1="15" x2="9" y2="15" /><line x1="5" y1="17" x2="7" y2="17" />
+                                                        <circle cx="17" cy="15" r="2" fill="currentColor" fillOpacity="0.3" /><circle cx="19.5" cy="15" r="2" fill="currentColor" fillOpacity="0.5" />
                                                     </svg>
                                                 ),
                                             },
@@ -2169,7 +2246,7 @@ const MapaAsientos = () => {
                                 {/* ── Modal overlay para flows de pago ── */}
                                 {(metodoPago === 'efectivo' || metodoPago === 'qr' || metodoPago === 'tarjeta' || procesandoPago) && (() => {
                                     const modalAccent = metodoPago === 'efectivo' ? efectivoAccent : metodoPago === 'qr' ? qrAccent : metodoPago === 'tarjeta' ? tarjetaAccent : (te?.c1 || '#3b82f6');
-                                    const modalLabel  = metodoPago === 'efectivo' ? 'EFECTIVO EN SUCURSAL' : metodoPago === 'qr' ? 'PAGO QR' : metodoPago === 'tarjeta' ? 'PAGO CON TARJETA' : 'PROCESANDO';
+                                    const modalLabel = metodoPago === 'efectivo' ? 'EFECTIVO EN SUCURSAL' : metodoPago === 'qr' ? 'PAGO QR' : metodoPago === 'tarjeta' ? 'PAGO CON TARJETA' : 'PROCESANDO';
                                     const cerrarModal = () => {
                                         if (metodoPago === 'efectivo') { setMetodoPago(null); setReservaGenerada(null); setEfectivoExpira(null); }
                                         else if (metodoPago === 'qr') { setMetodoPago(null); setQrToken(null); setPollingQr(false); setQrExpiraEn(null); setQrTiempoRestante(null); }
@@ -2192,7 +2269,7 @@ const MapaAsientos = () => {
                                                         <div style={{ fontFamily: "Arial,'Helvetica Neue',sans-serif", fontSize: '0.7rem', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: '0.15rem' }}>BS {totalMonto} — {asientosSeleccionados.length} BOLETO{asientosSeleccionados.length > 1 ? 'S' : ''}</div>
                                                     </div>
                                                     {!procesandoPago && (
-                                                        <button onClick={cerrarModal} style={{ background: '#dc2626', border: 'none', borderRadius: '50%', width: 36, height: 36, color: '#ffffff', cursor: 'pointer', fontSize: '1.15rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 2px 8px rgba(220,38,38,0.45)', transition: 'background 0.15s' }} onMouseEnter={e => e.currentTarget.style.background='#b91c1c'} onMouseLeave={e => e.currentTarget.style.background='#dc2626'}>✕</button>
+                                                        <button onClick={cerrarModal} style={{ background: '#dc2626', border: 'none', borderRadius: '50%', width: 36, height: 36, color: '#ffffff', cursor: 'pointer', fontSize: '1.15rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 2px 8px rgba(220,38,38,0.45)', transition: 'background 0.15s' }} onMouseEnter={e => e.currentTarget.style.background = '#b91c1c'} onMouseLeave={e => e.currentTarget.style.background = '#dc2626'}>✕</button>
                                                     )}
                                                 </div>
 
@@ -2250,7 +2327,7 @@ const MapaAsientos = () => {
                                                             <div style={{ flexShrink: 0, textAlign: 'center', width: isMobile ? '100%' : 'auto' }}>
                                                                 <div style={{ display: 'inline-block', padding: isMobile ? '8px' : '12px', borderRadius: '16px', background: 'white', border: `3px solid ${qrAccent}`, boxShadow: `0 0 32px ${qrAccent}50`, position: 'relative' }}>
                                                                     <QRCodeSVG
-                                                                        value={`${window.location.origin}/pago/qr?token=${qrToken}&monto=${totalMonto}&origen=${encodeURIComponent(origenViaje)}&destino=${encodeURIComponent(destinoViaje)}`}
+                                                                        value={`${window.location.origin}/pago/qr?token=${qrToken}&monto=${totalMonto}&origen=${encodeURIComponent(origenViaje)}&destino=${encodeURIComponent(destinoViaje)}&empresa=${encodeURIComponent(empresaNombre)}`}
                                                                         size={isMobile ? 180 : 220}
                                                                         level="H"
                                                                     />
@@ -2376,7 +2453,7 @@ const MapaAsientos = () => {
                                                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem',
                                                 flex: isMobile ? 1 : 'none',
                                             }}>
-                                                <svg width={isMobile ? 13 : 16} height={isMobile ? 13 : 16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                                <svg width={isMobile ? 13 : 16} height={isMobile ? 13 : 16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
                                                 DESCARGAR PDF
                                             </button>
                                         )}
@@ -2390,7 +2467,7 @@ const MapaAsientos = () => {
                                             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.3rem',
                                             flex: isMobile ? 1 : 'none',
                                         }}>
-                                            <svg width={isMobile ? 13 : 16} height={isMobile ? 13 : 16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                                            <svg width={isMobile ? 13 : 16} height={isMobile ? 13 : 16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>
                                             IR AL INICIO
                                         </button>
                                     </div>

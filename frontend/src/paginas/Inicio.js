@@ -77,7 +77,47 @@ const Inicio = () => {
     }, [sucursalesAll]);
 
     const top3 = sucursales.slice(0, 3);
-    const STARS = (r) => '★'.repeat(Math.min(5, Math.round((r / 100) * 5)));
+    
+    const metalicos = [
+        {
+            colorTexto: '#ffd700',
+            colorBorde: 'rgba(255, 215, 0, 0.45)',
+            colorGlow: 'rgba(255, 215, 0, 0.08)',
+            bgTint: 'rgba(255, 215, 0, 0.03)',
+            bgHover: 'rgba(255, 215, 0, 0.08)',
+            medalla: '🥇'
+        },
+        {
+            colorTexto: '#cbd5e1',
+            colorBorde: 'rgba(203, 213, 225, 0.45)',
+            colorGlow: 'rgba(203, 213, 225, 0.08)',
+            bgTint: 'rgba(203, 213, 225, 0.02)',
+            bgHover: 'rgba(203, 213, 225, 0.07)',
+            medalla: '🥈'
+        },
+        {
+            colorTexto: '#b45309',
+            colorBorde: 'rgba(180, 83, 9, 0.45)',
+            colorGlow: 'rgba(180, 83, 9, 0.08)',
+            bgTint: 'rgba(180, 83, 9, 0.02)',
+            bgHover: 'rgba(180, 83, 9, 0.07)',
+            medalla: '🥉'
+        }
+    ];
+
+    const renderEstrellas = (ranking, color) => {
+        const count = Math.max(1, Math.min(5, Math.round((ranking / 100) * 5)));
+        return (
+            <div style={{ display: 'flex', gap: '0.1rem', alignItems: 'center' }}>
+                {Array.from({ length: count }).map((_, idx) => (
+                    <span key={`f-${idx}`} style={{ color, fontSize: '0.85rem', filter: `drop-shadow(0 0 2px ${color}50)` }}>★</span>
+                ))}
+                {Array.from({ length: 5 - count }).map((_, idx) => (
+                    <span key={`e-${idx}`} style={{ color: `${color}30`, fontSize: '0.85rem' }}>☆</span>
+                ))}
+            </div>
+        );
+    };
 
     // Estilos base derivados del tema
     const h2Style = {
@@ -198,7 +238,7 @@ const Inicio = () => {
                         </div>
 
                         {/* Top 3 */}
-                        <div className="explorar-top3" style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', minWidth: 0, overflow: 'hidden' }}>
+                        <div className="explorar-top3" style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', minWidth: 0, overflow: 'visible', padding: '2px' }}>
                             <p style={{ ...eyebrow(c2), marginBottom: '0.35rem' }}>Mejor calificadas en {departamento}</p>
                             {top3.length === 0 ? (
                                 <div style={{ color: `${ac}45`, padding: '2.5rem', background: bgCard, borderRadius: 14, textAlign: 'center', border: borderFaint }}>
@@ -207,59 +247,72 @@ const Inicio = () => {
                             ) : (
                                 <>
                                     {top3.map((s, i) => {
-                                        const medalGlow = i === 0 ? '#d97706' : i === 1 ? '#94a3b8' : '#b45309';
+                                        const rankStyle = metalicos[i] || {
+                                            colorTexto: '#e2e8f0',
+                                            colorBorde: 'rgba(255,255,255,0.15)',
+                                            colorGlow: 'rgba(255,255,255,0.05)',
+                                            bgTint: 'rgba(255,255,255,0.02)',
+                                            bgHover: 'rgba(255,255,255,0.06)',
+                                            medalla: '🚌'
+                                        };
                                         return (
                                             <Link key={s.id} to={`/sucursal/${s.id}`} state={{ departamento }} style={{ textDecoration: 'none', color: 'inherit', display: 'block', minWidth: 0 }}>
                                                 <div data-anim className="explorar-empresa-card" style={{
-                                                    background: `linear-gradient(135deg, ${s.colorAccent}14, ${bg})`,
-                                                    border: `1px solid ${s.colorAccent}45`,
-                                                    borderLeft: `3px solid ${s.colorAccent}`,
+                                                    background: `linear-gradient(135deg, ${rankStyle.bgTint}, rgba(8, 16, 32, 0.45))`,
+                                                    border: `1.5px solid ${rankStyle.colorBorde}`,
                                                     borderRadius: 14, padding: '1.1rem 1.25rem',
                                                     display: 'flex', alignItems: 'center', gap: '1rem',
                                                     overflow: 'hidden',
-                                                    transition: 'all 0.18s', cursor: 'pointer',
-                                                    boxShadow: `0 2px 16px ${s.colorAccent}18`,
+                                                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)', cursor: 'pointer',
+                                                    boxShadow: `0 4px 16px rgba(0,0,0,0.35), 0 0 10px ${rankStyle.colorGlow}`,
                                                 }}
-                                                    onMouseEnter={e => { e.currentTarget.style.background = `linear-gradient(135deg, ${s.colorAccent}24, ${c1}08)`; e.currentTarget.style.transform = 'translateX(4px)'; e.currentTarget.style.boxShadow = `0 4px 24px ${s.colorAccent}35`; }}
-                                                    onMouseLeave={e => { e.currentTarget.style.background = `linear-gradient(135deg, ${s.colorAccent}14, ${bg})`; e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = `0 2px 16px ${s.colorAccent}18`; }}>
+                                                    onMouseEnter={e => { 
+                                                        e.currentTarget.style.background = `linear-gradient(135deg, ${rankStyle.bgHover}, rgba(8, 16, 32, 0.75))`; 
+                                                        e.currentTarget.style.transform = 'translateY(-2px) scale(1.01)'; 
+                                                        e.currentTarget.style.boxShadow = `0 8px 24px rgba(0,0,0,0.5), 0 0 20px ${rankStyle.colorTexto}25`;
+                                                        e.currentTarget.style.borderColor = rankStyle.colorTexto;
+                                                    }}
+                                                    onMouseLeave={e => { 
+                                                        e.currentTarget.style.background = `linear-gradient(135deg, ${rankStyle.bgTint}, rgba(8, 16, 32, 0.45))`; 
+                                                        e.currentTarget.style.transform = 'none'; 
+                                                        e.currentTarget.style.boxShadow = `0 4px 16px rgba(0,0,0,0.35), 0 0 10px ${rankStyle.colorGlow}`;
+                                                        e.currentTarget.style.borderColor = rankStyle.colorBorde;
+                                                    }}>
 
                                                     <div className="explorar-medalla" style={{
-                                                        width: 40, height: 40, borderRadius: 10,
-                                                        background: i === 0 ? 'linear-gradient(135deg,#f59e0b,#d97706)' : i === 1 ? 'linear-gradient(135deg,#cbd5e1,#94a3b8)' : 'linear-gradient(135deg,#d97706,#b45309)',
+                                                        width: 42, height: 42, borderRadius: 10,
+                                                        background: `radial-gradient(circle at 30% 30%, ${rankStyle.colorTexto}25, ${rankStyle.colorTexto}05)`,
+                                                        border: `1.5px solid ${rankStyle.colorBorde}`,
                                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                        fontSize: i === 0 ? '1.3rem' : '1.05rem', flexShrink: 0,
-                                                        boxShadow: `0 0 16px ${medalGlow}70`,
+                                                        fontSize: '1.4rem', flexShrink: 0,
+                                                        boxShadow: `0 0 12px ${rankStyle.colorTexto}18`,
                                                     }}>
-                                                        {RANK_MEDAL[i]}
+                                                        {rankStyle.medalla}
                                                     </div>
 
                                                     <div className="explorar-logo" style={{
                                                         borderRadius: 10, flexShrink: 0, overflow: 'hidden',
                                                         background: '#ffffff',
-                                                        border: `2px solid ${s.colorAccent}80`,
-                                                        boxShadow: `0 0 12px ${s.colorAccent}50`,
+                                                        border: `2px solid ${rankStyle.colorBorde}`,
+                                                        boxShadow: `0 0 12px ${rankStyle.colorTexto}15`,
                                                         width: 72, height: 72,
                                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                     }}>
                                                         {getEmpresaLogo(s.nombre)
                                                             ? <img src={getEmpresaLogo(s.nombre)} alt={s.nombre} className="explorar-logo-img" style={{ display: 'block', width: '100%', height: '100%', objectFit: 'contain' }} />
-                                                            : <div style={{ fontSize: '2.2rem', lineHeight: 1 }}>{s.logoEmoji || '🚌'}</div>
+                                                            : <div style={{ fontSize: '2.2rem', lineHeight: 1 }}>{'🚌'}</div>
                                                         }
                                                     </div>
 
                                                     <div style={{ flex: 1, minWidth: 0 }}>
-                                                        <div style={{ fontWeight: 700, color: '#f8f4f0', fontSize: '0.97rem', marginBottom: '0.2rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.nombre}</div>
-                                                        <div style={{ color: '#d97706', fontSize: '0.78rem', marginBottom: '0.3rem' }}>
-                                                            {STARS(s.ranking)} <span style={{ color: `${ac}50` }}>{s.ranking}pts</span>
-                                                        </div>
-                                                        <div className="explorar-amenidades" style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap' }}>
-                                                            {(s.amenidades || []).slice(0, 3).map(a => (
-                                                                <span key={a} style={{ fontSize: '0.65rem', color: `${ac}70`, background: `${s.colorAccent}10`, border: `1px solid ${s.colorAccent}20`, padding: '0.1rem 0.4rem', borderRadius: 4 }}>{a}</span>
-                                                            ))}
+                                                        <div style={{ fontWeight: 800, color: '#f8f4f0', fontSize: '1rem', marginBottom: '0.25rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: "'Outfit', sans-serif" }}>{s.nombre}</div>
+                                                        <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                                                            {renderEstrellas(s.ranking, rankStyle.colorTexto)}
+                                                            <span style={{ color: rankStyle.colorTexto, fontSize: '0.75rem', fontWeight: 700, fontFamily: "'Outfit', sans-serif", letterSpacing: '0.02em' }}>{s.ranking} PTS</span>
                                                         </div>
                                                     </div>
 
-                                                    <span style={{ color: s.colorAccent, fontSize: '0.82rem', fontWeight: 700, flexShrink: 0 }}>Ver →</span>
+                                                    <span style={{ color: rankStyle.colorTexto, fontSize: '0.85rem', fontWeight: 800, flexShrink: 0, textTransform: 'uppercase', letterSpacing: '0.04em', fontFamily: "'Outfit', sans-serif" }}>VER →</span>
                                                 </div>
                                             </Link>
                                         );

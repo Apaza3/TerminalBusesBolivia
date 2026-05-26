@@ -36,6 +36,26 @@ const BuscadorViajes = () => {
         return () => ctx.revert();
     }, []);
 
+    // gemini: los viajes son recurrentes semanalmente.
+    // Se proyecta cada viaje al próximo día de la semana que coincida con su día original.
+    // La fecha del mock solo importa para el día de la semana y la hora.
+    const proyectarAProximaOcurrencia = (salidaISO) => {
+        const original = new Date(salidaISO);
+        const diasSemanaOriginal = original.getDay(); // 0=dom, 1=lun...
+        const ahora = new Date();
+        const hoy = ahora.getDay();
+        let diasDiff = diasSemanaOriginal - hoy;
+        if (diasDiff < 0) diasDiff += 7;
+        // Si es el mismo día pero la hora ya pasó, proyectar a la siguiente semana
+        if (diasDiff === 0 && original.getHours() * 60 + original.getMinutes() <= ahora.getHours() * 60 + ahora.getMinutes()) {
+            diasDiff = 7;
+        }
+        const proyectado = new Date(ahora);
+        proyectado.setDate(ahora.getDate() + diasDiff);
+        proyectado.setHours(original.getHours(), original.getMinutes(), 0, 0);
+        return proyectado.toISOString();
+    };
+
     const buscarViajes = () => {
         if (!origen || !destino) return;
         setCargando(true);
@@ -45,6 +65,8 @@ const BuscadorViajes = () => {
             let todos = SUCURSALES_MOCK.flatMap(s =>
                 obtenerViajesSucursal(s.id).map(v => ({
                     ...v,
+                    // gemini: reemplazar fecha pasada del mock con la próxima ocurrencia del mismo día/hora
+                    salida: proyectarAProximaOcurrencia(v.salida),
                     sucursalNombre: s.nombre,
                     sucursalEmoji: s.logoEmoji,
                     sucursalColor: s.colorAccent,
@@ -59,7 +81,9 @@ const BuscadorViajes = () => {
             );
 
             if (fecha) {
-                todos = todos.filter(v => v.salida.startsWith(fecha));
+                // gemini: comparar solo el día de la semana, no la fecha exacta
+                const diaFiltro = new Date(fecha + 'T00:00:00').getDay();
+                todos = todos.filter(v => new Date(v.salida).getDay() === diaFiltro);
             }
             if (precioMax) {
                 todos = todos.filter(v => v.precio <= parseFloat(precioMax));

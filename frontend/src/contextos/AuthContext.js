@@ -1,12 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../servicios/supabase';
-import { loginCliente as mockLoginCliente, registrarCliente } from '../data/mockClientDB';
 
 const AuthContext = createContext();
 
-const SESSION_KEY = 'tbb_session';
-
-// Fetch the public.usuarios row + sucursal + departamento for a given auth user id
 async function fetchPerfil(authUserId) {
     const { data, error } = await supabase
         .from('usuarios')
@@ -44,20 +40,10 @@ export const AuthProvider = ({ children }) => {
     const [cargandoAuth, setCargandoAuth] = useState(true);
 
     useEffect(() => {
-        // Restore Supabase session on mount
         supabase.auth.getSession().then(async ({ data: { session } }) => {
             if (session?.user) {
                 const p = await fetchPerfil(session.user.id);
-                if (p) {
-                    setSesion(session);
-                    setPerfil(p);
-                } else {
-                    // Supabase user exists but no public.usuarios row → might be a client
-                    // Try restoring client session from sessionStorage
-                    _tryRestoreClientSession();
-                }
-            } else {
-                _tryRestoreClientSession();
+                if (p) { setSesion(session); setPerfil(p); }
             }
             setCargandoAuth(false);
         });
@@ -66,24 +52,10 @@ export const AuthProvider = ({ children }) => {
             if (event === 'SIGNED_OUT') {
                 setSesion(null);
                 setPerfil(null);
-                sessionStorage.removeItem(SESSION_KEY);
             }
         });
         return () => subscription.unsubscribe();
     }, []);
-
-    const _tryRestoreClientSession = () => {
-        try {
-            const raw = sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(SESSION_KEY);
-            if (raw) {
-                const parsed = JSON.parse(raw);
-                if (parsed?.rol === 'cliente') {
-                    setSesion({ user: parsed });
-                    setPerfil(parsed);
-                }
-            }
-        } catch { /* ignore */ }
-    };
 
     // ── Login Staff (admin_sucursal / cajero / conductor) via Supabase ──
     const login = async (email, password, recordar = false) => {
@@ -105,31 +77,86 @@ export const AuthProvider = ({ children }) => {
         return { exito: true, usuario: p };
     };
 
-    // ── Login Cliente (CI + password) via localStorage mock ──────────────
-    const loginComoCliente = (ci, password, recordar = false) => {
-        const resultado = mockLoginCliente(ci, password);
-        if (resultado.exito) {
-            const clientePerfil = { ...resultado.cliente, rol: 'cliente' };
-            setSesion({ user: clientePerfil });
-            setPerfil(clientePerfil);
-            if (recordar) {
-                localStorage.setItem(SESSION_KEY, JSON.stringify(clientePerfil));
-            } else {
-                sessionStorage.setItem(SESSION_KEY, JSON.stringify(clientePerfil));
+    // ── Login Cliente (CI + password) via Supabase ────────────────────────
+    const loginComoCliente = async (ci, password, recordar = false) => {
+        // Lookup email by CI in public.usuarios (lectura pública permitida)
+        const { data: usuario } = await supabase
+            .from('usuarios')
+            .select('id, email')
+            .eq('ci', ci.toUpperCase())
+            .eq('rol', 'cliente')
+            .maybeSingle();
+
+        if (!usuario) return { exito: false, error: 'CI no registrado en el sistema.' };
+
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email: usuario.email,
+            password,
+        });
+
+        if (error) {
+            if (error.message.toLowerCase().includes('not confirmed')) {
+                return { exito: false, error: 'Confirma tu correo electrónico antes de ingresar.' };
             }
+            return { exito: false, error: 'Contraseña incorrecta.' };
         }
-        return resultado;
+
+        const p = await fetchPerfil(data.user.id);
+        if (!p) return { exito: false, error: 'Perfil no encontrado.' };
+        if (!p.activo) return { exito: false, error: 'Esta cuenta está suspendida.' };
+
+        setSesion(data.session);
+        setPerfil(p);
+        return { exito: true, usuario: p };
+    };
+
+    // ── Registro Cliente via Supabase ─────────────────────────────────────
+    const registrarCliente = async ({ nombreCompleto, ci, telefono, email, password, fechaNacimiento, fotoPerfil, ciAnverso, ciReverso }) => {
+        const correo = email?.trim() || `${ci.toLowerCase()}@cliente.tbb.bo`;
+
+        const { data, error } = await supabase.auth.signUp({ email: correo, password });
+
+        if (error) {
+            const msg = error.message.toLowerCase();
+            if (msg.includes('already registered') || msg.includes('already exists')) {
+                return { exito: false, error: 'Este correo ya está registrado.' };
+            }
+            return { exito: false, error: error.message };
+        }
+
+        const { error: insertError } = await supabase
+            .from('usuarios')
+            .insert({
+                id:               data.user.id,
+                email:            correo,
+                nombre_completo:  nombreCompleto,
+                ci:               ci.toUpperCase(),
+                telefono:         telefono || null,
+                fecha_nacimiento: fechaNacimiento || null,
+                foto_url:         fotoPerfil   || null,
+                ci_anverso_url:   ciAnverso    || null,
+                ci_reverso_url:   ciReverso    || null,
+                rol:              'cliente',
+                verificado:       false,
+                activo:           true,
+            });
+
+        if (insertError) {
+            await supabase.auth.signOut();
+            if (insertError.message.includes('unique') || insertError.message.includes('duplicate')) {
+                return { exito: false, error: 'CI o correo ya registrado.' };
+            }
+            return { exito: false, error: insertError.message };
+        }
+
+        return { exito: true, cliente: { id: data.user.id, email: correo, ci, nombre_completo: nombreCompleto } };
     };
 
     // ── Logout ────────────────────────────────────────────────────────────
     const logout = async () => {
-        if (perfil?.rol !== 'cliente') {
-            await supabase.auth.signOut();
-        }
+        await supabase.auth.signOut();
         setSesion(null);
         setPerfil(null);
-        localStorage.removeItem(SESSION_KEY);
-        sessionStorage.removeItem(SESSION_KEY);
         return { exito: true };
     };
 
@@ -137,17 +164,6 @@ export const AuthProvider = ({ children }) => {
     const actualizarPerfil = async (datos) => {
         if (!perfil) return { exito: false, error: 'Sin sesión.' };
 
-        if (perfil.rol === 'cliente') {
-            const actualizado = { ...perfil, ...datos };
-            setSesion({ user: actualizado });
-            setPerfil(actualizado);
-            const key = localStorage.getItem(SESSION_KEY) ? SESSION_KEY : null;
-            if (key) localStorage.setItem(key, JSON.stringify(actualizado));
-            else sessionStorage.setItem(SESSION_KEY, JSON.stringify(actualizado));
-            return { exito: true, usuario: actualizado };
-        }
-
-        // Staff: update via Supabase
         const { error } = await supabase
             .from('usuarios')
             .update({
@@ -155,10 +171,10 @@ export const AuthProvider = ({ children }) => {
                 telefono:        datos.telefono,
             })
             .eq('id', perfil.id);
+
         if (error) return { exito: false, error: error.message };
 
         const actualizado = { ...perfil, ...datos };
-        setSesion(prev => ({ ...prev }));
         setPerfil(actualizado);
         return { exito: true, usuario: actualizado };
     };

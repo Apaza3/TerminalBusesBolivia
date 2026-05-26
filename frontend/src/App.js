@@ -50,7 +50,7 @@ function AppContent() {
     const location   = useLocation();
     const isStaff    = ROLES_STAFF.includes(perfil?.rol);
     // Inicio, Empresas y PlanearViaje tienen su propia navbar completa
-    const sinNavGlobal = ['/', '/empresas', '/planear-viaje', '/login-cliente', '/registro', '/login', '/recuperar-password'].includes(location.pathname)
+    const sinNavGlobal = ['/', '/empresas', '/planear-viaje', '/login-cliente', '/registro', '/login', '/recuperar-password', '/pago/qr'].includes(location.pathname)
         || location.pathname.startsWith('/sucursal/')
         || location.pathname.startsWith('/admin/')
         || location.pathname.startsWith('/cajero/')

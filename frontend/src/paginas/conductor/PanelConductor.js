@@ -37,6 +37,56 @@ const TIPOS_INCIDENTE = [
     { value: 'otro', label: '📋 Otro' },
 ];
 
+const IconViajes = ({ color, size = 18 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'all 0.15s ease' }}>
+        <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-1.1 0-2 .9-2 2v7c0 .6.4 1 1 1h1" />
+        <circle cx="7" cy="17" r="2" />
+        <path d="M9 17h6" />
+        <circle cx="17" cy="17" r="2" />
+    </svg>
+);
+
+const IconNotificar = ({ color, size = 18 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'all 0.15s ease' }}>
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+        <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+    </svg>
+);
+
+const IconEscanear = ({ color, size = 18 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'all 0.15s ease' }}>
+        <path d="M3 7V5a2 2 0 0 1 2-2h2" />
+        <path d="M17 3h2a2 2 0 0 1 2 2v2" />
+        <path d="M21 17v2a2 2 0 0 1-2 2h-2" />
+        <path d="M7 21H5a2 2 0 0 1-2-2v-2" />
+        <line x1="5" y1="12" x2="19" y2="12" />
+    </svg>
+);
+
+const IconPasajeros = ({ color, size = 18 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'all 0.15s ease' }}>
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+);
+
+const IconHome = ({ color, size = 18 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+        <polyline points="9 22 9 12 15 12 15 22" />
+    </svg>
+);
+
+const IconLogout = ({ color, size = 18 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+        <polyline points="16 17 21 12 16 7" />
+        <line x1="21" y1="12" x2="9" y2="12" />
+    </svg>
+);
+
 const badgeEstado = (estado, color) => {
     const m = {
         programado: { bg: '#1e3a8a22', c: '#93c5fd', label: '📅 Programado' },
@@ -331,10 +381,10 @@ const PanelConductor = () => {
     };
 
     const TABS = [
-        { id: 'viajes', icon: '🚌', label: 'Viajes' },
-        { id: 'notificar', icon: '🔔', label: 'Notificar' },
-        { id: 'escanear', icon: '📷', label: 'Escanear' },
-        { id: 'pasajeros', icon: '👥', label: 'Pasajeros' },
+        { id: 'viajes', icon: IconViajes, label: 'Viajes' },
+        { id: 'notificar', icon: IconNotificar, label: 'Notificar' },
+        { id: 'escanear', icon: IconEscanear, label: 'Escanear' },
+        { id: 'pasajeros', icon: IconPasajeros, label: 'Pasajeros' },
     ];
 
     const logoUrl = getIconoEmpresa(sucursalNombre);
@@ -349,6 +399,28 @@ const PanelConductor = () => {
             color: '#dde5f0', fontFamily: "'Rajdhani', system-ui, sans-serif",
             textTransform: 'uppercase', letterSpacing: '0.03em',
         }}>
+            <style>{`
+                @media (max-width: 768px) {
+                    .conductor-tab-bar-top {
+                        display: none !important;
+                    }
+                    .conductor-tab-bar-bottom {
+                        display: flex !important;
+                    }
+                    .conductor-main-content {
+                        padding-bottom: calc(58px + env(safe-area-inset-bottom, 0px)) !important;
+                    }
+                }
+                @media (min-width: 769px) {
+                    .conductor-tab-bar-top {
+                        display: flex !important;
+                    }
+                    .conductor-tab-bar-bottom {
+                        display: none !important;
+                    }
+                }
+            `}</style>
+
             {/* Fondo fijo dentro del contenedor — no scrollea porque overflow:hidden en padre */}
             <div style={{
                 position: 'absolute', inset: 0, zIndex: 0,
@@ -367,77 +439,159 @@ const PanelConductor = () => {
                 }} />
             )}
 
-            {/* Header — sólido, encima del fondo */}
+            {/* Header — translúcido, encima del fondo */}
             <header data-anim="header" style={{
                 position: 'relative', zIndex: 30, flexShrink: 0,
-                background: `linear-gradient(135deg, ${empresaColor} 0%, ${empresaColor}cc 60%, ${empresaTema?.secondary || empresaColor}88 100%)`,
-                borderBottom: `2px solid ${empresaColor}90`,
-                padding: '0.75rem 1rem',
+                background: `linear-gradient(135deg, ${empresaColor}dd 0%, ${empresaColor}b3 60%, ${(empresaTema?.secondary || empresaColor)}99 100%)`,
+                backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+                borderBottom: `1px solid rgba(255, 255, 255, 0.15)`,
             }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                        <div style={{
-                            width: 44, height: 44, borderRadius: '8px', flexShrink: 0,
-                            background: '#000000', border: '2px solid #FFD700',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            overflow: 'hidden', padding: '3px',
+                {/* 1. Faja Informativa Superior (Delgada) */}
+                <div style={{
+                    padding: '0.22rem 0.75rem',
+                    background: 'rgba(0, 0, 0, 0.25)',
+                    borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                }}>
+                    <div style={{ fontFamily: "'Outfit', sans-serif", display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+                        <span style={{ 
+                            fontWeight: 800, fontSize: '0.62rem', color: '#ffffff', 
+                            letterSpacing: '0.04em'
                         }}>
-                            <FragmentoDept deptNombre={deptNombre} color={empresaTextColor} size={36} />
+                            {sucursalNombre}
+                        </span>
+                        <span style={{ 
+                            fontSize: '0.55rem', color: `${empresaTextColor}b3`, 
+                            fontWeight: 500, letterSpacing: '0.02em', borderLeft: '1px solid rgba(255,255,255,0.2)', paddingLeft: '0.45rem'
+                        }}>
+                            Chofer: {perfil?.nombre_completo || 'Conductor'}
+                        </span>
+                    </div>
+                    {/* Indicador de Estado En Línea */}
+                    <div style={{ 
+                        fontSize: '0.5rem', color: '#10b981', fontWeight: 700, 
+                        display: 'flex', alignItems: 'center', gap: '0.2rem', letterSpacing: '0.05em' 
+                    }}>
+                        <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#10b981', display: 'inline-block' }}></span>
+                        ACTIVO
+                    </div>
+                </div>
+
+                {/* 2. Barra de Acciones, Logo y Reloj Centrado */}
+                <div style={{ 
+                    padding: '0.45rem 0.85rem', 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center' 
+                }}>
+                    {/* Lado Izquierdo: FragmentoDept Logo */}
+                    <div style={{
+                        width: 32, height: 32, borderRadius: '7px', flexShrink: 0,
+                        background: 'rgba(0, 0, 0, 0.3)', border: `1.2px solid ${empresaTema?.secondary ? `${empresaTema.secondary}60` : 'rgba(255, 255, 255, 0.2)'}`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        overflow: 'hidden', padding: '2px',
+                    }}>
+                        <FragmentoDept deptNombre={deptNombre} color={empresaTextColor} size={22} />
+                    </div>
+
+                    {/* Centro: Reloj y Fecha */}
+                    <div style={{ 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: 'rgba(0, 0, 0, 0.15)', 
+                        borderRadius: '7px', 
+                        padding: '0.2rem 0.65rem',
+                        border: '1px solid rgba(255, 255, 255, 0.05)'
+                    }}>
+                        <div style={{ 
+                            fontFamily: 'monospace', fontSize: '0.92rem', fontWeight: 700, 
+                            color: empresaTextColor, lineHeight: 1.1 
+                        }}>
+                            {horaActual.toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
                         </div>
-                        <div>
-                            <div style={{ fontWeight: 700, fontSize: '0.9rem', color: empresaTextColor, lineHeight: 1.2 }}>
-                                {sucursalNombre}
-                            </div>
-                            <div style={{ fontSize: '0.65rem', color: `${empresaTextColor}80` }}>
-                                {perfil?.nombre_completo || 'Conductor'}
-                            </div>
+                        <div style={{ 
+                            fontSize: '0.52rem', color: `${empresaTextColor}a0`, 
+                            fontWeight: 600, letterSpacing: '0.04em', marginTop: '0.05rem',
+                            fontFamily: "'Outfit', sans-serif"
+                        }}>
+                            {horaActual.toLocaleDateString('es-BO', { weekday: 'short', day: '2-digit', month: 'short' }).toUpperCase()}
                         </div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                        <div style={{ textAlign: 'right' }}>
-                            <div style={{ fontFamily: 'monospace', fontSize: '1rem', fontWeight: 700, color: empresaTextColor, lineHeight: 1 }}>
-                                {horaActual.toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
-                            </div>
-                            <div style={{ fontSize: '0.55rem', color: `${empresaTextColor}70` }}>
-                                {horaActual.toLocaleDateString('es-BO', { weekday: 'short', day: '2-digit', month: 'short' })}
-                            </div>
-                        </div>
-                        <button onClick={() => navigate('/')} style={{
-                            background: '#111827', border: 'none',
-                            color: '#ffffff', padding: '0.3rem 0.65rem', borderRadius: '6px',
-                            cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600,
-                        }}>🏠</button>
-                        <button onClick={handleLogout} style={{
-                            background: '#ffffff', border: 'none',
-                            color: '#e00000', padding: '0.3rem 0.6rem', borderRadius: '6px',
-                            cursor: 'pointer', fontSize: '1rem', fontWeight: 900, lineHeight: 1,
-                        }}>✕</button>
+
+                    {/* Lado Derecho: Acciones (Home y Logout) */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                        <button 
+                            onClick={() => navigate('/')} 
+                            title="Volver a Inicio"
+                            style={{
+                                background: 'rgba(255, 255, 255, 0.12)', border: 'none',
+                                color: empresaTextColor, padding: '0.38rem', borderRadius: '7px',
+                                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                transition: 'all 0.2s ease',
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.2)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.12)'; }}
+                        >
+                            <IconHome color={empresaTextColor} size={16} />
+                        </button>
+                        
+                        <button 
+                            onClick={handleLogout} 
+                            title="Cerrar Sesión"
+                            style={{
+                                background: 'rgba(239, 68, 68, 0.15)', border: 'none',
+                                color: '#fca5a5', padding: '0.38rem', borderRadius: '7px',
+                                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                transition: 'all 0.2s ease',
+                            }}
+                            onMouseEnter={e => { 
+                                e.currentTarget.style.background = '#dc2626'; 
+                                e.currentTarget.querySelector('svg').setAttribute('stroke', '#ffffff');
+                            }}
+                            onMouseLeave={e => { 
+                                e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)'; 
+                                e.currentTarget.querySelector('svg').setAttribute('stroke', '#fca5a5');
+                            }}
+                        >
+                            <IconLogout color="#fca5a5" size={16} />
+                        </button>
                     </div>
                 </div>
 
                 {/* Tab bar */}
-                <div style={{
-                    display: 'flex', gap: '0.2rem', marginTop: '0.65rem',
-                    background: 'rgba(0,0,0,0.35)', borderRadius: '9px', padding: '0.25rem',
+                {/* Tab bar */}
+                <div className="conductor-tab-bar-top" style={{
+                    display: 'flex', gap: '0.4rem', marginTop: '0.65rem',
+                    background: 'rgba(0,0,0,0.25)', borderRadius: '9px', padding: '0.25rem',
                 }}>
-                    {TABS.map(t => (
-                        <button key={t.id} onClick={() => setTab(t.id)} style={{
-                            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            gap: '0.3rem', padding: '0.5rem 0', borderRadius: '6px', border: 'none',
-                            background: tab === t.id ? (empresaTema?.secondary || '#ffffff') : '#1f2937',
-                            color: tab === t.id ? (empresaTema?.primary || empresaColor) : (empresaTema?.secondary || '#ffffff'),
-                            fontWeight: tab === t.id ? 700 : 500, fontSize: '0.78rem',
-                            cursor: 'pointer', transition: 'all 0.15s',
-                        }}>
-                            <span>{t.icon}</span>
-                            <span>{t.label}</span>
-                        </button>
-                    ))}
+                    {TABS.map(t => {
+                        const activo = tab === t.id;
+                        const iconColor = activo ? '#ffffff' : 'rgba(255, 255, 255, 0.45)';
+                        return (
+                            <button key={t.id} onClick={() => setTab(t.id)} style={{
+                                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                gap: '0.5rem', padding: '0.55rem 0', borderRadius: '6px', border: 'none',
+                                background: activo ? empresaColor : 'transparent',
+                                color: activo ? '#ffffff' : 'rgba(255, 255, 255, 0.55)',
+                                fontWeight: activo ? 700 : 500, fontSize: '0.78rem',
+                                cursor: 'pointer', transition: 'all 0.2s ease',
+                                fontFamily: "'Outfit', sans-serif",
+                                letterSpacing: '0.04em',
+                            }}>
+                                <t.icon color={iconColor} size={16} />
+                                <span>{t.label}</span>
+                            </button>
+                        );
+                    })}
                 </div>
             </header>
 
             {/* Main — scrolleable, el fondo queda fijo en el padre */}
-            <main style={{ flex: 1, position: 'relative', zIndex: 1, padding: '1rem', overflowY: 'auto' }}>
+            <main className="conductor-main-content" style={{ flex: 1, position: 'relative', zIndex: 1, padding: '1rem', overflowY: 'auto' }}>
                 <div>
 
                 {/* ── Tab Viajes ── */}
@@ -859,6 +1013,52 @@ const PanelConductor = () => {
 
                 </div>
             </main>
+
+            {/* Bottom Nav Bar - Estilo TikTok para móviles */}
+            <div className="conductor-tab-bar-bottom" style={{
+                position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 40,
+                background: 'linear-gradient(180deg, #020203 0%, #2b3542 100%)',
+                backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+                borderTop: '1px solid rgba(255, 255, 255, 0.12)',
+                display: 'none',
+                justifyContent: 'space-around',
+                alignItems: 'center',
+                padding: '0.4rem 0.4rem calc(0.4rem + env(safe-area-inset-bottom, 0px)) 0.4rem',
+            }}>
+                {TABS.map(t => {
+                    const activo = tab === t.id;
+                    // El color del contenido activo usa el color de texto contrastante de la empresa, inactivo usa gris
+                    const itemColor = activo ? (empresaTextColor || '#ffffff') : '#64748b';
+                    return (
+                        <button key={t.id} onClick={() => setTab(t.id)} style={{
+                            background: activo ? empresaColor : 'transparent',
+                            border: 'none',
+                            borderRadius: '10px',
+                            display: 'flex', flexDirection: 'column', alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '0.1rem',
+                            flex: 1,
+                            padding: '0.44rem 0.2rem',
+                            margin: '0 0.2rem',
+                            cursor: 'pointer',
+                            color: itemColor,
+                            boxShadow: activo ? `0 3px 10px ${empresaColor}30` : 'none',
+                            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                        }}>
+                            <t.icon color={itemColor} size={17} />
+                            <span style={{ 
+                                fontSize: '0.53rem', 
+                                fontWeight: activo ? 800 : 500,
+                                color: itemColor,
+                                fontFamily: "'Outfit', sans-serif",
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.04em',
+                                marginTop: '0.08rem'
+                            }}>{t.label}</span>
+                        </button>
+                    );
+                })}
+            </div>
         </div>
     );
 };
