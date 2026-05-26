@@ -1,5 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contextos/AuthContext';
+import { DEPARTAMENTOS } from '../../contextos/DepartamentoContext';
 import { supabase } from '../../servicios/supabase';
 import gsap from 'gsap';
 import '../../estilos/escritorio/admin.css';
@@ -153,6 +155,9 @@ const FORM_INICIAL = {
 
 const RegistroBus = () => {
     const navigate = useNavigate();
+    const { perfil } = useAuth();
+    const deptNombre = perfil?.departamento || 'La Paz';
+    const tema = DEPARTAMENTOS[deptNombre] || DEPARTAMENTOS['La Paz'];
     const containerRef = useRef(null);
 
     const [form, setForm]           = useState(FORM_INICIAL);
@@ -305,17 +310,19 @@ const RegistroBus = () => {
     const catSel = CATEGORIAS.find(c => c.id === form.categoria);
 
     return (
-        <div className="pagina-admin" ref={containerRef}>
-            <div className="admin-banner">
-                <span className="admin-banner-icono">⚙️</span>
-                Panel Administrativo
-            </div>
+        <div ref={containerRef} style={{ color: '#f1f5f9', fontFamily: "'Inter', system-ui, sans-serif" }}>
 
-            <div className="admin-header">
-                <button className="btn-volver-admin" onClick={() => navigate(-1)} id="btn-volver-bus">← Volver</button>
-                <div>
-                    <h1>Registrar Bus</h1>
-                    <div className="admin-header-sub">Configura el layout, categoría y documentación del vehículo</div>
+            {/* Título */}
+            <div style={{ maxWidth: 900, margin: '2rem auto 0', padding: '0 1rem 1.5rem' }}>
+                <div style={{
+                    fontSize: 'clamp(1.5rem,3.5vw,2rem)', fontWeight: 900,
+                    background: `linear-gradient(90deg, ${tema.color}, ${tema.colorSecundario})`,
+                    WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                    fontFamily: "'Rajdhani', system-ui, sans-serif",
+                    textTransform: 'uppercase', lineHeight: 1.1,
+                }}>Registrar Bus</div>
+                <div style={{ fontSize: '0.73rem', color: '#64748b', marginTop: '0.2rem' }}>
+                    Configura el layout, categoría y documentación del vehículo
                 </div>
             </div>
 

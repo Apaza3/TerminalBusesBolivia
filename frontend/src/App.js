@@ -1,150 +1,139 @@
 import React from 'react';
-import { Routes, Route, NavLink, Navigate } from 'react-router-dom';
-import { AuthProvider } from './contextos/AuthContext';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { AuthProvider, useAuth } from './contextos/AuthContext';
 import { DepartamentoProvider } from './contextos/DepartamentoContext';
 import { ToastProvider } from './componentes/ToastNotifications';
+import NavbarGlobal from './componentes/NavbarGlobal';
+import ProtectedRoute from './componentes/ProtectedRoute';
+
+// Pages — public
 import Inicio from './paginas/Inicio';
-import BuscadorViajes from './paginas/BuscadorViajes';
 import SucursalDetalle from './paginas/SucursalDetalle';
 import LoginAdmin from './paginas/auth/LoginAdmin';
 import LoginCliente from './paginas/auth/LoginCliente';
 import RegistroCliente from './paginas/auth/RegistroCliente';
 import RecuperarPassword from './paginas/auth/RecuperarPassword';
+import MapaAsientos from './paginas/MapaAsientos';
+import MisViajes from './paginas/cliente/MisViajes';
+import EditarPerfil from './paginas/perfil/EditarPerfil';
+import RecuperarBoleto from './paginas/RecuperarBoleto';
+import PagoQRMovil from './paginas/pago/PagoQRMovil';
+import PlanearViaje from './paginas/PlanearViaje';
+
+// Pages — admin
+import AdminLayout from './paginas/admin/AdminLayout';
 import AdminDashboard from './paginas/admin/AdminDashboard';
 import DashboardAnalitico from './paginas/admin/DashboardAnalitico';
 import RegistroBus from './paginas/admin/RegistroBus';
 import RegistroTripulacion from './paginas/admin/RegistroTripulacion';
-import ProtectedRoute from './componentes/ProtectedRoute';
-import MapaAsientos from './paginas/MapaAsientos';
+import RendimientoRutas from './paginas/admin/RendimientoRutas';
+import RankingEmpresas from './paginas/admin/RankingEmpresas';
+import ManifiestoPDF from './paginas/admin/ManifiestoPDF';
+import Incidentes from './paginas/admin/Incidentes';
+import PasajerosFinalizados from './paginas/admin/PasajerosFinalizados';
+import Empresas from './paginas/Empresas';
+
+// Pages — cajero / conductor
+import PanelCajero from './paginas/cajero/PanelCajero';
 import PanelConductor from './paginas/conductor/PanelConductor';
 import RegistrarIncidencia from './paginas/conductor/RegistrarIncidencia';
 import ReporteMantenimiento from './paginas/conductor/ReporteMantenimiento';
-import RecuperarBoleto from './paginas/RecuperarBoleto';
-import PanelCajero from './paginas/cajero/PanelCajero';
-import MisViajes from './paginas/cliente/MisViajes';
-import EditarPerfil from './paginas/perfil/EditarPerfil';
-import PerfilIndicador from './componentes/PerfilIndicador';
-import PagoQRMovil from './paginas/pago/PagoQRMovil';
 import ValidarAbordaje from './paginas/conductor/ValidarAbordaje';
 
 import './estilos/escritorio/buscador.css';
 import './estilos/movil/buscador-responsivo.css';
 
-/**
- * App - Root component with react-router-dom navigation.
- * Manages routing between Inicio, BuscadorViajes, and SucursalDetalle.
- * Replaces the previous state-based navigation to support browser Back button.
- */
+const ROLES_STAFF = ['admin_sucursal', 'cajero', 'conductor'];
+
+function AppContent() {
+    const { perfil } = useAuth();
+    const location   = useLocation();
+    const isStaff    = ROLES_STAFF.includes(perfil?.rol);
+    // Inicio, Empresas y PlanearViaje tienen su propia navbar completa
+    const sinNavGlobal = ['/', '/empresas', '/planear-viaje', '/login-cliente', '/registro', '/login', '/recuperar-password', '/pago/qr'].includes(location.pathname)
+        || location.pathname.startsWith('/sucursal/')
+        || location.pathname.startsWith('/admin/')
+        || location.pathname.startsWith('/cajero/')
+        || location.pathname.startsWith('/conductor/');
+
+    return (
+        <div className="App">
+            {/* Navbar premium — solo en rutas de cliente/visitante que no tienen navbar propia */}
+            {!isStaff && !sinNavGlobal && <NavbarGlobal />}
+
+            <Routes>
+                {/* ── Rutas públicas ───────────────────────────────── */}
+                <Route path="/" element={<Inicio />} />
+                <Route path="/sucursal/:id" element={<SucursalDetalle />} />
+                <Route path="/login" element={<LoginAdmin />} />
+                <Route path="/login-cliente" element={<LoginCliente />} />
+                <Route path="/registro" element={<RegistroCliente />} />
+                <Route path="/recuperar-password" element={<RecuperarPassword />} />
+                <Route path="/reserva/:viajeId" element={<MapaAsientos />} />
+                <Route path="/mis-viajes" element={<MisViajes />} />
+                <Route path="/perfil/editar" element={<EditarPerfil />} />
+                <Route path="/recuperar-boleto" element={<RecuperarBoleto />} />
+                <Route path="/pago/qr" element={<PagoQRMovil />} />
+                <Route path="/empresas" element={<Empresas />} />
+                <Route path="/planear-viaje" element={<PlanearViaje />} />
+
+                {/* ── Admin — sidebar persistente (AdminLayout + Outlet) ── */}
+                <Route path="/admin" element={
+                    <ProtectedRoute rolesPermitidos={['admin_sucursal']}>
+                        <AdminLayout />
+                    </ProtectedRoute>
+                }>
+                    <Route index element={<Navigate to="dashboard" replace />} />
+                    <Route path="dashboard"          element={<AdminDashboard />} />
+                    <Route path="analitica"          element={<DashboardAnalitico />} />
+                    <Route path="rendimiento-rutas"  element={<RendimientoRutas />} />
+                    <Route path="ranking-empresas"   element={<RankingEmpresas />} />
+                    <Route path="manifiesto"         element={<ManifiestoPDF />} />
+                    <Route path="incidentes"          element={<Incidentes />} />
+                    <Route path="pasajeros"          element={<PasajerosFinalizados />} />
+                    <Route path="bus/nuevo"          element={<RegistroBus />} />
+                    <Route path="tripulacion/nuevo"  element={<RegistroTripulacion />} />
+                </Route>
+
+                {/* ── Cajero ───────────────────────────────────────── */}
+                <Route path="/cajero/panel" element={
+                    <ProtectedRoute rolesPermitidos={['cajero', 'admin_sucursal']}>
+                        <PanelCajero />
+                    </ProtectedRoute>
+                } />
+
+                {/* ── Conductor ────────────────────────────────────── */}
+                <Route path="/conductor/panel" element={
+                    <ProtectedRoute rolesPermitidos={['conductor', 'ayudante', 'admin_sucursal']}>
+                        <PanelConductor />
+                    </ProtectedRoute>
+                } />
+                <Route path="/conductor/incidencia/:viajeId" element={
+                    <ProtectedRoute rolesPermitidos={['conductor', 'admin_sucursal']}>
+                        <RegistrarIncidencia />
+                    </ProtectedRoute>
+                } />
+                <Route path="/conductor/mantenimiento" element={
+                    <ProtectedRoute rolesPermitidos={['conductor', 'admin_sucursal']}>
+                        <ReporteMantenimiento />
+                    </ProtectedRoute>
+                } />
+                <Route path="/conductor/abordaje" element={
+                    <ProtectedRoute rolesPermitidos={['conductor', 'ayudante', 'admin_sucursal']}>
+                        <ValidarAbordaje />
+                    </ProtectedRoute>
+                } />
+            </Routes>
+        </div>
+    );
+}
+
 function App() {
     return (
         <ToastProvider>
         <DepartamentoProvider>
         <AuthProvider>
-            <div className="App">
-                {/* Barra de navegación superior */}
-                <nav className="barra-nav">
-                    <div className="nav-logo">
-                        <NavLink to="/" style={{ color: 'inherit', textDecoration: 'none' }}>
-                            🚌 Terminal<span>Bolivia</span>
-                        </NavLink>
-                    </div>
-                    <div className="nav-links">
-                        <NavLink
-                            to="/"
-                            end
-                            className={({ isActive }) => `nav-link ${isActive ? 'activo' : ''}`}
-                            id="nav-inicio"
-                        >
-                            Inicio
-                        </NavLink>
-                        <NavLink
-                            to="/buscar"
-                            className={({ isActive }) => `nav-link ${isActive ? 'activo' : ''}`}
-                            id="nav-buscador"
-                        >
-                            Buscar Viajes
-                        </NavLink>
-                        <PerfilIndicador />
-                    </div>
-                </nav>
-
-                {/* Route-based page rendering */}
-                <Routes>
-                    {/* Public Routes */}
-                    <Route path="/" element={<Inicio />} />
-                    <Route path="/buscar" element={<BuscadorViajes />} />
-                    <Route path="/sucursal/:id" element={<SucursalDetalle />} />
-                    <Route path="/login" element={<LoginAdmin />} />
-                    <Route path="/login-cliente" element={<LoginCliente />} />
-                    <Route path="/registro" element={<RegistroCliente />} />
-                    <Route path="/recuperar-password" element={<RecuperarPassword />} />
-                    <Route path="/reserva/:viajeId" element={<MapaAsientos />} />
-                    <Route path="/mis-viajes" element={<MisViajes />} />
-                    <Route path="/perfil/editar" element={<EditarPerfil />} />
-                    <Route path="/recuperar-boleto" element={<RecuperarBoleto />} />
-                    <Route path="/pago/qr" element={<PagoQRMovil />} />
-
-                    {/* Rutas no subidas en esta rama (como MapaAsientos) se redirigen o fallan
-                        dependiendo de si existen en FileSystem o no. */}
-
-                    {/* Admin Protected Routes */}
-                    <Route path="/admin/dashboard" element={
-                        <ProtectedRoute rolesPermitidos={['admin_sucursal', 'conductor']}>
-                            <AdminDashboard />
-                        </ProtectedRoute>
-                    } />
-                    <Route path="/admin/bus/nuevo" element={
-                        <ProtectedRoute rolesPermitidos={['admin_sucursal']}>
-                            <RegistroBus />
-                        </ProtectedRoute>
-                    } />
-                    {/* Ruta de Registro de Tripulación restaurada */}
-                    <Route path="/admin/tripulacion/nuevo" element={
-                        <ProtectedRoute rolesPermitidos={['admin_sucursal']}>
-                            <RegistroTripulacion />
-                        </ProtectedRoute>
-                    } />
-                    
-                    {/* Redirect root admin to dashboard */}
-                    <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
-
-                    {/* ─── Analytics Dashboard (Admin) ─── */}
-                    <Route path="/admin/analitica" element={
-                        <ProtectedRoute rolesPermitidos={['admin_sucursal']}>
-                            <DashboardAnalitico />
-                        </ProtectedRoute>
-                    } />
-
-                    {/* ─── Cajero Protected Route ─── */}
-                    <Route path="/cajero/panel" element={
-                        <ProtectedRoute rolesPermitidos={['cajero', 'admin_sucursal']}>
-                            <PanelCajero />
-                        </ProtectedRoute>
-                    } />
-
-                    {/* ─── Conductor Protected Routes ─── */}
-                    <Route path="/conductor/panel" element={
-                        <ProtectedRoute rolesPermitidos={['conductor', 'admin_sucursal']}>
-                            <PanelConductor />
-                        </ProtectedRoute>
-                    } />
-                    <Route path="/conductor/incidencia/:viajeId" element={
-                        <ProtectedRoute rolesPermitidos={['conductor', 'admin_sucursal']}>
-                            <RegistrarIncidencia />
-                        </ProtectedRoute>
-                    } />
-                    <Route path="/conductor/mantenimiento" element={
-                        <ProtectedRoute rolesPermitidos={['conductor', 'admin_sucursal']}>
-                            <ReporteMantenimiento />
-                        </ProtectedRoute>
-                    } />
-                    <Route path="/conductor/abordaje" element={
-                        <ProtectedRoute rolesPermitidos={['conductor', 'admin_sucursal']}>
-                            <ValidarAbordaje />
-                        </ProtectedRoute>
-                    } />
-                </Routes>
-            </div>
+            <AppContent />
         </AuthProvider>
         </DepartamentoProvider>
         </ToastProvider>
