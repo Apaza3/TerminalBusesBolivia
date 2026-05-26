@@ -207,6 +207,11 @@ const PanelCajero = () => {
             emailCliente:    boleto.pasajeroEmail,
             telefonoCliente: boleto.pasajeroTelefono,
             metodoPago:      boleto.metodoPago,
+            nombre:          boleto.pasajeroNombre,
+            origen:          boleto.origen,
+            destino:         boleto.destino,
+            fechaSalida:     boleto.fechaSalida,
+            empresa:         boleto.sucursalNombre,
         });
 
         if (resultado.error) {

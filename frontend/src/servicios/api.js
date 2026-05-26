@@ -327,7 +327,7 @@ export async function getAsientosOcupados(viajeId) {
   return (data || []).flatMap(r => r.asientos || []);
 }
 
-export async function crearReservaSupabase({ viajeId, usuarioId, asientos, monto, emailCliente, telefonoCliente, metodoPago }) {
+export async function crearReservaSupabase({ viajeId, usuarioId, asientos, monto, emailCliente, telefonoCliente, metodoPago, nombre, origen, destino, fechaSalida, empresa }) {
   const { data, error } = await supabase
     .from('reservas')
     .insert({
@@ -342,6 +342,18 @@ export async function crearReservaSupabase({ viajeId, usuarioId, asientos, monto
     })
     .select('id').single();
   if (error) { console.error('crearReservaSupabase:', error.message); return { error: error.message }; }
+
+  // Enviar email de confirmación (sin bloquear)
+  if (emailCliente) {
+    const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL || 'https://eoiindqtjhvyyoahnpcp.supabase.co';
+    const ANON_KEY     = process.env.REACT_APP_SUPABASE_ANON_KEY || '';
+    fetch(`${SUPABASE_URL}/functions/v1/send-booking-confirmation`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': ANON_KEY },
+      body: JSON.stringify({ email: emailCliente, nombre, origen, destino, fechaSalida, asientos, monto, empresa, reservaId: data.id }),
+    }).catch(() => {});
+  }
+
   return { id: data.id };
 }
 

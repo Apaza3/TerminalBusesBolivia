@@ -1299,7 +1299,24 @@ const MapaAsientos = () => {
         const compradorSeatKey = Object.keys(datosPasajeros)[0];
         const compradorEmail = datosPasajeros[compradorSeatKey]?.email;
         if (compradorEmail) {
-            setTimeout(() => toast.mostrar(`📧 Boletos enviados a ${compradorEmail}`, 'exito'), 1800);
+            const SURL = process.env.REACT_APP_SUPABASE_URL || 'https://eoiindqtjhvyyoahnpcp.supabase.co';
+            const AKEY = process.env.REACT_APP_SUPABASE_ANON_KEY || '';
+            fetch(`${SURL}/functions/v1/send-booking-confirmation`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'apikey': AKEY },
+                body: JSON.stringify({
+                    email:       compradorEmail,
+                    nombre:      datosPasajeros[compradorSeatKey]?.nombre,
+                    origen:      datos.origen,
+                    destino:     datos.destino,
+                    fechaSalida: datos.fechaSalida,
+                    asientos:    datos.asientos,
+                    monto:       datos.precio,
+                    empresa:     datos.sucursalNombre,
+                    reservaId:   resultado.id,
+                }),
+            }).then(() => toast.mostrar(`📧 Confirmación enviada a ${compradorEmail}`, 'exito'))
+              .catch(() => {});
         }
     };
 
