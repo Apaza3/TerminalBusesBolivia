@@ -18,6 +18,7 @@ import MisViajes from './paginas/cliente/MisViajes';
 import EditarPerfil from './paginas/perfil/EditarPerfil';
 import RecuperarBoleto from './paginas/RecuperarBoleto';
 import PagoQRMovil from './paginas/pago/PagoQRMovil';
+import BoletoPúblico from './paginas/BoletoPúblico';
 import PlanearViaje from './paginas/PlanearViaje';
 
 // Pages — admin
@@ -74,6 +75,7 @@ function AppContent() {
                 <Route path="/perfil/editar" element={<EditarPerfil />} />
                 <Route path="/recuperar-boleto" element={<RecuperarBoleto />} />
                 <Route path="/pago/qr" element={<PagoQRMovil />} />
+                <Route path="/boleto" element={<BoletoPúblico />} />
                 <Route path="/empresas" element={<Empresas />} />
                 <Route path="/planear-viaje" element={<PlanearViaje />} />
 

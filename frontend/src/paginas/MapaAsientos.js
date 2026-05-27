@@ -1289,7 +1289,7 @@ const MapaAsientos = () => {
             setPaso('mapa');
             return;
         }
-        const bs = crearBoletos(resultado, datosPasajeros);
+        const bs = crearBoletos(resultado, datosPasajeros, datos.sucursalNombre);
         setReservaGenerada(resultado);
         setBoletos(bs);
         setAsientosSeleccionados([]);
@@ -1299,25 +1299,66 @@ const MapaAsientos = () => {
         const compradorSeatKey = Object.keys(datosPasajeros)[0];
         const compradorEmail = datosPasajeros[compradorSeatKey]?.email;
         if (compradorEmail) {
+            enviarEmailConfirmacion({ bs, datos, resultado, compradorEmail, compradorNombre: datosPasajeros[compradorSeatKey]?.nombre });
+        }
+    };
+
+    const enviarEmailConfirmacion = async ({ bs, datos, resultado, compradorEmail, compradorNombre }) => {
+        try {
+            const QRLib = (await import('qrcode')).default;
+            const base = window.location.origin;
+            // QR base64 por boleto apuntando a la página pública
+            const boletosQR = await Promise.all(bs.map(async (b) => {
+                const url = `${base}/boleto?id=${b.id}&nombre=${encodeURIComponent(b.pasajeroNombre || '')}&asiento=${b.asiento}&origen=${encodeURIComponent(b.origen || datos.origen)}&destino=${encodeURIComponent(b.destino || datos.destino)}&fecha=${encodeURIComponent(b.fechaSalida || datos.fechaSalida)}&empresa=${encodeURIComponent(datos.sucursalNombre || '')}&placa=${encodeURIComponent(b.busPlaca || datos.busPlaca || '')}&precio=${b.precio || ''}&ci=${encodeURIComponent(b.pasajeroCI || '')}&tipo=${b.esInfante ? 'infante' : b.lleva1000 ? 'dinero' : b.llevaAnimales ? 'animales' : b.llevaProductos ? 'productos' : 'normal'}`;
+                const qrBase64 = await QRLib.toDataURL(url, { width: 200, margin: 1, color: { dark: '#111111', light: '#ffffff' } });
+                return { ...b, qrBase64, urlPublica: url };
+            }));
+
+            // PDF base64 con html2canvas (misma lógica que handleDownloadPDF)
+            let pdfBase64 = null;
+            try {
+                const h2c = (await import('html2canvas')).default;
+                const { jsPDF } = await import('jspdf');
+                const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+                const W = 150, X = (210 - W) / 2, TOP = 15, GAP = 10, PAGE_H = 297;
+                let curY = TOP, primera = true;
+                const refsMap = isMobile ? boletoRefsDesktopMap : boletoRefsMap;
+                for (const b of bs) {
+                    const el = refsMap.current[b.id];
+                    if (!el) continue;
+                    el.scrollIntoView({ block: 'nearest' });
+                    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+                    const canvas = await h2c(el, { scale: 3, useCORS: true, allowTaint: true, logging: false });
+                    const H = W * (canvas.height / canvas.width);
+                    if (!primera && curY + H > PAGE_H - 10) { doc.addPage(); curY = TOP; }
+                    doc.addImage(canvas.toDataURL('image/png'), 'PNG', X, curY, W, H);
+                    curY += H + GAP;
+                    primera = false;
+                }
+                pdfBase64 = doc.output('datauristring').split(',')[1];
+            } catch (_) {}
+
             const SURL = process.env.REACT_APP_SUPABASE_URL || 'https://eoiindqtjhvyyoahnpcp.supabase.co';
             const AKEY = process.env.REACT_APP_SUPABASE_ANON_KEY || '';
-            fetch(`${SURL}/functions/v1/send-booking-confirmation`, {
+            await fetch(`${SURL}/functions/v1/send-booking-confirmation`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'apikey': AKEY },
                 body: JSON.stringify({
                     email:       compradorEmail,
-                    nombre:      datosPasajeros[compradorSeatKey]?.nombre,
+                    nombre:      compradorNombre,
                     origen:      datos.origen,
                     destino:     datos.destino,
                     fechaSalida: datos.fechaSalida,
-                    asientos:    datos.asientos,
+                    busPlaca:    datos.busPlaca || '',
                     monto:       datos.precio,
                     empresa:     datos.sucursalNombre,
                     reservaId:   resultado.id,
+                    boletos:     boletosQR,
+                    pdfBase64,
                 }),
-            }).then(() => toast.mostrar(`📧 Confirmación enviada a ${compradorEmail}`, 'exito'))
-              .catch(() => {});
-        }
+            });
+            toast.mostrar(`📧 Confirmación enviada a ${compradorEmail}`, 'exito');
+        } catch (_) {}
     };
 
     const handleEfectivo = () => {

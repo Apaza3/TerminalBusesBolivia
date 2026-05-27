@@ -236,7 +236,7 @@ export const VIAJES_CONDUCTOR_MOCK = [
 
 // ── Boletos (tickets con QR único por pasajero) ──────
 
-export const crearBoletos = (reserva, datosPasajeros) => {
+export const crearBoletos = (reserva, datosPasajeros, empresa = '') => {
     const boletos = reserva.asientos.map(asiento => {
         const p = datosPasajeros?.[asiento] || {};
         return {
@@ -256,6 +256,7 @@ export const crearBoletos = (reserva, datosPasajeros) => {
             lleva1000: p.lleva1000 || false,
             llevaAnimales: p.llevaAnimales || false,
             llevaProductos: p.llevaProductos || false,
+            empresa: empresa || '',
             metodoPago: reserva.metodoPago,
             creadoEn: new Date().toISOString(),
             abordado: false,
