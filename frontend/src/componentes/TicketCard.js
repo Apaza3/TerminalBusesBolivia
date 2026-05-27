@@ -45,17 +45,19 @@ export const blendHex = (hex1, hex2, t = 0.5) => {
     return `#${[0,1,2].map(i=>Math.round(a[i]*(1-t)+b[i]*t).toString(16).padStart(2,'0')).join('')}`;
 };
 
+const norm = s => s?.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase() || '';
+
 export const getTemaEmpresa = (nombre) => {
     if (!nombre) return null;
-    const n = nombre.toLowerCase();
-    const key = Object.keys(TEMAS_EMPRESA).find(k => n.includes(k.toLowerCase()));
+    const n = norm(nombre);
+    const key = Object.keys(TEMAS_EMPRESA).find(k => n.includes(norm(k)));
     return key ? TEMAS_EMPRESA[key] : null;
 };
 
 export const getLogoEmpresa = (nombre) => {
     if (!nombre) return null;
-    const n = nombre.toLowerCase();
-    const key = Object.keys(LOGO_MAP).find(k => n.includes(k));
+    const n = norm(nombre);
+    const key = Object.keys(LOGO_MAP).find(k => n.includes(norm(k)));
     return key ? `/iconos/${LOGO_MAP[key]}.svg` : null;
 };
 
