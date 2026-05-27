@@ -2441,6 +2441,22 @@ const MapaAsientos = () => {
 
                                                                 {/* Botones */}
                                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: 'auto' }}>
+                                                                    {/* Enlace abrir en nueva pestaña para pagar desde el mismo celular */}
+                                                                    <a
+                                                                        href={`${window.location.origin}/pago/qr?token=${qrToken}&monto=${totalMonto}&origen=${encodeURIComponent(origenViaje)}&destino=${encodeURIComponent(destinoViaje)}&empresa=${encodeURIComponent(empresaNombre)}`}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        style={{ display: 'block', padding: isMobile ? '0.65rem 1rem' : '0.55rem 1rem', background: `${qrAccent}18`, border: `1.5px solid ${qrAccent}55`, borderRadius: '10px', color: lighten(qrAccent, 0.30), fontWeight: 800, fontSize: isMobile ? '0.82rem' : '0.78rem', fontFamily: "Arial,'Helvetica Neue',sans-serif", textTransform: 'uppercase', letterSpacing: '0.07em', textDecoration: 'none', textAlign: 'center', cursor: 'pointer' }}
+                                                                    >
+                                                                        📲 PAGAR DESDE ESTE DISPOSITIVO ↗
+                                                                    </a>
+                                                                    {/* Confirmación manual — para cuando el usuario ya pagó en otra ventana/tab */}
+                                                                    <button
+                                                                        onClick={() => finalizarReserva('qr')}
+                                                                        style={{ ...btnPrimario, background: `linear-gradient(135deg, #10b981 0%, #059669 100%)`, color: '#fff', fontWeight: 900, fontFamily: "Arial,'Helvetica Neue',sans-serif", textTransform: 'uppercase', letterSpacing: '0.06em', boxShadow: '0 4px 18px rgba(16,185,129,0.40)', border: 'none' }}
+                                                                    >
+                                                                        ✓ YA REALICÉ EL PAGO
+                                                                    </button>
                                                                     <button onClick={cerrarModal} style={{ ...btnPrimario, background: `linear-gradient(135deg, ${QR_BLUE} 0%, ${qrAccent} 50%, ${te?.c1 || QR_BLUE} 100%)`, color: '#0B1120', fontWeight: 900, fontFamily: "Arial,'Helvetica Neue',sans-serif", textTransform: 'uppercase', letterSpacing: '0.06em', boxShadow: `0 0 20px ${qrAccent}45`, margin: '0 auto', display: 'block' }}>← CAMBIAR MÉTODO</button>
                                                                 </div>
                                                             </div>
