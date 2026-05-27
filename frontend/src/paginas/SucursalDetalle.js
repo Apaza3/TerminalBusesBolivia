@@ -804,63 +804,69 @@ const SucursalDetalle = () => {
                 ) : (
                     <>
                         {/* ── Barra selector de día ── */}
-                        <div style={{ marginBottom: '1.1rem', padding: '0.85rem 1rem', background: `${color}0d`, border: `1px solid ${color}30`, borderRadius: 14 }}>
-                            {/* Fila superior: título + boletos */}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.7rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                                <div>
-                                    <span style={{ fontSize: '0.72rem', color: `${color}90`, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>📅 ¿Qué día quieres viajar?</span>
-                                    {diaFiltro && (
-                                        <button onClick={() => seleccionarDia(diaFiltro)} style={{ marginLeft: '0.6rem', fontSize: '0.65rem', color: '#94a3b8', background: 'transparent', border: 'none', cursor: 'pointer', textDecoration: 'underline', fontWeight: 600 }}>
-                                            ver todos
-                                        </button>
-                                    )}
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                    <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 600 }}>🎫</span>
-                                    <button onClick={() => setCantidadBoletos(b => Math.max(1, b - 1))}
-                                        style={{ width: 24, height: 24, borderRadius: 6, border: `1px solid ${color}50`, background: `${color}15`, color, cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
-                                    <span style={{ minWidth: 20, textAlign: 'center', fontWeight: 800, color: '#f1f5f9', fontSize: '0.85rem' }}>{cantidadBoletos}</span>
-                                    <button onClick={() => setCantidadBoletos(b => Math.min(10, b + 1))}
-                                        style={{ width: 24, height: 24, borderRadius: 6, border: `1px solid ${color}50`, background: `${color}15`, color, cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
-                                    <span style={{ fontSize: '0.68rem', color: '#64748b' }}>boleto{cantidadBoletos !== 1 ? 's' : ''}</span>
-                                </div>
+                        <style>{`
+                            .sd-dia-chip { transition: background 0.16s, border-color 0.16s, color 0.16s; }
+                            .sd-dia-chip:hover:not(:disabled) { filter: brightness(1.12); }
+                            @media (min-width: 768px) {
+                                .sd-dia-bar { padding: 1.4rem 1.6rem !important; }
+                                .sd-dia-chip { min-width: 76px !important; padding: 0.65rem 1rem !important; border-radius: 12px !important; }
+                                .sd-dia-chip .sd-dia-num { font-size: 1.45rem !important; }
+                                .sd-dia-chip .sd-dia-label { font-size: 0.72rem !important; }
+                                .sd-dia-chips { justify-content: center !important; gap: 0.7rem !important; }
+                                .sd-dia-titulo { font-size: 1rem !important; }
+                                .sd-dia-footer { font-size: 0.8rem !important; justify-content: center !important; }
+                            }
+                        `}</style>
+                        <div className="sd-dia-bar" style={{ marginBottom: '1.1rem', padding: '1rem 1rem', background: `${color}08`, border: `1px solid ${color}25`, borderRadius: 16 }}>
+                            {/* Título + ver todos */}
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.9rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                <span className="sd-dia-titulo" style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: '0.82rem', textTransform: 'uppercase', letterSpacing: '0.14em', color: `${color}cc` }}>
+                                    📅 ¿QUÉ DÍA QUIERES VIAJAR?
+                                </span>
+                                {diaFiltro && (
+                                    <button
+                                        onClick={() => seleccionarDia(diaFiltro)}
+                                        style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#cbd5e1', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 8, padding: '0.28rem 0.75rem', cursor: 'pointer' }}
+                                    >
+                                        VER TODOS
+                                    </button>
+                                )}
                             </div>
-                            {/* Chips de días */}
-                            <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap' }}>
+                            {/* Chips */}
+                            <div className="sd-dia-chips" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                                 {diasSemana.map(({ fecha, label, dia, dow }) => {
                                     const activo = diaFiltro === fecha;
                                     const tieneViajes = viajesTotales.some(v => (v.fecha_salida || '').startsWith(fecha));
                                     return (
                                         <button
                                             key={fecha}
+                                            className="sd-dia-chip"
                                             onClick={() => seleccionarDia(fecha)}
                                             disabled={!tieneViajes}
                                             style={{
                                                 display: 'flex', flexDirection: 'column', alignItems: 'center',
-                                                padding: '0.35rem 0.7rem', borderRadius: 10,
-                                                border: activo ? `2px solid ${color}` : `1px solid ${tieneViajes ? color + '35' : '#1e293b'}`,
-                                                background: activo ? color : tieneViajes ? `${color}12` : 'transparent',
-                                                color: activo ? '#fff' : tieneViajes ? textPrimary : '#334155',
-                                                cursor: tieneViajes ? 'pointer' : 'not-allowed',
-                                                fontWeight: activo ? 800 : 600,
-                                                boxShadow: activo ? `0 0 14px ${color}60` : 'none',
-                                                transition: 'all 0.18s ease',
-                                                minWidth: 52,
+                                                padding: '0.45rem 0.8rem', borderRadius: 10, minWidth: 58,
+                                                border: activo ? `2px solid ${color}` : `1px solid ${tieneViajes ? color + '30' : '#1e2d3d'}`,
+                                                background: activo ? color : tieneViajes ? `${color}10` : 'rgba(255,255,255,0.02)',
+                                                color: activo ? '#fff' : tieneViajes ? '#cbd5e1' : '#2a3f52',
+                                                cursor: tieneViajes ? 'pointer' : 'default',
+                                                fontFamily: "'Rajdhani', sans-serif",
                                             }}
                                         >
-                                            <span style={{ fontSize: '0.58rem', textTransform: 'uppercase', letterSpacing: '0.06em', opacity: activo ? 0.9 : 0.65 }}>
-                                                {label === 'Hoy' || label === 'Mañana' ? label : dow}
+                                            <span className="sd-dia-label" style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', opacity: activo ? 1 : 0.7 }}>
+                                                {label === 'Hoy' || label === 'Mañana' ? label.toUpperCase() : dow.toUpperCase()}
                                             </span>
-                                            <span style={{ fontSize: '1rem', fontWeight: 900, lineHeight: 1.1 }}>{dia}</span>
+                                            <span className="sd-dia-num" style={{ fontSize: '1.15rem', fontWeight: 900, lineHeight: 1.15 }}>{dia}</span>
                                         </button>
                                     );
                                 })}
                             </div>
-                            {/* Resumen viajes */}
-                            <div style={{ marginTop: '0.55rem', fontSize: '0.72rem', color: '#475569', fontWeight: 600 }}>
-                                <strong style={{ color: textPrimary }}>{viajesFiltrados.length}</strong> viaje{viajesFiltrados.length !== 1 ? 's' : ''} disponible{viajesFiltrados.length !== 1 ? 's' : ''}
-                                {diaFiltro && <span style={{ color: color, marginLeft: '0.4rem' }}>· {diasSemana.find(d => d.fecha === diaFiltro)?.label}</span>}
-                                {sinFiltroFecha && <span style={{ marginLeft: '0.5rem', color: '#f59e0b', fontWeight: 700 }}>· todos los horarios</span>}
+                            {/* Footer resumen */}
+                            <div className="sd-dia-footer" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.7rem', fontFamily: "'Rajdhani', sans-serif", fontSize: '0.73rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#475569' }}>
+                                <strong style={{ color: '#94a3b8' }}>{viajesFiltrados.length}</strong>
+                                <span>VIAJE{viajesFiltrados.length !== 1 ? 'S' : ''} DISPONIBLE{viajesFiltrados.length !== 1 ? 'S' : ''}</span>
+                                {diaFiltro && <><span style={{ color: '#334155' }}>·</span><span style={{ color }}>{(diasSemana.find(d => d.fecha === diaFiltro)?.label || '').toUpperCase()}</span></>}
+                                {sinFiltroFecha && <><span style={{ color: '#334155' }}>·</span><span style={{ color: '#f59e0b' }}>TODOS LOS HORARIOS</span></>}
                             </div>
                         </div>
 
