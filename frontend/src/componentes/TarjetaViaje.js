@@ -253,13 +253,33 @@ const TarjetaViaje = ({ viaje, onSeleccionar }) => {
                 boxShadow: hov && ds.canBook
                     ? `0 6px 32px ${dest.color}45, 0 0 0 1px ${dest.color}18`
                     : '0 2px 14px rgba(0,0,0,0.45)',
-                opacity: ds.label === 'Partió' ? 0.32 : ds.canBook ? 1 : 0.62,
                 cursor: ds.canBook ? 'pointer' : 'default',
+                position: 'relative',
             }}
             onClick={() => ds.canBook ? onSeleccionar?.(viaje) : undefined}
             onMouseEnter={() => setHov(true)}
             onMouseLeave={() => setHov(false)}
         >
+            {/* Badge FUERA del wrapper de opacity — siempre al 100% */}
+            <div style={{
+                position: 'absolute', top: 8, right: 8,
+                background: `${ds.color}22`,
+                border: `1px solid ${ds.color}80`,
+                color: ds.color,
+                borderRadius: 20,
+                padding: '0.18rem 0.6rem',
+                fontSize: '0.65rem',
+                fontWeight: 800,
+                letterSpacing: '0.07em',
+                textTransform: 'uppercase',
+                backdropFilter: 'blur(8px)',
+                zIndex: 10,
+            }}>
+                {ds.label}
+            </div>
+
+            {/* Contenido con opacity reducida para "Partió" */}
+            <div style={{ opacity: ds.label === 'Partió' ? 0.32 : ds.canBook ? 1 : 0.62 }}>
             {/* Destination panel */}
             <div
                 className="tv-panel"
@@ -275,23 +295,6 @@ const TarjetaViaje = ({ viaje, onSeleccionar }) => {
                 }} />
                 {!fondoDestino && <span className="tv-panel-emoji">{dest.emoji}</span>}
                 <div className="tv-panel-sep" style={{ background: `linear-gradient(90deg, transparent, ${dest.color}90, transparent)` }} />
-                {/* Estado badge */}
-                <div style={{
-                    position: 'absolute', top: 8, right: 8,
-                    background: `${ds.color}22`,
-                    border: `1px solid ${ds.color}80`,
-                    color: ds.color,
-                    borderRadius: 20,
-                    padding: '0.18rem 0.6rem',
-                    fontSize: '0.65rem',
-                    fontWeight: 800,
-                    letterSpacing: '0.07em',
-                    textTransform: 'uppercase',
-                    backdropFilter: 'blur(8px)',
-                    zIndex: 2,
-                }}>
-                    {ds.label}
-                </div>
             </div>
 
             {/* Trip content */}
@@ -392,6 +395,7 @@ const TarjetaViaje = ({ viaje, onSeleccionar }) => {
                     </div>
                 )}
             </div>
+            </div>{/* /opacity wrapper */}
         </div>
     );
 };
