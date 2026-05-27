@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useDepartamento, DEPARTAMENTOS } from '../contextos/DepartamentoContext';
 import { useAuth } from '../contextos/AuthContext';
 import { obtenerNotificaciones, marcarNotificacionLeida, marcarTodasLeidas } from '../data/mockStorage';
@@ -13,16 +13,27 @@ const PANEL_POR_ROL = {
 };
 
 const NAV_LINKS = [
-    { label: 'Empresas',    path: '/' },
-    { label: 'Nosotros',    path: '/' },
-    { label: 'Permisos',    path: '/' },
-    { label: 'Emergencias', path: '/' },
+    { label: 'Empresas',    path: '/', sectionId: 'explorar'    },
+    { label: 'Nosotros',    path: '/', sectionId: 'nosotros'    },
+    { label: 'Permisos',    path: '/', sectionId: 'permisos'    },
+    { label: 'Emergencias', path: '/', sectionId: 'emergencias' },
 ];
 
 const NavbarUniversal = () => {
     const { departamento, tema } = useDepartamento();
     const { perfil } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
+
+    const handleNavLink = (l) => {
+        setMenuMovil(false);
+        if (!l.sectionId) { navigate(l.path); return; }
+        if (location.pathname === '/') {
+            document.getElementById(l.sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+            navigate('/', { state: { scrollTo: l.sectionId } });
+        }
+    };
 
     const c1 = tema.color;
     const c2 = tema.colorSecundario;
@@ -99,7 +110,7 @@ const NavbarUniversal = () => {
                 {/* Nav links — oculto en móvil */}
                 <div className="nav-desktop" style={{ display: 'flex', alignItems: 'center', gap: '0.15rem', flex: 1, justifyContent: 'center' }}>
                     {NAV_LINKS.map(l => (
-                        <button key={l.label} onClick={() => navigate(l.path)} style={navLinkStyle}
+                        <button key={l.label} onClick={() => handleNavLink(l)} style={navLinkStyle}
                             onMouseEnter={e => { e.currentTarget.style.color = ac; e.currentTarget.style.background = `${c1}15`; }}
                             onMouseLeave={e => { e.currentTarget.style.color = '#e2e8f0'; e.currentTarget.style.background = 'none'; }}>
                             {l.label}
@@ -244,7 +255,7 @@ const NavbarUniversal = () => {
                         <span>{departamento}</span>
                     </button>
                     {NAV_LINKS.map(l => (
-                        <button key={l.label} onClick={() => { navigate(l.path); setMenuMovil(false); }} style={{
+                        <button key={l.label} onClick={() => handleNavLink(l)} style={{
                             ...navLinkStyle, textAlign: 'left', width: '100%',
                         }}>
                             {l.label}
