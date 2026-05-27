@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useDepartamento, DEPARTAMENTOS } from '../contextos/DepartamentoContext';
 import { useAuth } from '../contextos/AuthContext';
 import { obtenerNotificaciones, marcarNotificacionLeida, marcarTodasLeidas } from '../data/mockStorage';
@@ -45,6 +45,7 @@ function injectCSS() {
 const NavbarGlobal = ({ onScrollTo }) => {
     injectCSS();
     const navigate = useNavigate();
+    const location = useLocation();
     const { tema, departamento } = useDepartamento();
     const { perfil } = useAuth();
 
@@ -85,8 +86,13 @@ const NavbarGlobal = ({ onScrollTo }) => {
 
     const handleLink = (id) => {
         setMenuMovil(false);
-        if (onScrollTo) { onScrollTo(id); }
-        else { navigate('/'); }
+        if (onScrollTo) {
+            onScrollTo(id);
+        } else if (location.pathname === '/') {
+            document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+            navigate('/', { state: { scrollTo: id } });
+        }
     };
 
     const navLinkStyle = {

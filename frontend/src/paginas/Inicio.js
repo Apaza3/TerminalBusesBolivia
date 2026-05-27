@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { getSucursales } from '../servicios/api';
 import { getDeptFondo, getEmpresaLogo } from '../utils/assets';
 import { useDepartamento, DEPARTAMENTOS } from '../contextos/DepartamentoContext';
@@ -25,6 +25,21 @@ const Inicio = () => {
     const { departamento, setDepartamento, tema } = useDepartamento();
     const { perfil } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
+
+    // Scroll a sección si venimos de otra página con state.scrollTo
+    useEffect(() => {
+        const id = location.state?.scrollTo;
+        if (!id) return;
+        const intento = (n) => {
+            const el = document.getElementById(id);
+            if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+            if (n > 0) setTimeout(() => intento(n - 1), 150);
+        };
+        setTimeout(() => intento(5), 200);
+        // Limpiar state para que no re-dispare al recargar
+        window.history.replaceState({}, document.title);
+    }, []); // eslint-disable-line
 
     // Paleta derivada 100% del departamento
     const c1 = tema.color;           // color primario   (ej. rojo oscuro La Paz)
