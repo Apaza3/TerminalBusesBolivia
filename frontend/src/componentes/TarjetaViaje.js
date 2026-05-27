@@ -249,11 +249,12 @@ const TarjetaViaje = ({ viaje, onSeleccionar }) => {
         <div
             className="tv-card"
             style={{
-                border: `1.5px solid ${dest.color}${hov ? 'cc' : '40'}`,
+                border: ds.label === 'Partió' ? '1.5px solid #1e293b' : `1.5px solid ${dest.color}${hov ? 'cc' : '40'}`,
                 boxShadow: hov && ds.canBook
                     ? `0 6px 32px ${dest.color}45, 0 0 0 1px ${dest.color}18`
                     : '0 2px 14px rgba(0,0,0,0.45)',
-                opacity: ds.canBook ? 1 : 0.62,
+                opacity: ds.label === 'Partió' ? 0.38 : ds.canBook ? 1 : 0.62,
+                filter: ds.label === 'Partió' ? 'grayscale(85%)' : 'none',
                 cursor: ds.canBook ? 'pointer' : 'default',
             }}
             onClick={() => ds.canBook ? onSeleccionar?.(viaje) : undefined}
