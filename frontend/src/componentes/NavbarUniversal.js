@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useDepartamento, DEPARTAMENTOS } from '../contextos/DepartamentoContext';
 import { useAuth } from '../contextos/AuthContext';
-import { obtenerNotificaciones, marcarNotificacionLeida, marcarTodasLeidas } from '../data/mockStorage';
+// Notificaciones — pendiente migración a Supabase (tabla notificaciones)
 import RelojDigital from './RelojDigital';
 import PerfilIndicador from './PerfilIndicador';
 
@@ -48,19 +48,8 @@ const NavbarUniversal = () => {
     const esCliente = perfil?.rol === 'cliente' && perfil?.ci;
     const noLeidas  = notifs.filter(n => !n.leido).length;
 
-    const cargarNotifs = useCallback(() => {
-        if (!esCliente) return;
-        const lista = obtenerNotificaciones({ para: 'cliente', clienteCI: perfil.ci });
-        lista.sort((a, b) => new Date(b.creadoEn) - new Date(a.creadoEn));
-        setNotifs(lista);
-    }, [esCliente, perfil?.ci]);
-
-    useEffect(() => {
-        if (!esCliente) return;
-        cargarNotifs();
-        const t = setInterval(cargarNotifs, 15000);
-        return () => clearInterval(t);
-    }, [esCliente, cargarNotifs]);
+    // eslint-disable-next-line no-unused-vars
+    const cargarNotifs = useCallback(() => { setNotifs([]); }, []);
 
     useEffect(() => {
         if (!bellAbierta) return;
@@ -69,8 +58,8 @@ const NavbarUniversal = () => {
         return () => document.removeEventListener('mousedown', h);
     }, [bellAbierta]);
 
-    const handleMarcarLeida = (id) => { marcarNotificacionLeida(id); cargarNotifs(); };
-    const handleMarcarTodas = () => { marcarTodasLeidas({ para: 'cliente', clienteCI: perfil?.ci }); cargarNotifs(); };
+    const handleMarcarLeida = () => {};
+    const handleMarcarTodas = () => {};
 
     const navLinkStyle = {
         background: 'none', border: 'none', cursor: 'pointer',

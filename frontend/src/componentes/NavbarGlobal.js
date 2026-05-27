@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useDepartamento, DEPARTAMENTOS } from '../contextos/DepartamentoContext';
 import { useAuth } from '../contextos/AuthContext';
-import { obtenerNotificaciones, marcarNotificacionLeida, marcarTodasLeidas } from '../data/mockStorage';
+// Notificaciones — pendiente migración a Supabase (tabla notificaciones)
 import RelojDigital from './RelojDigital';
 import PerfilIndicador from './PerfilIndicador';
 
@@ -62,17 +62,9 @@ const NavbarGlobal = ({ onScrollTo }) => {
     const esCliente = perfil?.rol === 'cliente' && perfil?.ci;
 
     const cargarNotifs = useCallback(() => {
-        if (!esCliente) return;
-        const all = obtenerNotificaciones({ para: 'cliente', clienteCI: perfil?.ci });
-        setNotifs(all.slice(0, 20));
-    }, [esCliente, perfil?.ci]);
-
-    useEffect(() => {
-        if (!esCliente) return;
-        cargarNotifs();
-        const t = setInterval(cargarNotifs, 15000);
-        return () => clearInterval(t);
-    }, [esCliente, cargarNotifs]);
+        // TODO: migrar a tabla notificaciones en Supabase
+        setNotifs([]);
+    }, []);
 
     useEffect(() => {
         const h = (e) => { if (bellRef.current && !bellRef.current.contains(e.target)) setBellAbierta(false); };
@@ -80,9 +72,9 @@ const NavbarGlobal = ({ onScrollTo }) => {
         return () => document.removeEventListener('mousedown', h);
     }, []);
 
-    const noLeidas = notifs.filter(n => !n.leido).length;
-    const handleMarcarLeida = (id) => { marcarNotificacionLeida(id); cargarNotifs(); };
-    const handleMarcarTodas = () => { marcarTodasLeidas({ para: 'cliente', clienteCI: perfil?.ci }); cargarNotifs(); };
+    const noLeidas = 0;
+    const handleMarcarLeida = () => {};
+    const handleMarcarTodas = () => {};
 
     const handleLink = (id) => {
         setMenuMovil(false);

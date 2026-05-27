@@ -3,7 +3,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../../contextos/AuthContext';
 import { DEPARTAMENTOS } from '../../contextos/DepartamentoContext';
 import { obtenerManifiestoItinerario } from '../../servicios/analyticsService';
-import { VIAJES_CONDUCTOR_MOCK } from '../../data/mockStorage';
+const VIAJES_CONDUCTOR_MOCK = [];
 import ExportReportes from '../../componentes/ExportReportes';
 import gsap from 'gsap';
 

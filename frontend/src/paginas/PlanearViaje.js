@@ -2,12 +2,11 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { DEPARTAMENTOS, useDepartamento } from '../contextos/DepartamentoContext';
 import { useAuth } from '../contextos/AuthContext';
-import { obtenerNotificaciones, marcarNotificacionLeida, marcarTodasLeidas } from '../data/mockStorage';
+// Notificaciones — pendiente migración a Supabase
 import MapaBolivia from '../componentes/MapaBolivia';
 import RelojDigital from '../componentes/RelojDigital';
 import PerfilIndicador from '../componentes/PerfilIndicador';
-import { obtenerViajesSucursal } from '../data/mockDiscoveryDB';
-import { getSucursales } from '../servicios/api';
+import { getSucursales, buscarViajes } from '../servicios/api';
 import { getEmpresaLogo } from '../utils/assets';
 
 const PANEL_POR_ROL = {
@@ -147,21 +146,7 @@ const PlanearViaje = () => {
 
     const esCliente = perfil?.rol === 'cliente' && perfil?.ci;
 
-    const cargarNotifs = useCallback(() => {
-        if (!esCliente) return;
-        const lista = obtenerNotificaciones({ para: 'cliente', clienteCI: perfil.ci });
-        lista.sort((a, b) => new Date(b.creadoEn) - new Date(a.creadoEn));
-        setNotifs(lista);
-    }, [esCliente, perfil?.ci]);
-
     useEffect(() => { getSucursales().then(setSucursalesDB); }, []);
-
-    useEffect(() => {
-        if (!esCliente) return;
-        cargarNotifs();
-        const t = setInterval(cargarNotifs, 15000);
-        return () => clearInterval(t);
-    }, [esCliente, cargarNotifs]);
 
     useEffect(() => {
         if (!bellAbierta) return;
@@ -170,7 +155,7 @@ const PlanearViaje = () => {
         return () => document.removeEventListener('mousedown', h);
     }, [bellAbierta]);
 
-    const noLeidas = notifs.filter(n => !n.leido).length;
+    const noLeidas = 0;
 
     useEffect(() => {
         const iv = setInterval(() => setHoraActual(new Date()), 1000);
@@ -217,36 +202,32 @@ const PlanearViaje = () => {
 
     const linea = (origen && destino) ? { desde: origen, hasta: destino } : null;
 
-    // Compute companies when origen+destino set
+    // Compute companies when origen+destino set (Supabase)
     useEffect(() => {
         if (!origen || sucursalesDB.length === 0) return;
         const candidatas = sucursalesDB.filter(s => s.departamento === origen);
-        const conRuta = candidatas.filter(s => {
-            const viajes = obtenerViajesSucursal(s.id);
-            return destino
-                ? viajes.some(v => v.origen === origen && v.destino === destino)
-                : viajes.some(v => v.origen === origen);
+        if (!destino) { setCompanias(candidatas); return; }
+        buscarViajes(origen, destino).then(viajes => {
+            const sucursalesConRuta = new Set(viajes.map(v => v.sucursal_id));
+            const conRuta = candidatas.filter(s => sucursalesConRuta.has(s.id));
+            setCompanias(conRuta.length > 0 ? conRuta : candidatas);
         });
-        setCompanias(conRuta.length > 0 ? conRuta : candidatas);
-    }, [origen, destino, sucursalesDB]);
+    }, [origen, destino, sucursalesDB]); // eslint-disable-line
 
-    // Compute departures when empresa selected
+    // Compute departures when empresa selected (Supabase)
     useEffect(() => {
-        if (!empresa) return;
-        const viajes = obtenerViajesSucursal(empresa.id);
-        const filtrados = viajes.filter(v => {
-            if (v.origen !== origen) return false;
-            if (destino && v.destino !== destino) return false;
-            return true;
+        if (!empresa || !origen) return;
+        buscarViajes(origen, destino || '').then(viajes => {
+            const filtrados = viajes
+                .filter(v => v.sucursal_id === empresa.id)
+                .sort((a, b) => new Date(a.fecha_salida) - new Date(b.fecha_salida));
+            setSalidas(filtrados.map(v => ({
+                ...v,
+                salida: v.fecha_salida,
+                empresa: v.sucursales?.nombre || empresa.nombre,
+            })));
         });
-        // Sort by HH:MM
-        filtrados.sort((a, b) => {
-            const hA = new Date(a.salida).getHours() * 60 + new Date(a.salida).getMinutes();
-            const hB = new Date(b.salida).getHours() * 60 + new Date(b.salida).getMinutes();
-            return hA - hB;
-        });
-        setSalidas(filtrados);
-    }, [empresa, origen, destino]);
+    }, [empresa, origen, destino]); // eslint-disable-line
 
     const handleSelectOrigen = (dept) => {
         if (paso !== 1) return;
@@ -387,13 +368,13 @@ const PlanearViaje = () => {
                                     <div style={{ position: 'absolute', top: '110%', right: 0, width: 310, maxHeight: 400, background: bg, border: `1px solid ${c1}40`, borderRadius: 14, boxShadow: `0 8px 32px ${c1}30`, zIndex: 200, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.7rem 1rem', borderBottom: `1px solid ${c1}20`, background: `${c1}08` }}>
                                             <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#f0ece8' }}>Notificaciones {noLeidas > 0 && <span style={{ color: c1 }}>({noLeidas})</span>}</span>
-                                            {noLeidas > 0 && <button onClick={() => { marcarTodasLeidas({ para: 'cliente', clienteCI: perfil?.ci }); cargarNotifs(); }} style={{ background: 'none', border: 'none', color: ac, fontSize: '0.7rem', cursor: 'pointer', fontWeight: 600 }}>Marcar leídas</button>}
+                                            {noLeidas > 0 && <button onClick={() => {}} style={{ background: 'none', border: 'none', color: ac, fontSize: '0.7rem', cursor: 'pointer', fontWeight: 600 }}>Marcar leídas</button>}
                                         </div>
                                         <div style={{ overflowY: 'auto', flex: 1 }}>
                                             {notifs.length === 0
                                                 ? <div style={{ padding: '2rem', textAlign: 'center', color: `${ac}40`, fontSize: '0.82rem' }}>Sin notificaciones</div>
                                                 : notifs.map(n2 => (
-                                                    <div key={n2.id} onClick={() => { marcarNotificacionLeida(n2.id); cargarNotifs(); }} style={{ padding: '0.7rem 1rem', borderBottom: `1px solid ${c1}12`, cursor: n2.leido ? 'default' : 'pointer', background: n2.leido ? 'transparent' : `${c1}08`, display: 'flex', gap: '0.6rem', alignItems: 'flex-start' }}>
+                                                    <div key={n2.id} style={{ padding: '0.7rem 1rem', borderBottom: `1px solid ${c1}12`, cursor: n2.leido ? 'default' : 'pointer', background: n2.leido ? 'transparent' : `${c1}08`, display: 'flex', gap: '0.6rem', alignItems: 'flex-start' }}>
                                                         <span style={{ fontSize: '1rem', flexShrink: 0 }}>{n2.leido ? '📭' : '📬'}</span>
                                                         <div style={{ flex: 1 }}>
                                                             <div style={{ fontSize: '0.78rem', color: n2.leido ? `${ac}55` : `${ac}cc`, fontWeight: n2.leido ? 400 : 500, marginBottom: '0.2rem' }}>{n2.mensaje}</div>

@@ -1,6 +1,15 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { calcularEdad, esMayorDeEdad } from '../../data/mockClientDB';
+const calcularEdad = (fechaNac) => {
+    if (!fechaNac) return 0;
+    const hoy = new Date();
+    const nac = new Date(fechaNac);
+    let edad = hoy.getFullYear() - nac.getFullYear();
+    const m = hoy.getMonth() - nac.getMonth();
+    if (m < 0 || (m === 0 && hoy.getDate() < nac.getDate())) edad--;
+    return edad;
+};
+const esMayorDeEdad = (fechaNac) => calcularEdad(fechaNac) >= 18;
 import { useDepartamento } from '../../contextos/DepartamentoContext';
 import NavbarUniversal from '../../componentes/NavbarUniversal';
 import { getDeptFondo } from '../../utils/assets';

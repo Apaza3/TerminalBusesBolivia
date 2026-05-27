@@ -1,7 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contextos/AuthContext';
-import { enviarFeedback, obtenerFeedback, obtenerLabelsPorMood, yaOpino } from '../data/mockDiscoveryDB';
+import { crearComentario, getComentariosSucursal } from '../servicios/api';
+
+// ── Inline mood labels (no mockDiscoveryDB) ────────────────────────────────────
+const MOOD_LABELS = {
+    1: [{ emoji: '🧹', texto: 'Suciedad' }, { emoji: '💺', texto: 'Asientos rotos' }, { emoji: '⏰', texto: 'Gran retraso' }, { emoji: '😤', texto: 'Mal trato' }, { emoji: '🛣️', texto: 'Manejo peligroso' }, { emoji: '🔒', texto: 'Me sentí inseguro/a' }, { emoji: '🚫', texto: 'No cumplió lo prometido' }],
+    2: [{ emoji: '🧹', texto: 'Poca limpieza' }, { emoji: '💺', texto: 'Incomodidad' }, { emoji: '⏰', texto: 'Retraso' }, { emoji: '😒', texto: 'Atención pobre' }, { emoji: '💸', texto: 'Precio elevado' }, { emoji: '🕐', texto: 'Salida tardía' }],
+    3: [{ emoji: '😐', texto: 'Servicio aceptable' }, { emoji: '💺', texto: 'Asientos regulares' }, { emoji: '🕐', texto: 'Leve retraso' }, { emoji: '💸', texto: 'Precio justo' }, { emoji: '🏁', texto: 'Llegó a destino' }],
+    4: [{ emoji: '🤝', texto: 'Buena atención' }, { emoji: '✨', texto: 'Bus limpio' }, { emoji: '🏁', texto: 'Puntual' }, { emoji: '🛋️', texto: 'Cómodo' }, { emoji: '😊', texto: 'Conductor amable' }, { emoji: '💸', texto: 'Buen precio' }],
+    5: [{ emoji: '🤩', texto: 'Servicio excepcional' }, { emoji: '✨', texto: 'Bus impecable' }, { emoji: '⚡', texto: 'Súper puntual' }, { emoji: '🛋️', texto: 'Máxima comodidad' }, { emoji: '😄', texto: 'Personal muy amable' }, { emoji: '🌟', texto: '100% recomendado' }, { emoji: '🏆', texto: 'Mejor empresa' }],
+};
+const obtenerLabelsPorMood = (mood) => MOOD_LABELS[mood] || [];
 
 const EMOJIS = [
     { valor: 1, emoji: '😡', label: 'Muy mal',   color: '#ef4444' },
@@ -74,12 +84,25 @@ const FeedbackEmoji = ({ sucursalId, departamento, color = '#3b82f6', starsColor
     const [mostrarTodos,        setMostrarTodos]       = useState(false);
 
     const esCliente = perfil?.rol === 'cliente';
-    const usuarioClave = perfil?.ci || perfil?.email || '';
-    const yaDejoOpinion = esCliente && yaOpino(sucursalId, departamento, usuarioClave);
+    const yaDejoOpinion = esCliente && perfil?.id && reviews.some(r => r.usuarioId === perfil.id);
 
     useEffect(() => {
-        setReviews(obtenerFeedback(sucursalId, departamento));
-    }, [sucursalId, departamento]);
+        if (!sucursalId) return;
+        getComentariosSucursal(sucursalId).then(data => {
+            setReviews((data || []).map(r => ({
+                id:                  r.id,
+                mood:                r.puntuacion,
+                moodBus:             r.puntuacion,
+                moodTripulacion:     r.puntuacion,
+                labelsSeleccionados: Array.isArray(r.categorias) ? r.categorias : [],
+                comentario:          r.comentario || '',
+                nombreUsuario:       r.nombre_usuario || 'Viajero',
+                fecha:               r.creado_en,
+                avatarGenerico:      '👤',
+                usuarioId:           r.usuario_id,
+            })));
+        });
+    }, [sucursalId, departamento]); // eslint-disable-line
 
     const labels = mood > 0 ? obtenerLabelsPorMood(mood) : [];
 
@@ -89,30 +112,39 @@ const FeedbackEmoji = ({ sucursalId, departamento, color = '#3b82f6', starsColor
 
     const puedeEnviar = mood > 0 && (!evaluarIndividual || (moodBus > 0 && moodTripulacion > 0));
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         if (!puedeEnviar) return;
         setEnviando(true);
-        setTimeout(() => {
-            const nuevo = enviarFeedback({
-                sucursalId,
-                departamento,
-                usuarioClave,
-                nombreUsuario: perfil?.nombre_completo || perfil?.nombreCompleto || perfil?.email || 'Viajero',
+        const nuevo = await crearComentario({
+            sucursalId,
+            usuarioId:    perfil?.id || null,
+            nombreUsuario: perfil?.nombre_completo || perfil?.nombreCompleto || perfil?.email || 'Viajero',
+            puntuacion:   mood,
+            comentario:   comentario.trim(),
+            categorias:   labelsSeleccionados,
+            departamentoId: departamento,
+        });
+        if (nuevo) {
+            setReviews(prev => [{
+                id:                  nuevo.id,
                 mood,
+                moodBus:             evaluarIndividual ? moodBus        : mood,
+                moodTripulacion:     evaluarIndividual ? moodTripulacion : mood,
                 labelsSeleccionados,
-                comentario: comentario.trim(),
-                moodBus:        evaluarIndividual ? moodBus        : mood,
-                moodTripulacion: evaluarIndividual ? moodTripulacion : mood,
-            });
-            setReviews(prev => [nuevo, ...prev]);
-            setMood(0); setMoodBus(0); setMoodTripulacion(0);
-            setLabels([]); setComentario('');
-            setEvaluarIndividual(false);
-            setEnviando(false);
-            setEnviado(true);
-            onNuevoFeedback?.();
-            setTimeout(() => setEnviado(false), 4000);
-        }, 450);
+                comentario:          nuevo.comentario || '',
+                nombreUsuario:       nuevo.nombre_usuario || 'Viajero',
+                fecha:               nuevo.creado_en,
+                avatarGenerico:      '👤',
+                usuarioId:           nuevo.usuario_id,
+            }, ...prev]);
+        }
+        setMood(0); setMoodBus(0); setMoodTripulacion(0);
+        setLabels([]); setComentario('');
+        setEvaluarIndividual(false);
+        setEnviando(false);
+        setEnviado(true);
+        onNuevoFeedback?.();
+        setTimeout(() => setEnviado(false), 4000);
     };
 
     // ── Aggregate stats ──

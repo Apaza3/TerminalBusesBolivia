@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contextos/AuthContext';
 import { DEPARTAMENTOS } from '../../contextos/DepartamentoContext';
-import { obtenerIncidentes } from '../../data/mockStorage';
+// Incidentes: pending Supabase migration
 
 const TIPOS_COLOR = {
     retraso:    { bg: '#f59e0b20', border: '#f59e0b40', text: '#fbbf24', label: 'Retraso' },
@@ -20,10 +20,8 @@ const Incidentes = () => {
     const [busqueda, setBusqueda] = useState('');
 
     const cargar = useCallback(() => {
-        const lista = obtenerIncidentes(perfil?.sucursal_id);
-        lista.sort((a, b) => new Date(b.creadoEn) - new Date(a.creadoEn));
-        setIncidentes(lista);
-    }, [perfil?.sucursal_id]);
+        setIncidentes([]);
+    }, [perfil?.sucursal_id]); // eslint-disable-line
 
     useEffect(() => { cargar(); }, [cargar]);
 

@@ -6,23 +6,11 @@ import TicketCard, { getTemaEmpresa, getLogoEmpresa, darken, lighten, blendHex }
 import { useAuth } from '../contextos/AuthContext';
 import { useDepartamento } from '../contextos/DepartamentoContext';
 import { useToast } from '../componentes/ToastNotifications';
-import { obtenerCliente } from '../data/mockClientDB';
-import { getViaje, buscarClientePorCI, getAsientosOcupados } from '../servicios/api';
 import {
-    crearReserva,
-    obtenerReservas,
-    obtenerAsientosPendientes,
-    marcarAsientosPendientes,
-    liberarAsientosBloqueados,
-    liberarAsientosExpirados,
-    crearBoletos,
-    crearTokenQR,
-    obtenerEstadoQR,
-    actualizarEstadoQR,
-    crearReservaConEstado,
-    verificarExpiradas,
-} from '../data/mockStorage';
-// gemini: importar API_BASE para consultar estado del QR desde el backend (compartido entre PC y celular)
+    getViaje, buscarClientePorCI,
+    getAsientosOcupados, getAsientosBloqueados, bloquearAsientos, liberarAsientos,
+    crearReservaSupabase, crearBoletosBatch, updateReservaEstado, getReservaById,
+} from '../servicios/api';
 import { API_BASE } from '../config';
 import '../estilos/escritorio/mapa-asientos.css';
 
@@ -970,20 +958,14 @@ const MapaAsientos = () => {
 
     // ── Load seat state & poll every 3s ──────────────
     const cargarAsientos = useCallback(async () => {
-        liberarAsientosExpirados();
-        verificarExpiradas();
         const ocupados = await getAsientosOcupados(viajeId);
         setAsientosReservados(ocupados);
 
-        const pendientes = obtenerAsientosPendientes(viajeId);
-        const ahora = Date.now();
-        const mySesionId = sesionIdRef.current;
-        const bloqueados = pendientes
-            .filter(p => p.expiraEn > ahora && p.sesionId !== mySesionId)
-            .map(p => p.asiento)
-            .filter(a => !seleccionadosRef.current.includes(a));
-        setAsientosBloqueados(bloqueados);
-    }, [viajeId]); // ref keeps this stable — no stale-closure bug
+        // Asientos bloqueados por otros usuarios (Supabase asientos_viaje)
+        const bloqueados = await getAsientosBloqueados(viajeId, sesion?.user?.id || null);
+        const bloqueadosFiltrados = bloqueados.filter(a => !seleccionadosRef.current.includes(a));
+        setAsientosBloqueados(bloqueadosFiltrados);
+    }, [viajeId, sesion]); // eslint-disable-line
 
     useEffect(() => {
         setTimeout(() => setCargando(false), 400);
@@ -997,9 +979,12 @@ const MapaAsientos = () => {
         };
     }, [viajeId]); // eslint-disable-line
 
-    // Liberar asientos pendientes si el usuario sale del panel sin completar pago
+    // Liberar asientos bloqueados en Supabase al salir sin completar pago
     useEffect(() => {
-        return () => { liberarAsientosBloqueados(viajeId, seleccionadosRef.current); };
+        return () => {
+            if (sesion?.user?.id && seleccionadosRef.current?.length)
+                liberarAsientos(viajeId, seleccionadosRef.current, sesion.user.id);
+        };
     }, [viajeId]); // eslint-disable-line
 
     // ── Restore pending seats from sessionStorage after login redirect ──
@@ -1027,64 +1012,23 @@ const MapaAsientos = () => {
                     } : { nombre: '', ci: '', telefono: '', email: '', esInfante: false, lleva1000: false, llevaAnimales: false, llevaProductos: false };
                 });
                 setDatosPasajeros(initial);
-                marcarAsientosPendientes(viajeId, seats, sesionIdRef.current);
+                if (sesion?.user?.id) bloquearAsientos(viajeId, seats, sesion.user.id);
             }
         } catch { sessionStorage.removeItem('tbb_pending_seats'); }
     }, [sesion]); // eslint-disable-line
 
-    // ── QR polling + WebSocket listener ───────────────────────────
-    // gemini: Dual detection:
-    //   1. WebSocket en tiempo real (si el backend está corriendo)
-    //   2. Polling HTTP como fallback cada 2s
+    // ── QR polling — verifica Supabase cada 2s ────────
     useEffect(() => {
         if (!pollingQr || !qrToken) return;
-
-        // Canal WebSocket para detectar qr_pago broadcast del backend
-        const wsHost = window.location.hostname;
-        const ws = new WebSocket(`ws://${wsHost}:4000`);
-        wsQrRef.current = ws;
-        ws.onmessage = (evt) => {
-            try {
-                const msg = JSON.parse(evt.data);
-                if (msg.tipo === 'qr_pago' && msg.data?.token === qrToken && msg.data?.estado === 'pagado') {
-                    clearInterval(pollingRef.current);
-                    ws.close();
-                    setPollingQr(false);
-                    actualizarEstadoQR(qrToken, 'pagado');
-                    finalizarReserva('qr');
-                }
-            } catch { /* mensaje WS no parseable */ }
-        };
-
-        // Polling HTTP como fallback
         pollingRef.current = setInterval(async () => {
-            // 1. Verificar localStorage (flujo original - misma PC)
-            const estadoLocal = obtenerEstadoQR(qrToken);
-            if (estadoLocal?.estado === 'pagado') {
+            const reserva = await getReservaById(qrToken);
+            if (reserva?.estado === 'pagado') {
                 clearInterval(pollingRef.current);
                 setPollingQr(false);
-                finalizarReserva('qr');
-                return;
+                finalizarReservaPostPago(qrToken);
             }
-            // 2. Verificar backend (flujo móvil - celular en red local)
-            try {
-                const res = await fetch(`${API_BASE}/qr/${qrToken}`);
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data?.estado === 'pagado') {
-                        clearInterval(pollingRef.current);
-                        setPollingQr(false);
-                        // Sincronizar localStorage para consistencia
-                        actualizarEstadoQR(qrToken, 'pagado');
-                        finalizarReserva('qr');
-                    }
-                }
-            } catch { /* backend no disponible, solo usamos localStorage */ }
         }, 2000);
-        return () => {
-            clearInterval(pollingRef.current);
-            if (wsQrRef.current) { wsQrRef.current.close(); wsQrRef.current = null; }
-        };
+        return () => { clearInterval(pollingRef.current); };
     }, [pollingQr, qrToken]); // eslint-disable-line
 
     // ── Efectivo countdown ────────────────────────────
@@ -1178,8 +1122,7 @@ const MapaAsientos = () => {
     const handleCIChange = async (seat, ci) => {
         setDatosPasajeros(prev => ({ ...prev, [seat]: { ...prev[seat], ci } }));
         if (ci.length >= 5) {
-            let cliente = await buscarClientePorCI(ci);
-            if (!cliente) cliente = obtenerCliente(ci);
+            const cliente = await buscarClientePorCI(ci);
             if (cliente) {
                 setDatosPasajeros(prev => ({
                     ...prev,
@@ -1258,63 +1201,112 @@ const MapaAsientos = () => {
         setPaso('pago');
     };
 
-    const buildReservaData = (metodo) => {
+    const buildReservaParams = (metodo, estadoReserva = 'pagado') => {
         const compradorSeat = asientosSeleccionados[0];
-        const comprador = datosPasajeros[compradorSeat];
+        const comprador = datosPasajeros[compradorSeat] || {};
         return {
             viajeId,
-            pasajeroNombre: comprador.nombre,
-            pasajeroCI: comprador.ci,
-            pasajeroTelefono: comprador.telefono,
-            asientos: asientosSeleccionados,
-            busPlaca: viaje?.busPlaca || 'ABC-1234',
-            origen: origenViaje,
-            destino: destinoViaje,
-            precio: asientosSeleccionados.length * precioPorAsiento,
-            fechaSalida: fechaSalidaViaje,
-            pasajeros: datosPasajeros,
-            metodoPago: metodo,
-            sucursalId: viaje?.sucursales?.id || viaje?.sucursalId || null,
-            sucursalNombre: empresaNombre || null,
+            usuarioId:        sesion?.user?.id || null,
+            asientos:         asientosSeleccionados,
+            monto:            asientosSeleccionados.length * precioPorAsiento,
+            emailCliente:     comprador.email || '',
+            telefonoCliente:  comprador.telefono || null,
+            metodoPago:       metodo,
+            estado:           estadoReserva,
+            nombre:           comprador.nombre,
+            origen:           origenViaje,
+            destino:          destinoViaje,
+            fechaSalida:      fechaSalidaViaje,
+            empresa:          empresaNombre || '',
         };
     };
 
-    const finalizarReserva = (metodo) => {
+    /** Crea boletos Supabase y muestra el ticket */
+    const crearYMostrarBoletos = async (reservaId) => {
+        const r = await crearBoletosBatch({
+            reservaId,
+            viajeId,
+            asientos:         asientosSeleccionados,
+            datosPasajeros,
+            precioUnitario:   precioPorAsiento,
+            sucursalId:       viaje?.sucursales?.id || null,
+            horarioSalida:    fechaSalidaViaje || null,
+        });
+        if (r.error) {
+            toast.mostrar('Error creando boletos. Contacte soporte.', 'error');
+            return null;
+        }
+        // Normalizar shape para TicketCard (espera pasajeroNombre, pasajeroCI, etc.)
+        const bs = (r.boletos || []).map(b => ({
+            id:             b.id,
+            asiento:        b.asiento,
+            pasajeroNombre: b.nombre_pasajero,
+            pasajeroCI:     b.ci_pasajero,
+            email:          b.email_pasajero || '',
+            qrToken:        b.qr_token,
+            precio:         b.precio_individual,
+            estado:         b.estado,
+            esInfante:      b.es_infante,
+            lleva1000:      b.declaraciones?.lleva1000 || false,
+            llevaAnimales:  b.declaraciones?.llevaAnimales || false,
+            llevaProductos: b.declaraciones?.llevaProductos || false,
+            origen:         origenViaje,
+            destino:        destinoViaje,
+            fechaSalida:    fechaSalidaViaje,
+            busPlaca:       viaje?.buses?.placa || '',
+        }));
+        return bs;
+    };
+
+    /** Finalizar reserva tarjeta/confirmado inmediato */
+    const finalizarReserva = async (metodo) => {
         setProcesandoPago(true);
-        const datos = buildReservaData(metodo);
-        const resultado = crearReserva(datos);
+        const params = buildReservaParams(metodo, 'pagado');
+        const resultado = await crearReservaSupabase(params);
         if (resultado.error) {
-            toast.mostrar(resultado.mensaje, 'error');
+            toast.mostrar('Error al crear reserva. Intente nuevamente.', 'error');
             setProcesandoPago(false);
             setPaso('mapa');
             return;
         }
-        const bs = crearBoletos(resultado, datosPasajeros, datos.sucursalNombre);
+        const bs = await crearYMostrarBoletos(resultado.id);
+        if (!bs) { setProcesandoPago(false); return; }
         setReservaGenerada(resultado);
         setBoletos(bs);
         setAsientosSeleccionados([]);
         setProcesandoPago(false);
         toast.mostrar('¡Reserva confirmada exitosamente!', 'exito');
         setPaso('ticket');
-        const compradorSeatKey = Object.keys(datosPasajeros)[0];
-        const compradorEmail = datosPasajeros[compradorSeatKey]?.email;
-        if (compradorEmail) {
-            enviarEmailConfirmacion({ bs, datos, resultado, compradorEmail, compradorNombre: datosPasajeros[compradorSeatKey]?.nombre });
-        }
+        const compradorEmail = datosPasajeros[asientosSeleccionados[0]]?.email;
+        const compradorNombre = datosPasajeros[asientosSeleccionados[0]]?.nombre;
+        if (compradorEmail) enviarEmailConfirmacion({ bs, params, reservaId: resultado.id, compradorEmail, compradorNombre });
     };
 
-    const enviarEmailConfirmacion = async ({ bs, datos, resultado, compradorEmail, compradorNombre }) => {
+    /** Llamada cuando el QR polling detecta pago confirmado */
+    const finalizarReservaPostPago = async (reservaId) => {
+        const bs = await crearYMostrarBoletos(reservaId);
+        if (!bs) return;
+        setReservaGenerada({ id: reservaId });
+        setBoletos(bs);
+        setAsientosSeleccionados([]);
+        setProcesandoPago(false);
+        toast.mostrar('¡Pago recibido! Reserva confirmada.', 'exito');
+        setPaso('ticket');
+        const compradorEmail = datosPasajeros[asientosSeleccionados[0]]?.email;
+        const compradorNombre = datosPasajeros[asientosSeleccionados[0]]?.nombre;
+        if (compradorEmail) enviarEmailConfirmacion({ bs, params: buildReservaParams('qr', 'pagado'), reservaId, compradorEmail, compradorNombre });
+    };
+
+    const enviarEmailConfirmacion = async ({ bs, params, reservaId, compradorEmail, compradorNombre }) => {
         try {
             const QRLib = (await import('qrcode')).default;
             const base = window.location.origin;
-            // QR base64 por boleto apuntando a la página pública
             const boletosQR = await Promise.all(bs.map(async (b) => {
-                const url = `${base}/boleto?id=${b.id}&nombre=${encodeURIComponent(b.pasajeroNombre || '')}&asiento=${b.asiento}&origen=${encodeURIComponent(b.origen || datos.origen)}&destino=${encodeURIComponent(b.destino || datos.destino)}&fecha=${encodeURIComponent(b.fechaSalida || datos.fechaSalida)}&empresa=${encodeURIComponent(datos.sucursalNombre || '')}&placa=${encodeURIComponent(b.busPlaca || datos.busPlaca || '')}&precio=${b.precio || ''}&ci=${encodeURIComponent(b.pasajeroCI || '')}&tipo=${b.esInfante ? 'infante' : b.lleva1000 ? 'dinero' : b.llevaAnimales ? 'animales' : b.llevaProductos ? 'productos' : 'normal'}`;
+                // URL pública usa qr_token para lookup en Supabase
+                const url = `${base}/boleto?token=${b.qrToken}`;
                 const qrBase64 = await QRLib.toDataURL(url, { width: 200, margin: 1, color: { dark: '#111111', light: '#ffffff' } });
                 return { ...b, qrBase64, urlPublica: url };
             }));
-
-            // PDF base64 con html2canvas (misma lógica que handleDownloadPDF)
             let pdfBase64 = null;
             try {
                 const h2c = (await import('html2canvas')).default;
@@ -1337,76 +1329,79 @@ const MapaAsientos = () => {
                 }
                 pdfBase64 = doc.output('datauristring').split(',')[1];
             } catch (_) {}
-
-            const SURL = process.env.REACT_APP_SUPABASE_URL || 'https://eoiindqtjhvyyoahnpcp.supabase.co';
+            const SURL = process.env.REACT_APP_SUPABASE_URL || '';
             const AKEY = process.env.REACT_APP_SUPABASE_ANON_KEY || '';
             await fetch(`${SURL}/functions/v1/send-booking-confirmation`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'apikey': AKEY },
                 body: JSON.stringify({
-                    email:       compradorEmail,
-                    nombre:      compradorNombre,
-                    origen:      datos.origen,
-                    destino:     datos.destino,
-                    fechaSalida: datos.fechaSalida,
-                    busPlaca:    datos.busPlaca || '',
-                    monto:       datos.precio,
-                    empresa:     datos.sucursalNombre,
-                    reservaId:   resultado.id,
-                    boletos:     boletosQR,
-                    pdfBase64,
+                    email: compradorEmail, nombre: compradorNombre,
+                    origen: params.origen, destino: params.destino,
+                    fechaSalida: params.fechaSalida, busPlaca: viaje?.buses?.placa || '',
+                    monto: params.monto, empresa: params.empresa,
+                    reservaId, boletos: boletosQR, pdfBase64,
                 }),
             });
             toast.mostrar(`📧 Confirmación enviada a ${compradorEmail}`, 'exito');
         } catch (_) {}
     };
 
-    const handleEfectivo = () => {
-        const datos = buildReservaData('efectivo');
-        const resultado = crearReservaConEstado(datos, 'pendiente_efectivo');
+    const handleEfectivo = async () => {
+        setProcesandoPago(true);
+        const params = buildReservaParams('efectivo', 'pendiente');
+        const resultado = await crearReservaSupabase(params);
         if (resultado.error) {
-            toast.mostrar(resultado.mensaje, 'error');
+            toast.mostrar('Error al crear reserva.', 'error');
+            setProcesandoPago(false);
             return;
         }
         setReservaGenerada(resultado);
-        setEfectivoExpira(Date.now() + 3 * 60 * 1000); // 3 min timer
+        setEfectivoExpira(Date.now() + 3 * 60 * 1000);
         setMetodoPago('efectivo');
+        setProcesandoPago(false);
     };
 
-    const handleQR = () => {
-        const datos = buildReservaData('qr');
-        const token = crearTokenQR(datos);
-        setQrToken(token);
+    const handleQR = async () => {
+        setProcesandoPago(true);
+        const expiraEn = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+        const params = buildReservaParams('qr', 'pendiente');
+        const resultado = await crearReservaSupabase({ ...params, expiraEn });
+        if (resultado.error) {
+            toast.mostrar('Error al iniciar pago QR.', 'error');
+            setProcesandoPago(false);
+            return;
+        }
+        // El reservaId ES el token QR (cross-device via Supabase)
+        setQrToken(resultado.id);
         setMetodoPago('qr');
         setPollingQr(true);
         setQrExpiraEn(Date.now() + 10 * 60 * 1000);
-        // gemini: registrar token en backend para que el celular en red local pueda consultarlo
+        setProcesandoPago(false);
+        // Registrar en backend local como fallback (opcional)
         fetch(`${API_BASE}/qr/registrar`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                token,
-                monto: datos.totalMonto,
-                origen: datos.origen,
-                destino: datos.destino,
-                fecha: datos.salida,
-            }),
-        }).catch(() => { /* backend no disponible, el token solo existe en localStorage */ });
+            body: JSON.stringify({ token: resultado.id, monto: params.monto, origen: params.origen, destino: params.destino }),
+        }).catch(() => {});
     };
 
-    const handlePendienteDocumentos = () => {
-        const datos = buildReservaData('cajero');
-        const resultado = crearReservaConEstado(datos, 'pendiente_documentos');
+    const handlePendienteDocumentos = async () => {
+        setProcesandoPago(true);
+        const params = buildReservaParams('cajero', 'autorizado');
+        const resultado = await crearReservaSupabase({ ...params, requiereAutorizacion: true });
         if (resultado.error) {
-            toast.mostrar(resultado.mensaje, 'error');
+            toast.mostrar('Error al registrar reserva.', 'error');
+            setProcesandoPago(false);
             return;
         }
-        const bs = crearBoletos(resultado, datosPasajeros);
+        const bs = await crearYMostrarBoletos(resultado.id);
+        if (!bs) { setProcesandoPago(false); return; }
         setReservaGenerada(resultado);
         setBoletos(bs);
         setAsientosSeleccionados([]);
         setMostrarModalVerificacion(true);
         setPaso('ticket');
+        setProcesandoPago(false);
     };
 
     const handleDownloadPDF = async () => {

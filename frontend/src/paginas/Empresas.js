@@ -4,7 +4,7 @@ import { getSucursales } from '../servicios/api';
 import { getEmpresaLogo, getDeptFondo } from '../utils/assets';
 import { useDepartamento, DEPARTAMENTOS } from '../contextos/DepartamentoContext';
 import { useAuth } from '../contextos/AuthContext';
-import { obtenerNotificaciones, marcarNotificacionLeida, marcarTodasLeidas } from '../data/mockStorage';
+// Notificaciones — pendiente migración a Supabase
 import RelojDigital from '../componentes/RelojDigital';
 import PerfilIndicador from '../componentes/PerfilIndicador';
 
@@ -58,20 +58,6 @@ const Empresas = () => {
         return () => window.removeEventListener('resize', handler);
     }, []);
 
-    const cargarNotifs = useCallback(() => {
-        if (!esCliente) return;
-        const lista = obtenerNotificaciones({ para: 'cliente', clienteCI: perfil.ci });
-        lista.sort((a, b) => new Date(b.creadoEn) - new Date(a.creadoEn));
-        setNotifs(lista);
-    }, [esCliente, perfil?.ci]);
-
-    useEffect(() => {
-        if (!esCliente) return;
-        cargarNotifs();
-        const t = setInterval(cargarNotifs, 15000);
-        return () => clearInterval(t);
-    }, [esCliente, cargarNotifs]);
-
     useEffect(() => {
         if (!bellAbierta) return;
         const h = (e) => { if (bellRef.current && !bellRef.current.contains(e.target)) setBellAbierta(false); };
@@ -79,9 +65,9 @@ const Empresas = () => {
         return () => document.removeEventListener('mousedown', h);
     }, [bellAbierta]);
 
-    const noLeidas = notifs.filter(n => !n.leido).length;
-    const handleMarcarLeida = (id) => { marcarNotificacionLeida(id); cargarNotifs(); };
-    const handleMarcarTodas = () => { marcarTodasLeidas({ para: 'cliente', clienteCI: perfil?.ci }); cargarNotifs(); };
+    const noLeidas = 0;
+    const handleMarcarLeida = () => {};
+    const handleMarcarTodas = () => {};
 
     const STARS = (ranking) => {
         const estrellas = Math.min(5, Math.round((ranking / 100) * 5));

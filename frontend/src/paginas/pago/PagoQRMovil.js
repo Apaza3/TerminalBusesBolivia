@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { actualizarEstadoQR } from '../../data/mockStorage';
-import { API_BASE } from '../../config';
+import { updateReservaEstado, getReservaById } from '../../servicios/api';
 import gsap from 'gsap';
 import { getTemaEmpresa } from '../../componentes/TicketCard';
 import { getEmpresaLogo } from '../../utils/assets';
@@ -23,37 +22,20 @@ const PagoQRMovil = () => {
         empresa: searchParams.get('empresa') || '',
     });
 
-    const buscarViajeReal = (orig, dest, fec) => {
-        if (!orig || !dest) return;
-        const datePart = fec ? fec.split('T')[0] : '';
-        fetch(`${API_BASE}/viajes?origen=${encodeURIComponent(orig)}&destino=${encodeURIComponent(dest)}` + (datePart ? `&fecha=${datePart}` : ''))
-            .then(r => r.ok ? r.json() : [])
-            .then(viajes => {
-                const v = viajes.find(x => x.fecha_salida === fec) || viajes[0];
-                if (v?.sucursal) setViajeInfo(prev => ({ ...prev, empresa: v.sucursal.nombre }));
-            })
-            .catch(() => { });
-    };
-
     useEffect(() => {
         if (!token) { setEstado('expirado'); return; }
-        fetch(`${API_BASE}/qr/${token}`)
-            .then(r => r.ok ? r.json() : null)
-            .then(data => {
-                if (data) {
-                    if (data.estado && data.estado !== 'pendiente') setEstado(data.estado);
-                    const newOrig = data.origen || viajeInfo.origen;
-                    const newDest = data.destino || viajeInfo.destino;
-                    const newFech = data.fecha || viajeInfo.fecha;
-                    const newMont = data.monto || viajeInfo.monto;
-                    setViajeInfo(prev => ({ ...prev, origen: newOrig, destino: newDest, fecha: newFech, monto: newMont }));
-                    if (!searchParams.get('empresa')) buscarViajeReal(newOrig, newDest, newFech);
-                }
-            })
-            .catch(() => {
-                if (!searchParams.get('empresa'))
-                    buscarViajeReal(viajeInfo.origen, viajeInfo.destino, viajeInfo.fecha);
-            });
+        getReservaById(token).then(data => {
+            if (!data) { setEstado('expirado'); return; }
+            if (data.estado && data.estado !== 'pendiente') setEstado(data.estado);
+            // enrich viaje info from reserva if URL params incomplete
+            setViajeInfo(prev => ({
+                origen: data.origen || prev.origen,
+                destino: data.destino || prev.destino,
+                fecha: data.fecha_salida || prev.fecha,
+                monto: data.precio_total || prev.monto,
+                empresa: data.sucursal?.nombre || data.empresa || prev.empresa,
+            }));
+        }).catch(() => {});
     }, [token]); // eslint-disable-line
 
     useEffect(() => {
@@ -89,24 +71,15 @@ const PagoQRMovil = () => {
         return () => ctx.revert();
     }, []);
 
-    const handlePagar = () => {
+    const handlePagar = async () => {
         setProcesando(true);
-        fetch(`${API_BASE}/qr/${token}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ estado: 'pagado', monto: viajeInfo.monto, origen: viajeInfo.origen, destino: viajeInfo.destino }),
-        }).catch(() => { });
-        actualizarEstadoQR(token, 'pagado');
-        setTimeout(() => { setEstado('pagado'); setProcesando(false); }, 1200);
+        await updateReservaEstado(token, 'pagado');
+        setEstado('pagado');
+        setProcesando(false);
     };
 
-    const handleCancelar = () => {
-        fetch(`${API_BASE}/qr/${token}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ estado: 'cancelado' }),
-        }).catch(() => { });
-        actualizarEstadoQR(token, 'cancelado');
+    const handleCancelar = async () => {
+        await updateReservaEstado(token, 'cancelado');
         setEstado('cancelado');
     };
 

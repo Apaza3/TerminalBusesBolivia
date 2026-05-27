@@ -3,8 +3,14 @@ import { BarChart3, TrendingUp, Users, Bus, MapPin, AlertTriangle, Activity } fr
 import { useAuth } from '../../contextos/AuthContext';
 import { DEPARTAMENTOS } from '../../contextos/DepartamentoContext';
 import { getEmpresaTema } from '../../data/empresasTemas';
-import { obtenerKPIs, TRAFICO_POR_HORA, INGRESOS_POR_RUTA, obtenerAnalisisOcupacion, BUSES_MANTENIMIENTO } from '../../data/mockAnalyticsDB';
-import { obtenerKPIsGlobales, obtenerVentasHistorico } from '../../servicios/analyticsService';
+import { obtenerKPIsGlobales, obtenerVentasHistorico, obtenerTraficoPorHora } from '../../servicios/analyticsService';
+
+// Static seed data — replaced by real Supabase data when analytics endpoints are ready
+const TRAFICO_POR_HORA = obtenerTraficoPorHora();
+const INGRESOS_POR_RUTA = [];
+const BUSES_MANTENIMIENTO = [];
+const obtenerKPIs = () => ({ ingresosTotales: 0, totalBoletos: 0, totalViajes: 0, rutasActivas: 0, ocupacionPromedio: 0, totalSalidasDiarias: 0 });
+const obtenerAnalisisOcupacion = () => [];
 import ExportReportes from '../../componentes/ExportReportes';
 import AsistenteIA from '../../componentes/AsistenteIA';
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contextos/AuthContext';
 import { DEPARTAMENTOS } from '../../contextos/DepartamentoContext';
-import { obtenerNotificaciones, marcarNotificacionLeida, marcarTodasLeidas, crearBoletos } from '../../data/mockStorage';
+import { crearBoletosBatch } from '../../servicios/api';
 import PanelDisponibilidad from '../../componentes/PanelDisponibilidad';
 import FragmentoDept from '../../componentes/FragmentoDept';
 import {
@@ -109,17 +109,7 @@ const PanelCajero = () => {
         getAsientosOcupados(boleto.viajeId).then(setAsientosOcupados);
     }, [boleto.viajeId]);
 
-    const cargarNotifs = useCallback(() => {
-        const lista = obtenerNotificaciones({ para: 'cajero', sucursalId: perfil?.sucursal_id });
-        lista.sort((a, b) => new Date(b.creadoEn) - new Date(a.creadoEn));
-        setNotifs(lista);
-    }, [perfil?.sucursal_id]);
-
-    useEffect(() => {
-        cargarNotifs();
-        const iv = setInterval(cargarNotifs, 15000);
-        return () => clearInterval(iv);
-    }, [cargarNotifs]);
+    const cargarNotifs = useCallback(() => { setNotifs([]); }, []); // pending Supabase notificaciones table
 
     const cargarPrecios = useCallback(async () => {
         if (!perfil?.sucursal_id) return;
@@ -234,7 +224,16 @@ const PanelCajero = () => {
                 acc[asiento] = { nombre: boleto.pasajeroNombre, ci: boleto.pasajeroCI, email: boleto.pasajeroEmail };
                 return acc;
             }, {});
-            const bs = crearBoletos(reservaCompleta, pasajerosObj);
+            const bs = await crearBoletosBatch({
+                reservaId:      resultado.id,
+                viajeId:        boleto.viajeId,
+                asientos:       boleto.asientosSeleccionados,
+                datosPasajeros: pasajerosObj,
+                precioUnitario: boleto.precio,
+                sucursalId:     perfil?.sucursal_id,
+                departamentoId: perfil?.departamento,
+                horarioSalida:  boleto.fechaSalida,
+            });
             setBoletoCreado(reservaCompleta);
             setBoletosEmitidos(bs || []);
             setPagado(true);
@@ -243,24 +242,25 @@ const PanelCajero = () => {
     };
 
     const noLeidas = notifs.filter(n => !n.leido).length;
-
-    const handleMarcarLeida = (id) => {
-        marcarNotificacionLeida(id);
-        cargarNotifs();
-    };
-
-    const handleMarcarTodas = () => {
-        marcarTodasLeidas({ para: 'cajero', sucursalId: perfil?.sucursal_id });
-        cargarNotifs();
-    };
+    const handleMarcarLeida = () => {};
+    const handleMarcarTodas = () => {};
 
     const pendientesValidacion = reservas.filter(r => r.estado === 'pendiente_documentos');
 
     const handleAprobarReserva = async (reservaId) => {
         const reserva = reservas.find(r => r.id === reservaId);
         if (!reserva) return;
-        await updateReservaEstado(reservaId, 'confirmada');
-        const bs = crearBoletos(reserva, {});
+        await updateReservaEstado(reservaId, 'autorizado');
+        const bs = await crearBoletosBatch({
+            reservaId,
+            viajeId:        reserva.viaje_id || reserva.viajeId,
+            asientos:       reserva.asientos || [],
+            datosPasajeros: {},
+            precioUnitario: reserva.precio || 0,
+            sucursalId:     perfil?.sucursal_id,
+            departamentoId: perfil?.departamento,
+            horarioSalida:  reserva.fecha_salida || reserva.fechaSalida,
+        });
         const email = reserva.email_cliente || null;
         setAprobados(prev => ({ ...prev, [reservaId]: { boletos: bs, nombreEmpresa: sucursalNombre, email } }));
         if (email) setTimeout(() => alert(`📧 Boletos enviados a ${email}`), 400);

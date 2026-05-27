@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contextos/AuthContext';
 import { useDepartamento } from '../../contextos/DepartamentoContext';
-import { obtenerBoletos, obtenerReservas } from '../../data/mockStorage';
 import { getReservasByUsuario, updateReservaEstado } from '../../servicios/api';
 import { QRCodeSVG } from 'qrcode.react';
 import TicketCard, { getTemaEmpresa, getLogoEmpresa } from '../../componentes/TicketCard';
@@ -141,7 +140,7 @@ const TarjetaReserva = ({ reserva, ahora, tema, onCancelar }) => {
     // Colores de empresa — siempre definidos (fallback hash)
     const col = getColoresCard(nombreEmpresa, reserva.id);
 
-    const bls = obtenerBoletos(reserva.id);
+    const bls = []; // boletos cargados por reserva si se necesitan
     const handleEmail = (b) => {
         setEmailEnv(p => ({ ...p, [b.id]: true }));
         setTimeout(() => setEmailEnv(p => ({ ...p, [b.id]: false })), 3000);
@@ -270,16 +269,8 @@ const MisViajes = () => {
     const ahora = new Date();
 
     const cargar = useCallback(async () => {
-        // Supabase
-        const remota = perfil?.id ? await getReservasByUsuario(perfil.id) : [];
-        // localStorage — filtrar por CI del perfil
-        const local = perfil?.ci
-            ? (obtenerReservas() || []).filter(r => r.pasajeroCI === perfil.ci)
-            : [];
-        // Fusionar sin duplicados por id
-        const ids = new Set(remota.map(r => r.id));
-        const combinadas = [...remota, ...local.filter(r => !ids.has(r.id))];
-        setReservas(combinadas);
+        const data = perfil?.id ? await getReservasByUsuario(perfil.id) : [];
+        setReservas(data);
     }, [perfil]);
 
     useEffect(() => {

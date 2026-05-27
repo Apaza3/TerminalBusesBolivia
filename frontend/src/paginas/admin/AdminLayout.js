@@ -3,7 +3,7 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contextos/AuthContext';
 import { DEPARTAMENTOS } from '../../contextos/DepartamentoContext';
 import FragmentoDept from '../../componentes/FragmentoDept';
-import { obtenerNotificaciones, marcarTodasLeidas } from '../../data/mockStorage';
+// Notifications: pending Supabase migration — stubbed as empty
 
 const FONDOS_DEPT = {
     'La Paz': '/fondos/La_Paz.webp',
@@ -83,21 +83,8 @@ const AdminLayout = () => {
 
     const handleLogout = async () => { await logout(); navigate('/'); };
 
-    const [notifCount, setNotifCount] = useState(0);
-    useEffect(() => {
-        const leer = () => {
-            const noLeidas = obtenerNotificaciones({ para: 'admin', sucursalId: perfil?.sucursal_id, soloNoLeidas: true });
-            setNotifCount(noLeidas.length);
-        };
-        leer();
-        const t = setInterval(leer, 15000);
-        return () => clearInterval(t);
-    }, [perfil?.sucursal_id]);
-
-    const marcarLeidas = () => {
-        marcarTodasLeidas({ para: 'admin', sucursalId: perfil?.sucursal_id });
-        setNotifCount(0);
-    };
+    const [notifCount] = useState(0);
+    const marcarLeidas = () => {};
 
     const vistas = NAV.filter(n => n.grupo === 'vistas');
     const operaciones = NAV.filter(n => n.grupo === 'operaciones');

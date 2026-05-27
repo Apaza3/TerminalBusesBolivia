@@ -7,7 +7,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contextos/AuthContext';
 import { DEPARTAMENTOS } from '../../contextos/DepartamentoContext';
-import { validarBoleto, marcarAbordado, obtenerBoletosViaje, VIAJES_CONDUCTOR_MOCK, obtenerEstadoViaje } from '../../data/mockStorage';
+import { getBoletoPorQR, marcarBoletoValidado, getBoletosViaje, getViajesConductor } from '../../servicios/api';
 import gsap from 'gsap';
 
 const ValidarAbordaje = () => {
@@ -23,11 +23,17 @@ const ValidarAbordaje = () => {
     const [resultado, setResultado] = useState(null); // { tipo: 'ok'|'error'|'yaAbordado', boleto }
     const [viajeSeleccionado, setViajeSeleccionado] = useState('');
     const [manifiesto, setManifiesto] = useState([]);
+    const [viajesDisponibles, setViajesDisponibles] = useState([]);
+
+    useEffect(() => {
+        if (perfil?.tripulacion_id) {
+            getViajesConductor(perfil.tripulacion_id, 2).then(vs => setViajesDisponibles(vs || []));
+        }
+    }, [perfil?.tripulacion_id]);
 
     const cargarManifiesto = useCallback(() => {
         if (!viajeSeleccionado) return;
-        const boletos = obtenerBoletosViaje(viajeSeleccionado);
-        setManifiesto(boletos);
+        getBoletosViaje(viajeSeleccionado).then(boletos => setManifiesto(boletos || []));
     }, [viajeSeleccionado]);
 
     useEffect(() => {
@@ -44,30 +50,29 @@ const ValidarAbordaje = () => {
         return () => ctx.revert();
     }, []);
 
-    const handleValidar = (e) => {
+    const handleValidar = async (e) => {
         e?.preventDefault();
-        const id = inputQR.trim().toUpperCase();
+        const id = inputQR.trim();
         if (!id) return;
 
-        const boleto = validarBoleto(id);
+        const boleto = await getBoletoPorQR(id);
         if (!boleto) {
             setResultado({ tipo: 'error', mensaje: 'Boleto no encontrado. Código inválido.' });
             gsap.from('[data-v="result"]', { scale: 0.95, opacity: 0, duration: 0.3, ease: 'back.out(1.7)' });
             return;
         }
 
-        if (boleto.abordado) {
-            setResultado({ tipo: 'yaAbordado', boleto });
+        if (boleto.estado === 'validado') {
+            setResultado({ tipo: 'yaAbordado', boleto: { ...boleto, abordado: true } });
             gsap.from('[data-v="result"]', { scale: 0.95, opacity: 0, duration: 0.3, ease: 'back.out(1.7)' });
             return;
         }
 
-        const res = marcarAbordado(id);
-        if (res.exito) {
-            setResultado({ tipo: 'ok', boleto: res.boleto });
+        const ok = await marcarBoletoValidado(boleto.id, perfil?.id || null);
+        if (ok) {
+            setResultado({ tipo: 'ok', boleto });
             cargarManifiesto();
             gsap.from('[data-v="result"]', { scale: 0.9, opacity: 0, duration: 0.4, ease: 'back.out(2)' });
-            // Auto-clear input
             setInputQR('');
             inputRef.current?.focus();
         }
@@ -75,10 +80,7 @@ const ValidarAbordaje = () => {
 
     const handleLogout = async () => { await logout(); navigate('/'); };
 
-    const viajes = VIAJES_CONDUCTOR_MOCK.map(v => ({
-        ...v,
-        estado: obtenerEstadoViaje(v.id),
-    }));
+    const viajes = viajesDisponibles;
 
     const presentesCount = manifiesto.filter(b => b.abordado).length;
     const totalCount = manifiesto.length;

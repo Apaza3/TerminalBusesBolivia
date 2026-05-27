@@ -9,8 +9,8 @@ import {
 import { DEPARTAMENTOS, useDepartamento } from '../contextos/DepartamentoContext';
 import { getEmpresaLogo } from '../utils/assets';
 import { useAuth } from '../contextos/AuthContext';
-import { obtenerNotificaciones, marcarNotificacionLeida, marcarTodasLeidas } from '../data/mockStorage';
-import { calcularRankingPromedio } from '../data/mockDiscoveryDB';
+import { getComentariosSucursal } from '../servicios/api';
+// Notificaciones — pendiente migración a Supabase
 import FeedbackEmoji from '../componentes/FeedbackEmoji';
 import TarjetaViaje from '../componentes/TarjetaViaje';
 import PerfilIndicador from '../componentes/PerfilIndicador';
@@ -212,11 +212,15 @@ const SucursalDetalle = () => {
     const ciudad = sucursal?.ciudad || '';
     const dept   = deptSeleccionado || sucursal?.departamento;
     const rankingBase = parseFloat(sucursal?.ranking) || 0;
-    const ranking = rankingLocal ?? calcularRankingPromedio(id, dept) ?? rankingBase;
+    const ranking = rankingLocal ?? rankingBase;
 
-    const recalcularRanking = () => {
-        const r = calcularRankingPromedio(id, dept);
-        setRankingLocal(r ?? rankingBase);
+    const recalcularRanking = async () => {
+        // Recalcular ranking desde comentarios reales en Supabase
+        const comentarios = await getComentariosSucursal(id);
+        if (comentarios.length > 0) {
+            const avg = comentarios.reduce((s, c) => s + (c.puntuacion || 0), 0) / comentarios.length;
+            setRankingLocal(Math.round(avg * 20)); // escala 1-5 → 0-100
+        }
     };
 
     const renderStars = (r, interactive = false, hover = 0, onHover, onClick, size = 16) => (

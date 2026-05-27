@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import gsap from 'gsap';
 import { getTemaEmpresa, getLogoEmpresa } from '../componentes/TicketCard';
-import { validarBoleto, obtenerBoletos } from '../data/mockStorage';
+import { getBoletoPorQR } from '../servicios/api';
 
 const TIPO_INFO = {
     infante:   { label: 'NIÑO',     color: '#f59e0b' },
@@ -26,35 +26,56 @@ const BoletoPúblico = () => {
     const [params] = useSearchParams();
     const rootRef = useRef(null);
 
-    const id      = params.get('id')      || '';
-    const nombre  = params.get('nombre')  || '';
-    const asiento = params.get('asiento') || '';
-    const origen  = params.get('origen')  || '';
-    const destino = params.get('destino') || '';
-    const fecha   = params.get('fecha')   || '';
-    const empresa = params.get('empresa') || '';
-    const placa   = params.get('placa')   || '';
-    const precio  = params.get('precio')  || '';
-    const ci      = params.get('ci')      || '';
-    const tipo    = params.get('tipo')    || 'normal';
+    // Nuevo: qr_token en URL (?token=xxx) — lookup en Supabase
+    const qrToken  = params.get('token')   || params.get('id') || '';
+    // Fallback: parámetros legacy para compatibilidad con boletos viejos en URL
+    const nombre   = params.get('nombre')  || '';
+    const asiento  = params.get('asiento') || '';
+    const origen   = params.get('origen')  || '';
+    const destino  = params.get('destino') || '';
+    const fecha    = params.get('fecha')   || '';
+    const empresa  = params.get('empresa') || '';
+    const placa    = params.get('placa')   || '';
+    const precio   = params.get('precio')  || '';
+    const ci       = params.get('ci')      || '';
+    const tipo     = params.get('tipo')    || 'normal';
 
-    // boleto del localStorage (si está en el mismo dispositivo)
-    const [boleto, setBoleto] = useState(null);
+    const [boleto,  setBoleto]  = useState(null);
     const [boletos, setBoletos] = useState([]);
+    const [cargando, setCargando] = useState(false);
 
     useEffect(() => {
-        if (!id) return;
-        const b = validarBoleto(id);
-        if (b) {
-            setBoleto(b);
-            const todos = b.reservaId ? obtenerBoletos(b.reservaId) : [b];
-            setBoletos(todos);
-        } else {
-            // Reconstruir desde URL params
-            setBoleto({ id, pasajeroNombre: nombre, pasajeroCI: ci, asiento, origen, destino, fechaSalida: fecha, empresa, busPlaca: placa, precio, esInfante: tipo === 'infante', lleva1000: tipo === 'dinero', llevaAnimales: tipo === 'animales', llevaProductos: tipo === 'productos' });
-            setBoletos([{ id, pasajeroNombre: nombre, pasajeroCI: ci, asiento, origen, destino, fechaSalida: fecha, empresa, busPlaca: placa, precio, esInfante: tipo === 'infante', lleva1000: tipo === 'dinero', llevaAnimales: tipo === 'animales', llevaProductos: tipo === 'productos' }]);
-        }
-    }, [id]); // eslint-disable-line
+        if (!qrToken) return;
+        setCargando(true);
+        getBoletoPorQR(qrToken).then(b => {
+            if (b) {
+                const normalizado = {
+                    id:             b.id,
+                    pasajeroNombre: b.pasajeroNombre,
+                    pasajeroCI:     b.pasajeroCI,
+                    asiento:        b.asiento,
+                    origen:         b.origen,
+                    destino:        b.destino,
+                    fechaSalida:    b.fechaSalida,
+                    empresa:        b.empresa,
+                    busPlaca:       b.busPlaca,
+                    precio:         b.precio,
+                    esInfante:      b.esInfante,
+                    lleva1000:      b.declaraciones?.lleva1000 || false,
+                    llevaAnimales:  b.declaraciones?.llevaAnimales || false,
+                    llevaProductos: b.declaraciones?.llevaProductos || false,
+                    qrToken:        b.qrToken,
+                };
+                setBoleto(normalizado);
+                setBoletos([normalizado]);
+            } else if (nombre) {
+                // Fallback params legacy
+                const b2 = { id: qrToken, pasajeroNombre: nombre, pasajeroCI: ci, asiento, origen, destino, fechaSalida: fecha, empresa, busPlaca: placa, precio, esInfante: tipo === 'infante', lleva1000: tipo === 'dinero', llevaAnimales: tipo === 'animales', llevaProductos: tipo === 'productos' };
+                setBoleto(b2); setBoletos([b2]);
+            }
+            setCargando(false);
+        });
+    }, [qrToken]); // eslint-disable-line
 
     const empresaNombre = boleto?.empresa || empresa || 'Terminal Hub';
     const te   = getTemaEmpresa(empresaNombre);
@@ -81,9 +102,14 @@ const BoletoPúblico = () => {
 
     const qrData = (b) => JSON.stringify({ id: b.id, asiento: b.asiento, nombre: b.pasajeroNombre, ci: b.pasajeroCI, origen: b.origen || origen, destino: b.destino || destino, salida: b.fechaSalida || fecha, placa: b.busPlaca || placa });
 
-    if (!id) return (
+    if (!qrToken) return (
         <div style={{ minHeight: '100vh', background: '#07111f', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontFamily: 'Rajdhani, sans-serif' }}>
             QR inválido.
+        </div>
+    );
+    if (cargando) return (
+        <div style={{ minHeight: '100vh', background: '#07111f', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontFamily: 'Rajdhani, sans-serif' }}>
+            Cargando boleto...
         </div>
     );
 

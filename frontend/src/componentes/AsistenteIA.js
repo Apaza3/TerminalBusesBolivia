@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Bot, Send, Sparkles, RefreshCw } from 'lucide-react';
-import { generarContextoIA } from '../data/mockAnalyticsDB';
+// Contexto IA: pending migración Supabase — stub temporal
+const generarContextoIA = () => 'Sistema de terminal de buses Bolivia. Rutas nacionales. Información de viajes en tiempo real.';
 
 /**
  * AsistenteIA — AI Scheduling & Logistics Consultant.
