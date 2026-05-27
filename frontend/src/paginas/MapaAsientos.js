@@ -1694,8 +1694,7 @@ const MapaAsientos = () => {
                         ? `0 4px 28px ${dp.bandera1}40, 0 0 0 1px ${dp.primary}30`
                         : `0 4px 20px ${destDept.color}18`,
                     display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem',
-                    // gemini: bajado 80px en desktop (50+30) porque se subió demasiado arriba
-                    marginTop: isMobile ? 0 : '80px',
+                    marginTop: isMobile ? 0 : '20px',
                 }}>
                     {/* Back */}
                     <button onClick={() => navigate('/sucursal/' + (viaje?.sucursalId || viaje?.sucursales?.id || ''))} style={{
@@ -2383,7 +2382,7 @@ const MapaAsientos = () => {
                                                                                 position: 'absolute',
                                                                                 top: '50%', left: '50%',
                                                                                 transform: 'translate(-50%, -50%)',
-                                                                                width: isMobile ? 64 : 86, height: isMobile ? 64 : 86,
+                                                                                width: isMobile ? 48 : 54, height: isMobile ? 48 : 54,
                                                                                 borderRadius: 14,
                                                                                 background: 'white',
                                                                                 padding: 5,
