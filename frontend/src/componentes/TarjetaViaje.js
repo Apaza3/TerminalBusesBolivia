@@ -213,7 +213,7 @@ const calcularDisplayEstado = (viaje) => {
     if (viaje.estado === 'en_viaje')   return { label: 'En Viaje',   color: '#3b82f6', canBook: false };
     if (viaje.estado === 'completado') return { label: 'Completado', color: '#475569', canBook: false };
     if (viaje.estado === 'cancelado')  return { label: 'Cancelado',  color: '#ef4444', canBook: false };
-    if (diffMs < 0)                    return { label: 'Partió',     color: '#475569', canBook: false };
+    if (diffMs < 0)                    return { label: 'Partió',     color: '#dc2626', canBook: false };
     if (diffMs < 60 * 60 * 1000)      return { label: 'Embarcando', color: '#f59e0b', canBook: true  };
     return                                    { label: 'Disponible', color: '#10b981', canBook: true  };
 };
