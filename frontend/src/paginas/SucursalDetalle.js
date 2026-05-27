@@ -77,6 +77,7 @@ const SucursalDetalle = () => {
     const [rankingLocal,    setRankingLocal]    = useState(null);
 
     const [cantidadBoletos, setCantidadBoletos] = useState(1);
+    const [diaFiltro,       setDiaFiltro]       = useState(null); // null = todos, 'YYYY-MM-DD' = día específico
 
     const [precioMin,  setPrecioMin]  = useState('');
     const [precioMax,  setPrecioMax]  = useState('');
@@ -120,7 +121,7 @@ const SucursalDetalle = () => {
         });
     }, [id, sinFiltroFecha, deptSeleccionado]); // eslint-disable-line
 
-    const aplicarFiltros = () => {
+    const aplicarFiltros = (diaOverride) => {
         let f = [...viajesTotales];
         if (precioMin !== '') f = f.filter(v => v.precio >= parseFloat(precioMin));
         if (precioMax !== '') f = f.filter(v => v.precio <= parseFloat(precioMax));
@@ -133,15 +134,36 @@ const SucursalDetalle = () => {
             f = f.filter(v => (v.buses?.pisos || 1) === pisosFiltro);
         if (destinoFiltro.length > 0)
             f = f.filter(v => destinoFiltro.some(d => v.destino?.toLowerCase().includes(d.toLowerCase())));
+        const dia = diaOverride !== undefined ? diaOverride : diaFiltro;
+        if (dia) f = f.filter(v => (v.fecha_salida || '').startsWith(dia));
         setViajesFiltrados(f);
         setPaginaActual(1);
     };
 
     const limpiarFiltros = () => {
         setPrecioMin(''); setPrecioMax(''); setCalidad(0); setAmenidades([]); setPisosFiltro(null); setDestinoFiltro([]);
+        setDiaFiltro(null);
         setViajesFiltrados(viajesTotales);
         setPaginaActual(1);
     };
+
+    const seleccionarDia = (fecha) => {
+        const nuevo = diaFiltro === fecha ? null : fecha;
+        setDiaFiltro(nuevo);
+        aplicarFiltros(nuevo);
+    };
+
+    // Generar los próximos 7 días desde hoy
+    const diasSemana = Array.from({ length: 7 }, (_, i) => {
+        const d = new Date();
+        d.setDate(d.getDate() + i);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        const label = i === 0 ? 'Hoy' : i === 1 ? 'Mañana'
+            : d.toLocaleDateString('es-BO', { weekday: 'short', day: 'numeric' }).replace('.', '');
+        return { fecha: `${yyyy}-${mm}-${dd}`, label, dia: d.getDate(), dow: d.toLocaleDateString('es-BO', { weekday: 'short' }).replace('.', '') };
+    });
 
     const toggleAmenidad = a =>
         setAmenidades(prev => prev.includes(a) ? prev.filter(x => x !== a) : [...prev, a]);
@@ -781,23 +803,65 @@ const SucursalDetalle = () => {
                     </div>
                 ) : (
                     <>
-                        {/* Count */}
-                        <div className="sd-count-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', padding: '0.5rem 0.75rem', background: `${color}10`, border: `1px solid ${color}28`, borderRadius: 10, flexWrap: 'wrap', gap: '0.5rem' }}>
-                            <span style={{ fontSize: '0.82rem', color: textSecondary, fontWeight: 600 }}>
-                                <strong style={{ color: textPrimary, textShadow: `0 0 10px ${textPrimary}80` }}>{viajesFiltrados.length}</strong> viaje{viajesFiltrados.length !== 1 ? 's' : ''} · <strong style={{ color: '#94a3b8' }}>{nombre}</strong>
-                                {sinFiltroFecha && <span style={{ marginLeft: '0.5rem', fontSize: '0.7rem', color: '#f59e0b', fontWeight: 700 }}>· todos los horarios</span>}
-                            </span>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 500 }}>🎫 Boletos:</span>
-                                <button onClick={() => setCantidadBoletos(b => Math.max(1, b - 1))}
-                                    style={{ width: 26, height: 26, borderRadius: 6, border: `1px solid ${color}50`, background: `${color}15`, color, cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
-                                <span style={{ minWidth: 18, textAlign: 'center', fontWeight: 700, color: '#f1f5f9', fontSize: '0.88rem' }}>{cantidadBoletos}</span>
-                                <button onClick={() => setCantidadBoletos(b => Math.min(10, b + 1))}
-                                    style={{ width: 26, height: 26, borderRadius: 6, border: `1px solid ${color}50`, background: `${color}15`, color, cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+                        {/* ── Barra selector de día ── */}
+                        <div style={{ marginBottom: '1.1rem', padding: '0.85rem 1rem', background: `${color}0d`, border: `1px solid ${color}30`, borderRadius: 14 }}>
+                            {/* Fila superior: título + boletos */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.7rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                <div>
+                                    <span style={{ fontSize: '0.72rem', color: `${color}90`, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>📅 ¿Qué día quieres viajar?</span>
+                                    {diaFiltro && (
+                                        <button onClick={() => seleccionarDia(diaFiltro)} style={{ marginLeft: '0.6rem', fontSize: '0.65rem', color: '#94a3b8', background: 'transparent', border: 'none', cursor: 'pointer', textDecoration: 'underline', fontWeight: 600 }}>
+                                            ver todos
+                                        </button>
+                                    )}
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                    <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 600 }}>🎫</span>
+                                    <button onClick={() => setCantidadBoletos(b => Math.max(1, b - 1))}
+                                        style={{ width: 24, height: 24, borderRadius: 6, border: `1px solid ${color}50`, background: `${color}15`, color, cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
+                                    <span style={{ minWidth: 20, textAlign: 'center', fontWeight: 800, color: '#f1f5f9', fontSize: '0.85rem' }}>{cantidadBoletos}</span>
+                                    <button onClick={() => setCantidadBoletos(b => Math.min(10, b + 1))}
+                                        style={{ width: 24, height: 24, borderRadius: 6, border: `1px solid ${color}50`, background: `${color}15`, color, cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+                                    <span style={{ fontSize: '0.68rem', color: '#64748b' }}>boleto{cantidadBoletos !== 1 ? 's' : ''}</span>
+                                </div>
                             </div>
-                            {totalPaginas > 1 && (
-                                <span style={{ fontSize: '0.75rem', color: `${color}70` }}>Página {paginaActual} / {totalPaginas}</span>
-                            )}
+                            {/* Chips de días */}
+                            <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap' }}>
+                                {diasSemana.map(({ fecha, label, dia, dow }) => {
+                                    const activo = diaFiltro === fecha;
+                                    const tieneViajes = viajesTotales.some(v => (v.fecha_salida || '').startsWith(fecha));
+                                    return (
+                                        <button
+                                            key={fecha}
+                                            onClick={() => seleccionarDia(fecha)}
+                                            disabled={!tieneViajes}
+                                            style={{
+                                                display: 'flex', flexDirection: 'column', alignItems: 'center',
+                                                padding: '0.35rem 0.7rem', borderRadius: 10,
+                                                border: activo ? `2px solid ${color}` : `1px solid ${tieneViajes ? color + '35' : '#1e293b'}`,
+                                                background: activo ? color : tieneViajes ? `${color}12` : 'transparent',
+                                                color: activo ? '#fff' : tieneViajes ? textPrimary : '#334155',
+                                                cursor: tieneViajes ? 'pointer' : 'not-allowed',
+                                                fontWeight: activo ? 800 : 600,
+                                                boxShadow: activo ? `0 0 14px ${color}60` : 'none',
+                                                transition: 'all 0.18s ease',
+                                                minWidth: 52,
+                                            }}
+                                        >
+                                            <span style={{ fontSize: '0.58rem', textTransform: 'uppercase', letterSpacing: '0.06em', opacity: activo ? 0.9 : 0.65 }}>
+                                                {label === 'Hoy' || label === 'Mañana' ? label : dow}
+                                            </span>
+                                            <span style={{ fontSize: '1rem', fontWeight: 900, lineHeight: 1.1 }}>{dia}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            {/* Resumen viajes */}
+                            <div style={{ marginTop: '0.55rem', fontSize: '0.72rem', color: '#475569', fontWeight: 600 }}>
+                                <strong style={{ color: textPrimary }}>{viajesFiltrados.length}</strong> viaje{viajesFiltrados.length !== 1 ? 's' : ''} disponible{viajesFiltrados.length !== 1 ? 's' : ''}
+                                {diaFiltro && <span style={{ color: color, marginLeft: '0.4rem' }}>· {diasSemana.find(d => d.fecha === diaFiltro)?.label}</span>}
+                                {sinFiltroFecha && <span style={{ marginLeft: '0.5rem', color: '#f59e0b', fontWeight: 700 }}>· todos los horarios</span>}
+                            </div>
                         </div>
 
                         {/* Grid */}
