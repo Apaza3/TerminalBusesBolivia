@@ -455,11 +455,11 @@ const PlanearViaje = () => {
             {/* ── BLOQUE IMAGEN — igual que hero en Inicio.js ── */}
             <div style={{ position: 'relative', overflow: 'hidden', minHeight: 'calc(100vh - 76px)' }}>
                 {/* Capa trasera — siguiente preloadada, solo transiciona al entrar */}
-                <div style={{ position: 'absolute', inset: 0, backgroundImage: `url(/fondos/${FONDOS[(bgIdx + 1) % FONDOS.length]})`, backgroundSize: 'cover', backgroundPosition: 'center 10%', backgroundRepeat: 'no-repeat', opacity: bgFading ? 0.82 : 0, filter: 'blur(5px)', transition: bgFading ? 'opacity 1.2s ease-in-out' : 'none' }} />
+                <div style={{ position: 'fixed', inset: 0, backgroundImage: `url(/fondos/${FONDOS[(bgIdx + 1) % FONDOS.length]})`, backgroundSize: 'cover', backgroundPosition: 'center 10%', backgroundRepeat: 'no-repeat', opacity: bgFading ? 0.82 : 0, filter: 'blur(5px)', transition: bgFading ? 'opacity 1.2s ease-in-out' : 'none' }} />
                 {/* Capa frontal — actual, solo transiciona al salir */}
-                <div style={{ position: 'absolute', inset: 0, backgroundImage: `url(/fondos/${FONDOS[bgIdx]})`, backgroundSize: 'cover', backgroundPosition: 'center 10%', backgroundRepeat: 'no-repeat', opacity: bgFading ? 0 : 0.82, filter: 'blur(5px)', transition: bgFading ? 'opacity 1.2s ease-in-out' : 'none' }} />
+                <div style={{ position: 'fixed', inset: 0, backgroundImage: `url(/fondos/${FONDOS[bgIdx]})`, backgroundSize: 'cover', backgroundPosition: 'center 10%', backgroundRepeat: 'no-repeat', opacity: bgFading ? 0 : 0.82, filter: 'blur(5px)', transition: bgFading ? 'opacity 1.2s ease-in-out' : 'none' }} />
                 {/* Overlay oscuro para contraste */}
-                <div style={{ position: 'absolute', inset: 0, background: 'rgba(7,17,31,0.62)' }} />
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(7,17,31,0.62)' }} />
                 <div style={{ position: 'relative' }}>
 
                     {/* ── Título centrado ── */}

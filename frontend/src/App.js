@@ -46,6 +46,13 @@ import './estilos/movil/buscador-responsivo.css';
 
 const ROLES_STAFF = ['admin_sucursal', 'cajero', 'conductor'];
 
+// Resetea scroll al inicio en cada cambio de ruta (fix mobile viewport position)
+function ScrollToTop() {
+    const { pathname } = useLocation();
+    React.useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
+    return null;
+}
+
 function AppContent() {
     const { perfil } = useAuth();
     const location   = useLocation();
@@ -59,6 +66,7 @@ function AppContent() {
 
     return (
         <div className="App">
+            <ScrollToTop />
             {/* Navbar premium — solo en rutas de cliente/visitante que no tienen navbar propia */}
             {!isStaff && !sinNavGlobal && <NavbarGlobal />}
 

@@ -172,6 +172,8 @@ const Inicio = () => {
                     backgroundSize: 'cover', backgroundPosition: 'center 15%',
                     opacity: 0.62,
                     transition: 'opacity 0.6s',
+                    transform: 'translate3d(0,0,0)',
+                    willChange: 'transform',
                 }} />
                 {/* Degradé bicolor — c1 izquierda, c2 derecha */}
                 <div style={{

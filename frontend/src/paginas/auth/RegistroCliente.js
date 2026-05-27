@@ -244,8 +244,8 @@ const RegistroCliente = () => {
                 )}
 
                 {/* Fondo */}
-                <div style={{ position: 'absolute', inset: 0, backgroundImage: `url(${bg})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'brightness(0.18) saturate(0.5)', zIndex: 0 }} />
-                <div style={{ position: 'absolute', inset: 0, zIndex: 1, background: `linear-gradient(135deg, ${tema.bg}f5 0%, ${tema.bg}cc 50%, ${tema.bg}99 100%)` }} />
+                <div style={{ position: 'fixed', inset: 0, backgroundImage: `url(${bg})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'brightness(0.18) saturate(0.5)', zIndex: 0 }} />
+                <div style={{ position: 'fixed', inset: 0, zIndex: 1, background: `linear-gradient(135deg, ${tema.bg}f5 0%, ${tema.bg}cc 50%, ${tema.bg}99 100%)` }} />
                 <div style={{ position: 'absolute', top: '40%', left: '50%', transform: 'translate(-50%,-50%)', zIndex: 1, width: 600, height: 600, background: `radial-gradient(circle, ${tema.color}14 0%, transparent 65%)`, pointerEvents: 'none' }} />
 
                 {/* ════════ MOBILE WIZARD ════════ */}

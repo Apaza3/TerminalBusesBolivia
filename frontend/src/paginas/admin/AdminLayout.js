@@ -114,15 +114,14 @@ const AdminLayout = () => {
         }}>
             {/* Fondo encogido + difuminado: colores visibles, sin detalles */}
             <div style={{
-                position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none',
+                position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none',
                 backgroundImage: `url(${fondoUrl})`,
                 backgroundSize: 'cover', backgroundPosition: 'center',
-                transform: 'scale(0.99)',
                 filter: 'blur(9px) saturate(0.75)',
             }} />
             {/* Overlay oscuro — apaga sin borrar los tonos */}
             <div style={{
-                position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none',
+                position: 'fixed', inset: 0, zIndex: 1, pointerEvents: 'none',
                 background: 'rgba(8, 12, 24, 0.68)',
             }} />
 

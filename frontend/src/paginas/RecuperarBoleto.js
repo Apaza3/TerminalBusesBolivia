@@ -178,13 +178,13 @@ const RecuperarBoleto = () => {
             {/* ── Fondos ── */}
             {bg && (
                 <div style={{
-                    position: 'absolute', inset: 0, zIndex: 0,
+                    position: 'fixed', inset: 0, zIndex: 0,
                     backgroundImage: `url(${bg})`, backgroundSize: 'cover', backgroundPosition: 'center',
                     filter: 'brightness(0.25) saturate(0.5)',
                 }} />
             )}
-            <div style={{ position: 'absolute', inset: 0, zIndex: 0, backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', pointerEvents: 'none' }} />
-            <div style={{ position: 'absolute', inset: 0, zIndex: 0, background: `linear-gradient(135deg, rgba(6,10,20,0.97) 0%, ${P}35 35%, ${S}22 65%, rgba(6,10,20,0.97) 100%)`, pointerEvents: 'none' }} />
+            <div style={{ position: 'fixed', inset: 0, zIndex: 0, backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)', pointerEvents: 'none' }} />
+            <div style={{ position: 'fixed', inset: 0, zIndex: 0, background: `linear-gradient(135deg, rgba(6,10,20,0.97) 0%, ${P}35 35%, ${S}22 65%, rgba(6,10,20,0.97) 100%)`, pointerEvents: 'none' }} />
             <div style={{ position: 'absolute', top: 0, left: 0, width: '40%', height: '40%', zIndex: 0, background: `radial-gradient(ellipse at top left, ${P}40 0%, transparent 70%)`, pointerEvents: 'none' }} />
             <div style={{ position: 'absolute', bottom: 0, right: 0, width: '40%', height: '40%', zIndex: 0, background: `radial-gradient(ellipse at bottom right, ${S}35 0%, transparent 70%)`, pointerEvents: 'none' }} />
 

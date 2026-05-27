@@ -97,8 +97,8 @@ const LoginCliente = () => {
             <div ref={rootRef} style={{ height: 'calc(100vh - 76px)', overflow: 'hidden', position: 'relative', fontFamily: "'Outfit', sans-serif", color: '#dde5f0', textTransform: 'uppercase' }}>
 
                 {/* Fondo */}
-                <div style={{ position: 'absolute', inset: 0, backgroundImage: `url(${bg})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'brightness(0.35) saturate(0.7)', zIndex: 0 }} />
-                <div style={{ position: 'absolute', inset: 0, zIndex: 1, background: `linear-gradient(135deg, ${tema.bg}dd 0%, ${tema.bg}aa 50%, ${tema.bg}80 100%)` }} />
+                <div style={{ position: 'fixed', inset: 0, backgroundImage: `url(${bg})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'brightness(0.35) saturate(0.7)', zIndex: 0 }} />
+                <div style={{ position: 'fixed', inset: 0, zIndex: 1, background: `linear-gradient(135deg, ${tema.bg}dd 0%, ${tema.bg}aa 50%, ${tema.bg}80 100%)` }} />
                 <div style={{ position: 'absolute', top: '30%', left: isMobile ? '50%' : '25%', transform: 'translate(-50%,-50%)', zIndex: 1, width: 500, height: 500, background: `radial-gradient(circle, ${tema.color}18 0%, transparent 65%)`, pointerEvents: 'none' }} />
 
                 {/* ════ MOBILE ════ */}
