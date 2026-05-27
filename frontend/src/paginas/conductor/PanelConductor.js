@@ -13,127 +13,116 @@ import FragmentoDept from '../../componentes/FragmentoDept';
 import gsap from 'gsap';
 
 const TIPOS_INCIDENTE = [
-    { value: 'retraso', label: '⏰ Retraso' },
-    { value: 'mecanico', label: '🔧 Falla mecánica' },
-    { value: 'percance', label: '⚠️ Percance en ruta' },
-    { value: 'accidente', label: '🚨 Accidente' },
-    { value: 'otro', label: '📋 Otro' },
+    { value: 'retraso',   label: 'Retraso',         icon: '⏰' },
+    { value: 'mecanico',  label: 'Falla mecánica',   icon: '🔧' },
+    { value: 'percance',  label: 'Percance en ruta', icon: '⚠️' },
+    { value: 'accidente', label: 'Accidente',        icon: '🚨' },
+    { value: 'otro',      label: 'Otro',             icon: '📋' },
 ];
 
-const IconViajes = ({ color, size = 18 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'all 0.15s ease' }}>
-        <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-1.1 0-2 .9-2 2v7c0 .6.4 1 1 1h1" />
-        <circle cx="7" cy="17" r="2" />
-        <path d="M9 17h6" />
-        <circle cx="17" cy="17" r="2" />
-    </svg>
-);
+const IconViajes    = ({ color, size = 18 }) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-1.1 0-2 .9-2 2v7c0 .6.4 1 1 1h1" /><circle cx="7" cy="17" r="2" /><path d="M9 17h6" /><circle cx="17" cy="17" r="2" /></svg>);
+const IconNotificar = ({ color, size = 18 }) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>);
+const IconEscanear  = ({ color, size = 18 }) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2" /><path d="M17 3h2a2 2 0 0 1 2 2v2" /><path d="M21 17v2a2 2 0 0 1-2 2h-2" /><path d="M7 21H5a2 2 0 0 1-2-2v-2" /><line x1="5" y1="12" x2="19" y2="12" /></svg>);
+const IconPasajeros = ({ color, size = 18 }) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>);
+const IconHome      = ({ color, size = 18 }) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>);
+const IconLogout    = ({ color, size = 18 }) => (<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>);
 
-const IconNotificar = ({ color, size = 18 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'all 0.15s ease' }}>
-        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-        <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-    </svg>
-);
+const ESTADO_META = {
+    programado: { bg: 'rgba(59,130,246,0.12)',  border: 'rgba(59,130,246,0.3)',  text: '#93c5fd', dot: '#3b82f6', label: 'Programado'  },
+    autorizado:  { bg: 'rgba(16,185,129,0.12)', border: 'rgba(16,185,129,0.3)', text: '#6ee7b7', dot: '#10b981', label: 'Autorizado'   },
+    en_viaje:    { bg: null,                    border: null,                   text: null,       dot: '#f59e0b', label: 'En viaje'     },
+    completado:  { bg: 'rgba(100,116,139,0.12)',border: 'rgba(100,116,139,0.3)',text: '#94a3b8', dot: '#64748b', label: 'Completado'   },
+    cancelado:   { bg: 'rgba(220,38,38,0.1)',   border: 'rgba(220,38,38,0.25)', text: '#fca5a5', dot: '#ef4444', label: 'Cancelado'    },
+};
 
-const IconEscanear = ({ color, size = 18 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'all 0.15s ease' }}>
-        <path d="M3 7V5a2 2 0 0 1 2-2h2" />
-        <path d="M17 3h2a2 2 0 0 1 2 2v2" />
-        <path d="M21 17v2a2 2 0 0 1-2 2h-2" />
-        <path d="M7 21H5a2 2 0 0 1-2-2v-2" />
-        <line x1="5" y1="12" x2="19" y2="12" />
-    </svg>
-);
-
-const IconPasajeros = ({ color, size = 18 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transition: 'all 0.15s ease' }}>
-        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-        <circle cx="9" cy="7" r="4" />
-        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-    </svg>
-);
-
-const IconHome = ({ color, size = 18 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-        <polyline points="9 22 9 12 15 12 15 22" />
-    </svg>
-);
-
-const IconLogout = ({ color, size = 18 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-        <polyline points="16 17 21 12 16 7" />
-        <line x1="21" y1="12" x2="9" y2="12" />
-    </svg>
-);
-
-const badgeEstado = (estado, color) => {
-    const m = {
-        programado:  { bg: '#1e3a8a22', c: '#93c5fd',  label: '📅 Programado'  },
-        autorizado:  { bg: '#14532d22', c: '#86efac',  label: '✅ Autorizado'   },
-        en_viaje:    { bg: color + '22', c: color,     label: '🚌 En Viaje'     },
-        completado:  { bg: '#37415122', c: '#9ca3af',  label: '✅ Completado'   },
-        cancelado:   { bg: '#7f1d1d22', c: '#fca5a5',  label: '❌ Cancelado'    },
-    };
-    const s = m[estado] || m.programado;
+const StatusBadge = ({ estado, empresaColor }) => {
+    const m = ESTADO_META[estado] || ESTADO_META.programado;
+    const bg     = estado === 'en_viaje' ? `${empresaColor}18` : m.bg;
+    const border = estado === 'en_viaje' ? `${empresaColor}40` : m.border;
+    const text   = estado === 'en_viaje' ? empresaColor        : m.text;
+    const dot    = estado === 'en_viaje' ? empresaColor        : m.dot;
     return (
-        <span style={{ background: s.bg, color: s.c, padding: '0.28rem 0.7rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 600 }}>
-            {s.label}
+        <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+            background: bg, border: `1px solid ${border}`, color: text,
+            padding: '0.22rem 0.65rem', borderRadius: '999px',
+            fontSize: '0.72rem', fontWeight: 600, fontFamily: "'Outfit', sans-serif",
+            letterSpacing: '0.02em',
+        }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: dot, flexShrink: 0 }} />
+            {m.label}
         </span>
     );
 };
 
+const InitialsAvatar = ({ name, color }) => {
+    const parts = (name || '').trim().split(' ');
+    const initials = parts.length >= 2
+        ? `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
+        : (parts[0] || '?')[0].toUpperCase();
+    return (
+        <div style={{
+            width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+            background: `${color}18`, border: `1px solid ${color}30`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '0.65rem', fontWeight: 700, color,
+        }}>
+            {initials}
+        </div>
+    );
+};
+
+const TABS = [
+    { id: 'viajes',    icon: IconViajes,    label: 'Viajes'    },
+    { id: 'notificar', icon: IconNotificar, label: 'Notificar' },
+    { id: 'escanear',  icon: IconEscanear,  label: 'Escanear'  },
+    { id: 'pasajeros', icon: IconPasajeros, label: 'Pasajeros' },
+];
+
 const PanelConductor = () => {
     const navigate = useNavigate();
     const { perfil, logout } = useAuth();
-    const rootRef = useRef(null);
+    const rootRef    = useRef(null);
+    const contentRef = useRef(null);
     const scannerRef = useRef(null);
 
     const sucursalNombre = perfil?.sucursal_nombre || 'Mi Sucursal';
-    const deptNombre = perfil?.departamento || 'La Paz';
-    const tema = DEPARTAMENTOS[deptNombre] || DEPARTAMENTOS['La Paz'];
-    const empresaTema = getEmpresaTema(sucursalNombre);
-    const empresaColor = empresaTema?.primary || tema.primary;
+    const deptNombre     = perfil?.departamento || 'La Paz';
+    const tema           = DEPARTAMENTOS[deptNombre] || DEPARTAMENTOS['La Paz'];
+    const empresaTema    = getEmpresaTema(sucursalNombre);
+    const empresaColor   = empresaTema?.primary || tema.primary;
     const empresaTextColor = empresaTema?.primaryText || '#ffffff';
 
     const esConductor = perfil?.rol === 'conductor' || perfil?.rol === 'admin_sucursal';
 
-    const [tab, setTab] = useState('viajes');
-    const [tripulacionId, setTripulacionId] = useState(null);
-    const [viajes, setViajes] = useState([]);
-    const [cargando, setCargando] = useState(true);
-    const [viajeActivo, setViajeActivo] = useState(null);
-    const [pasajerosMap, setPasajerosMap] = useState({});
-    const [busquedaPasajero, setBusquedaPasajero] = useState('');
+    const [tab,               setTab]               = useState('viajes');
+    const [tripulacionId,     setTripulacionId]     = useState(null);
+    const [viajes,            setViajes]            = useState([]);
+    const [cargando,          setCargando]          = useState(true);
+    const [viajeActivo,       setViajeActivo]       = useState(null);
+    const [pasajerosMap,      setPasajerosMap]      = useState({});
+    const [busquedaPasajero,  setBusquedaPasajero]  = useState('');
     const [confirmandoCancelar, setConfirmandoCancelar] = useState(null);
-    const [horaActual, setHoraActual] = useState(new Date());
+    const [horaActual,        setHoraActual]        = useState(new Date());
 
-    // Notificación / incidente
     const [notifViajeId, setNotifViajeId] = useState('');
-    const [notifTipo, setNotifTipo] = useState('retraso');
-    const [notifDesc, setNotifDesc] = useState('');
-    const [notifEnviando, setNotifEnviando] = useState(false);
+    const [notifTipo,    setNotifTipo]    = useState('retraso');
+    const [notifDesc,    setNotifDesc]    = useState('');
+    const [notifEnviando,setNotifEnviando]= useState(false);
     const [notifResultado, setNotifResultado] = useState(null);
 
-    // QR scanner
-    const [scanResultado, setScanResultado] = useState(null);
-    const [scanViajeId, setScanViajeId] = useState('');
-    const [scannerActivo, setScannerActivo] = useState(false);
+    const [scanResultado,  setScanResultado]  = useState(null);
+    const [scanViajeId,    setScanViajeId]    = useState('');
+    const [scannerActivo,  setScannerActivo]  = useState(false);
 
-    // Tab Pasajeros
-    const [listaViajeId, setListaViajeId] = useState('');
-    const [listaPasajeros, setListaPasajeros] = useState([]);
+    const [listaViajeId,  setListaViajeId]  = useState('');
+    const [listaPasajeros,setListaPasajeros]= useState([]);
 
-    // Reloj
     useEffect(() => {
         const iv = setInterval(() => setHoraActual(new Date()), 1000);
         return () => clearInterval(iv);
     }, []);
 
-    // Lookup tripulacion.id para este usuario
     useEffect(() => {
         if (!perfil?.id) return;
         getTripulacionByUsuario(perfil.id).then(t => {
@@ -145,7 +134,7 @@ const PanelConductor = () => {
     const detectarViajeActual = useCallback((lista) => {
         const enViaje = lista.find(v => v.estado === 'en_viaje');
         if (enViaje) return enViaje.id;
-        const activos = lista.filter(v => v.estado === 'programado' || v.estado === 'autorizado');
+        const activos  = lista.filter(v => v.estado === 'programado' || v.estado === 'autorizado');
         const proximos = activos.filter(v => new Date(v.fecha_salida) >= new Date());
         if (proximos.length > 0) return proximos[0].id;
         return activos.length > 0 ? activos[activos.length - 1].id : '';
@@ -153,14 +142,14 @@ const PanelConductor = () => {
 
     const cargarViajes = useCallback(async () => {
         if (!tripulacionId) return;
-        const data = await getViajesConductor(tripulacionId, 1);
+        const data   = await getViajesConductor(tripulacionId, 1);
         const sorted = [...data].sort((a, b) => new Date(a.fecha_salida) - new Date(b.fecha_salida));
         setViajes(sorted);
         setCargando(false);
         const actual = detectarViajeActual(sorted);
         if (actual) {
             setNotifViajeId(prev => prev || actual);
-            setScanViajeId(prev => prev || actual);
+            setScanViajeId(prev  => prev || actual);
             setListaViajeId(prev => prev || actual);
         }
     }, [tripulacionId, detectarViajeActual]);
@@ -172,33 +161,39 @@ const PanelConductor = () => {
         return () => clearInterval(iv);
     }, [tripulacionId, cargarViajes]);
 
-    // Cargar pasajeros on-demand cuando se expande un viaje
     useEffect(() => {
-        if (!viajeActivo) return;
-        if (pasajerosMap[viajeActivo]) return;
+        if (!viajeActivo || pasajerosMap[viajeActivo]) return;
         getReservasViaje(viajeActivo).then(p => {
             setPasajerosMap(prev => ({ ...prev, [viajeActivo]: p }));
         });
     }, [viajeActivo]); // eslint-disable-line
 
-    // Cargar pasajeros para tab Pasajeros
     useEffect(() => {
         if (!listaViajeId) { setListaPasajeros([]); return; }
         getReservasViaje(listaViajeId).then(setListaPasajeros);
     }, [listaViajeId, tab]);
 
+    // Header entrance
     useEffect(() => {
         const ctx = gsap.context(() => {
-            gsap.from('[data-anim="header"]', { y: -24, opacity: 0, duration: 0.45, ease: 'power3.out' });
+            gsap.from('[data-anim="header"]', { y: -20, opacity: 0, duration: 0.4, ease: 'power3.out' });
         }, rootRef);
         return () => ctx.revert();
     }, []);
 
-    // ── QR Scanner lifecycle ──────────────────────────────────────────────────
+    // Tab content transition
+    useEffect(() => {
+        if (!contentRef.current) return;
+        gsap.fromTo(contentRef.current,
+            { opacity: 0, y: 10 },
+            { opacity: 1, y: 0, duration: 0.22, ease: 'power2.out' }
+        );
+    }, [tab]);
+
+    // QR scanner
     useEffect(() => {
         if (tab !== 'escanear') return;
         if (scannerRef.current) return;
-
         const scanner = new Html5QrcodeScanner(
             'qr-lector-conductor',
             { fps: 10, qrbox: { width: 240, height: 240 }, supportedScanTypes: [0] },
@@ -206,17 +201,16 @@ const PanelConductor = () => {
         );
         scanner.render(
             (texto) => {
-                setScanResultado({ tipo: 'info', mensaje: `QR leído: ${texto.trim().slice(0, 40)}` });
+                setScanResultado({ tipo: 'ok', mensaje: `QR leído: ${texto.trim().slice(0, 60)}` });
                 scanner.pause(true);
                 setScannerActivo(false);
             },
-            () => { }
+            () => {}
         );
         scannerRef.current = scanner;
         setScannerActivo(true);
-
         return () => {
-            scanner.clear().catch(() => { });
+            scanner.clear().catch(() => {});
             scannerRef.current = null;
             setScannerActivo(false);
         };
@@ -229,7 +223,6 @@ const PanelConductor = () => {
         }
     };
 
-    // ── Cambios de estado del viaje (Supabase) ──────────────────────────────
     const cambiarEstado = async (viajeId, nuevoEstado) => {
         await updateViajeEstado(viajeId, nuevoEstado);
         setViajes(prev => prev.map(v => v.id === viajeId ? { ...v, estado: nuevoEstado } : v));
@@ -241,43 +234,28 @@ const PanelConductor = () => {
         setConfirmandoCancelar(null);
     };
 
-    const esTemprano = (viaje) => {
-        const diffMs = new Date(viaje.fecha_salida) - new Date();
-        return diffMs > 60 * 60 * 1000;
-    };
+    const esTemprano = (viaje) => new Date(viaje.fecha_salida) - new Date() > 60 * 60 * 1000;
 
-    // ── Enviar notificación / incidente ──────────────────────────────────────
     const handleEnviarNotificacion = (e) => {
         e.preventDefault();
         setNotifEnviando(true);
         setNotifResultado(null);
-
         const viaje = viajes.find(v => v.id === notifViajeId);
         if (!viaje) { setNotifResultado({ tipo: 'error', texto: 'Selecciona un viaje.' }); setNotifEnviando(false); return; }
-
-        const busPlaca = viaje.buses?.placa || '';
-        const mensajeBase = `[${TIPOS_INCIDENTE.find(t => t.value === notifTipo)?.label || notifTipo}] ${viaje.origen} → ${viaje.destino} · Bus ${busPlaca}: ${notifDesc}`;
-
-        crearIncidente({
-            viajeId: viaje.id, busPlaca,
-            conductor: perfil?.nombre_completo || perfil?.email,
-            origen: viaje.origen, destino: viaje.destino,
-            salida: viaje.fecha_salida, tipo: notifTipo, descripcion: notifDesc,
-            sucursalId: perfil?.sucursal_id,
-        });
-
-        crearNotificacion({ tipo: notifTipo, para: 'admin', sucursalId: perfil?.sucursal_id, viajeId: viaje.id, busPlaca, mensaje: mensajeBase });
-        crearNotificacion({ tipo: notifTipo, para: 'cajero', sucursalId: perfil?.sucursal_id, viajeId: viaje.id, busPlaca, mensaje: `⚠️ Viaje ${viaje.origen} → ${viaje.destino} bus ${busPlaca} reportó: ${notifTipo}` });
-
+        const busPlaca    = viaje.buses?.placa || '';
+        const tipoLabel   = TIPOS_INCIDENTE.find(t => t.value === notifTipo)?.label || notifTipo;
+        const mensajeBase = `[${tipoLabel}] ${viaje.origen} → ${viaje.destino} · Bus ${busPlaca}: ${notifDesc}`;
+        crearIncidente({ viajeId: viaje.id, busPlaca, conductor: perfil?.nombre_completo || perfil?.email, origen: viaje.origen, destino: viaje.destino, salida: viaje.fecha_salida, tipo: notifTipo, descripcion: notifDesc, sucursalId: perfil?.sucursal_id });
+        crearNotificacion({ tipo: notifTipo, para: 'admin',  sucursalId: perfil?.sucursal_id, viajeId: viaje.id, busPlaca, mensaje: mensajeBase });
+        crearNotificacion({ tipo: notifTipo, para: 'cajero', sucursalId: perfil?.sucursal_id, viajeId: viaje.id, busPlaca, mensaje: `Viaje ${viaje.origen} → ${viaje.destino} bus ${busPlaca}: ${notifTipo}` });
         setNotifEnviando(false);
-        setNotifResultado({ tipo: 'ok', texto: `Notificación enviada a admins y cajeros.` });
+        setNotifResultado({ tipo: 'ok', texto: 'Notificación enviada a admins y cajeros.' });
         setNotifDesc('');
     };
 
-    // ── Manifiesto ───────────────────────────────────────────────────────────
     const imprimirManifiesto = async (viaje) => {
         const pasajeros = pasajerosMap[viaje.id] || await getReservasViaje(viaje.id);
-        const busPlaca = viaje.buses?.placa || '';
+        const busPlaca  = viaje.buses?.placa || '';
         const html = `<html><head><title>Manifiesto</title>
         <style>body{font-family:monospace;font-size:12px;margin:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #000;padding:4px 8px}th{background:#eee}</style>
         </head><body>
@@ -292,105 +270,155 @@ const PanelConductor = () => {
 
     const handleLogout = async () => { await logout(); navigate('/'); };
 
+    // ── Shared style helpers ─────────────────────────────────────────────────
+    const surface   = '#0c1421';
+    const surfaceHi = '#111b2d';
+    const border    = 'rgba(255,255,255,0.07)';
+    const textMuted = '#64748b';
+    const textSub   = '#94a3b8';
+
     const inputStyle = {
         width: '100%', boxSizing: 'border-box',
-        background: '#0d1a2e', border: `1px solid ${tema.color}40`,
-        color: '#f1f5f9', padding: '0.65rem 1rem',
-        borderRadius: '8px', fontSize: '0.88rem', outline: 'none',
+        background: surfaceHi, border: `1px solid ${border}`,
+        color: '#e2e8f0', padding: '0.7rem 1rem',
+        borderRadius: '8px', fontSize: '0.875rem',
+        outline: 'none', fontFamily: "'Outfit', system-ui, sans-serif",
+        transition: 'border-color 0.15s',
     };
 
-    const TABS = [
-        { id: 'viajes',    icon: IconViajes,    label: 'Viajes'    },
-        { id: 'notificar', icon: IconNotificar,  label: 'Notificar' },
-        { id: 'escanear',  icon: IconEscanear,   label: 'Escanear'  },
-        { id: 'pasajeros', icon: IconPasajeros,  label: 'Pasajeros' },
-    ];
+    const labelStyle = {
+        display: 'block', fontSize: '0.7rem', fontWeight: 600,
+        color: textMuted, marginBottom: '0.4rem',
+        textTransform: 'uppercase', letterSpacing: '0.07em',
+        fontFamily: "'Outfit', sans-serif",
+    };
+
+    const sectionTitle = {
+        fontSize: '0.7rem', fontWeight: 700, color: textMuted,
+        textTransform: 'uppercase', letterSpacing: '0.09em',
+        marginBottom: '1rem', fontFamily: "'Outfit', sans-serif",
+    };
 
     return (
         <div ref={rootRef} style={{
-            position: 'relative',
-            height: '100dvh', width: '100%',
-            display: 'flex', flexDirection: 'column',
-            overflow: 'hidden',
-            color: '#dde5f0', fontFamily: "'Rajdhani', system-ui, sans-serif",
-            textTransform: 'uppercase', letterSpacing: '0.03em',
+            position: 'relative', height: '100dvh', width: '100%',
+            display: 'flex', flexDirection: 'column', overflow: 'hidden',
+            color: '#dde5f0', fontFamily: "'Outfit', system-ui, sans-serif",
+            background: '#080f1a',
         }}>
             <style>{`
                 @media (max-width: 768px) {
-                    .conductor-tab-bar-top { display: none !important; }
-                    .conductor-tab-bar-bottom { display: flex !important; }
-                    .conductor-main-content { padding-bottom: calc(58px + env(safe-area-inset-bottom, 0px)) !important; }
+                    .conductor-tab-bar-top    { display: none   !important; }
+                    .conductor-tab-bar-bottom { display: flex   !important; }
+                    .conductor-main-content   { padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)) !important; }
                 }
                 @media (min-width: 769px) {
-                    .conductor-tab-bar-top { display: flex !important; }
-                    .conductor-tab-bar-bottom { display: none !important; }
+                    .conductor-tab-bar-top    { display: flex   !important; }
+                    .conductor-tab-bar-bottom { display: none   !important; }
                 }
+                @keyframes scanMove {
+                    0%   { top: 0%; opacity: 0.8; }
+                    48%  { opacity: 0.8; }
+                    50%  { top: calc(100% - 2px); opacity: 0.3; }
+                    52%  { opacity: 0.8; }
+                    100% { top: 0%; opacity: 0.8; }
+                }
+                @keyframes pulseRing {
+                    0%, 100% { opacity: 0.4; transform: scale(1); }
+                    50%       { opacity: 0.15; transform: scale(1.04); }
+                }
+                #qr-lector-conductor video { border-radius: 8px; }
+                #qr-lector-conductor img   { border-radius: 8px; }
+
+                .cond-tab-btn { transition: color 0.18s, background 0.18s; }
+                .cond-tab-btn:hover { background: rgba(255,255,255,0.06) !important; }
+
+                .cond-incident-pill { transition: background 0.15s, border-color 0.15s, color 0.15s; cursor: pointer; }
+
+                .viaje-card { transition: border-color 0.2s; }
+                .viaje-card:hover { border-color: rgba(255,255,255,0.12) !important; }
+
+                .action-btn { transition: filter 0.15s, transform 0.1s; }
+                .action-btn:hover  { filter: brightness(1.1); }
+                .action-btn:active { transform: scale(0.97); }
+
+                .cond-input:focus { border-color: ${empresaColor}70 !important; }
+
+                select option { background: #111b2d; }
             `}</style>
 
-            <div style={{ position: 'absolute', inset: 0, zIndex: 0, background: tema.bg }} />
-
-            {/* Header */}
+            {/* ── Header ─────────────────────────────────────────────────── */}
             <header data-anim="header" style={{
                 position: 'relative', zIndex: 30, flexShrink: 0,
-                background: `linear-gradient(135deg, ${empresaColor}dd 0%, ${empresaColor}b3 60%, ${(empresaTema?.secondary || empresaColor)}99 100%)`,
-                backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
-                borderBottom: '1px solid rgba(255,255,255,0.15)',
+                background: `linear-gradient(160deg, ${empresaColor}e8 0%, ${empresaColor}b0 55%, ${(empresaTema?.secondary || empresaColor)}90 100%)`,
+                borderBottom: `1px solid rgba(255,255,255,0.1)`,
             }}>
+                {/* Sub-bar */}
                 <div style={{
-                    padding: '0.22rem 0.75rem',
-                    background: 'rgba(0,0,0,0.25)',
-                    borderBottom: '1px solid rgba(255,255,255,0.08)',
+                    padding: '0.25rem 0.85rem',
+                    background: 'rgba(0,0,0,0.22)',
+                    borderBottom: '1px solid rgba(255,255,255,0.06)',
                     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 }}>
-                    <div style={{ fontFamily: "'Outfit', sans-serif", display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
-                        <span style={{ fontWeight: 800, fontSize: '0.62rem', color: '#ffffff', letterSpacing: '0.04em' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ fontWeight: 700, fontSize: '0.6rem', color: empresaTextColor, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
                             {sucursalNombre}
                         </span>
-                        <span style={{ fontSize: '0.55rem', color: `${empresaTextColor}b3`, fontWeight: 500, letterSpacing: '0.02em', borderLeft: '1px solid rgba(255,255,255,0.2)', paddingLeft: '0.45rem' }}>
-                            Chofer: {perfil?.nombre_completo || 'Conductor'}
+                        <span style={{ width: 1, height: 10, background: 'rgba(255,255,255,0.2)' }} />
+                        <span style={{ fontSize: '0.6rem', color: `${empresaTextColor}b0`, fontWeight: 500 }}>
+                            {perfil?.nombre_completo || 'Conductor'}
                         </span>
                     </div>
-                    <div style={{ fontSize: '0.5rem', color: '#10b981', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.2rem', letterSpacing: '0.05em' }}>
-                        <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#10b981', display: 'inline-block' }}></span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.55rem', color: '#34d399', fontWeight: 700, letterSpacing: '0.06em' }}>
+                        <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#34d399' }} />
                         ACTIVO
                     </div>
                 </div>
 
-                <div style={{ padding: '0.45rem 0.85rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ width: 32, height: 32, borderRadius: '7px', flexShrink: 0, background: 'rgba(0,0,0,0.3)', border: `1.2px solid ${empresaTema?.secondary ? `${empresaTema.secondary}60` : 'rgba(255,255,255,0.2)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', padding: '2px' }}>
+                {/* Main header row */}
+                <div style={{ padding: '0.5rem 0.85rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ width: 34, height: 34, borderRadius: '8px', flexShrink: 0, background: 'rgba(0,0,0,0.28)', border: '1px solid rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', padding: '3px' }}>
                         <FragmentoDept deptNombre={deptNombre} color={empresaTextColor} size={22} />
                     </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.15)', borderRadius: '7px', padding: '0.2rem 0.65rem', border: '1px solid rgba(255,255,255,0.05)' }}>
-                        <div style={{ fontFamily: 'monospace', fontSize: '0.92rem', fontWeight: 700, color: empresaTextColor, lineHeight: 1.1 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: 'rgba(0,0,0,0.18)', borderRadius: '8px', padding: '0.22rem 0.8rem', border: '1px solid rgba(255,255,255,0.06)' }}>
+                        <div style={{ fontFamily: 'ui-monospace, monospace', fontSize: '0.95rem', fontWeight: 700, color: empresaTextColor, lineHeight: 1.1, letterSpacing: '0.02em' }}>
                             {horaActual.toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
                         </div>
-                        <div style={{ fontSize: '0.52rem', color: `${empresaTextColor}a0`, fontWeight: 600, letterSpacing: '0.04em', marginTop: '0.05rem', fontFamily: "'Outfit', sans-serif" }}>
-                            {horaActual.toLocaleDateString('es-BO', { weekday: 'short', day: '2-digit', month: 'short' }).toUpperCase()}
+                        <div style={{ fontSize: '0.5rem', color: `${empresaTextColor}90`, fontWeight: 600, letterSpacing: '0.05em', marginTop: '0.05rem', textTransform: 'uppercase' }}>
+                            {horaActual.toLocaleDateString('es-BO', { weekday: 'short', day: '2-digit', month: 'short' })}
                         </div>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                        <button onClick={() => navigate('/')} title="Volver a Inicio" style={{ background: 'rgba(255,255,255,0.12)', border: 'none', color: empresaTextColor, padding: '0.38rem', borderRadius: '7px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease' }}
-                            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.2)'; }}
-                            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.12)'; }}>
-                            <IconHome color={empresaTextColor} size={16} />
+                    <div style={{ display: 'flex', gap: '0.4rem' }}>
+                        <button onClick={() => navigate('/')} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.12)', color: empresaTextColor, padding: '0.4rem', borderRadius: '7px', cursor: 'pointer', display: 'flex', alignItems: 'center', transition: 'background 0.15s' }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}>
+                            <IconHome color={empresaTextColor} size={15} />
                         </button>
-                        <button onClick={handleLogout} title="Cerrar Sesión" style={{ background: 'rgba(239,68,68,0.15)', border: 'none', color: '#fca5a5', padding: '0.38rem', borderRadius: '7px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease' }}
-                            onMouseEnter={e => { e.currentTarget.style.background = '#dc2626'; e.currentTarget.querySelector('svg').setAttribute('stroke', '#ffffff'); }}
-                            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.15)'; e.currentTarget.querySelector('svg').setAttribute('stroke', '#fca5a5'); }}>
-                            <IconLogout color="#fca5a5" size={16} />
+                        <button onClick={handleLogout} style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.2)', color: '#fca5a5', padding: '0.4rem', borderRadius: '7px', cursor: 'pointer', display: 'flex', alignItems: 'center', transition: 'background 0.15s' }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.25)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'rgba(239,68,68,0.12)'}>
+                            <IconLogout color="#fca5a5" size={15} />
                         </button>
                     </div>
                 </div>
 
-                <div className="conductor-tab-bar-top" style={{ display: 'flex', gap: '0.4rem', marginTop: '0.65rem', background: 'rgba(0,0,0,0.25)', borderRadius: '9px', padding: '0.25rem' }}>
+                {/* Tab bar — desktop */}
+                <div className="conductor-tab-bar-top" style={{ padding: '0 0.85rem 0.6rem', display: 'flex', gap: '0.25rem' }}>
                     {TABS.map(t => {
                         const activo = tab === t.id;
-                        const iconColor = activo ? '#ffffff' : 'rgba(255,255,255,0.45)';
                         return (
-                            <button key={t.id} onClick={() => setTab(t.id)} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '0.55rem 0', borderRadius: '6px', border: 'none', background: activo ? empresaColor : 'transparent', color: activo ? '#ffffff' : 'rgba(255,255,255,0.55)', fontWeight: activo ? 700 : 500, fontSize: '0.78rem', cursor: 'pointer', transition: 'all 0.2s ease', fontFamily: "'Outfit', sans-serif", letterSpacing: '0.04em' }}>
-                                <t.icon color={iconColor} size={16} />
+                            <button key={t.id} className="cond-tab-btn" onClick={() => setTab(t.id)} style={{
+                                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem',
+                                padding: '0.5rem 0', borderRadius: '7px', border: 'none',
+                                background: activo ? 'rgba(0,0,0,0.3)' : 'transparent',
+                                color: activo ? '#ffffff' : `${empresaTextColor}70`,
+                                fontWeight: activo ? 700 : 500, fontSize: '0.78rem',
+                                cursor: 'pointer', fontFamily: "'Outfit', sans-serif", letterSpacing: '0.03em',
+                                boxShadow: activo ? 'inset 0 1px 0 rgba(255,255,255,0.08)' : 'none',
+                            }}>
+                                <t.icon color={activo ? '#ffffff' : `${empresaTextColor}60`} size={15} />
                                 <span>{t.label}</span>
                             </button>
                         );
@@ -398,350 +426,452 @@ const PanelConductor = () => {
                 </div>
             </header>
 
-            {/* Main */}
-            <main className="conductor-main-content" style={{ flex: 1, position: 'relative', zIndex: 1, padding: '1rem', overflowY: 'auto' }}>
-                <div>
+            {/* ── Main content ───────────────────────────────────────────── */}
+            <main className="conductor-main-content" style={{ flex: 1, position: 'relative', zIndex: 1, overflowY: 'auto' }}>
+                <div ref={contentRef} style={{ padding: '1.1rem 1rem' }}>
 
-                {/* ── Tab Viajes ── */}
+                {/* ── Tab: VIAJES ── */}
                 {tab === 'viajes' && (
                     <div>
                         {cargando && (
-                            <div style={{ textAlign: 'center', color: '#475569', padding: '3.5rem 2rem' }}>
-                                <div style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>⏳</div>
-                                Cargando viajes...
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                                {[1,2].map(i => (
+                                    <div key={i} style={{ height: 110, borderRadius: '12px', background: surfaceHi, border: `1px solid ${border}`, opacity: 0.5 }} />
+                                ))}
                             </div>
                         )}
                         {!cargando && !tripulacionId && (
-                            <div style={{ textAlign: 'center', color: '#f59e0b', padding: '3.5rem 2rem', background: '#0d1a2e', borderRadius: '14px', border: '1px solid #92400e' }}>
-                                <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>⚠️</div>
-                                No se encontró registro de tripulación para este usuario.
+                            <div style={{ textAlign: 'center', padding: '3rem 1.5rem', background: surfaceHi, borderRadius: '14px', border: '1px solid rgba(245,158,11,0.2)' }}>
+                                <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>⚠️</div>
+                                <div style={{ color: '#fbbf24', fontWeight: 600, fontSize: '0.9rem' }}>Sin registro de tripulación</div>
+                                <div style={{ color: textMuted, fontSize: '0.8rem', marginTop: '0.35rem' }}>Este usuario no está vinculado a ningún conductor en el sistema.</div>
                             </div>
                         )}
                         {!cargando && tripulacionId && viajes.length === 0 && (
-                            <div style={{ textAlign: 'center', color: '#475569', padding: '3.5rem 2rem', background: '#0d1a2e', borderRadius: '14px', border: '1px solid #1e293b' }}>
-                                <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🚌</div>
-                                Sin viajes asignados para hoy.
+                            <div style={{ textAlign: 'center', padding: '3rem 1.5rem', background: surfaceHi, borderRadius: '14px', border: `1px solid ${border}` }}>
+                                <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>🚌</div>
+                                <div style={{ color: textSub, fontWeight: 600, fontSize: '0.9rem' }}>Sin viajes asignados</div>
+                                <div style={{ color: textMuted, fontSize: '0.8rem', marginTop: '0.35rem' }}>No hay viajes programados para hoy.</div>
                             </div>
                         )}
 
                         {viajes.map(viaje => {
-                            const busPlaca = viaje.buses?.placa || '—';
+                            const busPlaca  = viaje.buses?.placa || '—';
                             const pasajeros = pasajerosMap[viaje.id] || [];
-                            const temprano = esTemprano(viaje);
+                            const temprano  = esTemprano(viaje);
+                            const enViaje   = viaje.estado === 'en_viaje';
+                            const cancelado = viaje.estado === 'cancelado';
                             return (
-                                <div key={viaje.id} style={{ background: '#0d1a2e', borderRadius: '14px', marginBottom: '1.25rem', overflow: 'hidden', border: `1px solid ${viaje.estado === 'en_viaje' ? tema.color + '60' : viaje.estado === 'cancelado' ? '#7f1d1d60' : '#1e293b'}`, boxShadow: viaje.estado === 'en_viaje' ? `0 0 16px ${tema.color}20` : 'none' }}>
-                                    {/* Trip header */}
-                                    <div style={{ padding: '1rem 1.25rem', background: tema.bg, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem' }}>
-                                        <div>
-                                            <div style={{ fontWeight: 700, fontSize: '1rem', color: '#f1f5f9' }}>
+                                <div key={viaje.id} className="viaje-card" style={{
+                                    background: surface, borderRadius: '12px', marginBottom: '1rem',
+                                    overflow: 'hidden',
+                                    border: `1px solid ${enViaje ? `${empresaColor}40` : cancelado ? 'rgba(239,68,68,0.15)' : border}`,
+                                }}>
+                                    {/* Route header */}
+                                    <div style={{ padding: '1rem 1.1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.75rem' }}>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <div style={{ fontWeight: 700, fontSize: '1rem', color: '#f1f5f9', letterSpacing: '-0.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                                 {viaje.origen} → {viaje.destino}
                                             </div>
-                                            <div style={{ color: '#64748b', fontSize: '0.78rem', marginTop: '0.2rem' }}>
-                                                🚍 {busPlaca} · {new Date(viaje.fecha_salida).toLocaleString('es-BO')}
-                                                {viaje.anden && <> · Andén {viaje.anden}</>}
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.3rem', flexWrap: 'wrap' }}>
+                                                <span style={{ fontSize: '0.75rem', color: textMuted, fontFamily: 'ui-monospace, monospace' }}>
+                                                    {new Date(viaje.fecha_salida).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                                                </span>
+                                                <span style={{ color: border }}>·</span>
+                                                <span style={{ fontSize: '0.75rem', color: textMuted }}>🚍 {busPlaca}</span>
+                                                {viaje.anden && <><span style={{ color: border }}>·</span><span style={{ fontSize: '0.75rem', color: textMuted }}>Andén {viaje.anden}</span></>}
                                             </div>
                                         </div>
-                                        {badgeEstado(viaje.estado, tema.color)}
+                                        <StatusBadge estado={viaje.estado} empresaColor={empresaColor} />
                                     </div>
 
-                                    {/* Passenger list */}
-                                    {viaje.estado !== 'cancelado' && (
-                                        <div style={{ padding: '0.85rem 1.25rem' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem', flexWrap: 'wrap', gap: '0.4rem' }}>
-                                                <span style={{ color: '#64748b', fontSize: '0.8rem', fontWeight: 600 }}>
-                                                    👥 {viajeActivo === viaje.id ? `${pasajeros.length} pasajeros` : 'Pasajeros'}
+                                    {/* Passenger section */}
+                                    {!cancelado && (
+                                        <div style={{ borderTop: `1px solid ${border}`, padding: '0.75rem 1.1rem' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: viajeActivo === viaje.id ? '0.75rem' : 0 }}>
+                                                <span style={{ fontSize: '0.75rem', color: textMuted, fontWeight: 600 }}>
+                                                    {viajeActivo === viaje.id ? `${pasajeros.length} pasajeros` : 'Pasajeros'}
                                                 </span>
-                                                <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                                                    <button onClick={() => setViajeActivo(viajeActivo === viaje.id ? null : viaje.id)} style={{ background: `${tema.color}15`, border: `1px solid ${tema.color}30`, color: tema.acento, padding: '0.3rem 0.65rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.73rem' }}>
-                                                        {viajeActivo === viaje.id ? '▲ Ocultar' : '▼ Lista'}
+                                                <div style={{ display: 'flex', gap: '0.4rem' }}>
+                                                    <button className="action-btn" onClick={() => setViajeActivo(viajeActivo === viaje.id ? null : viaje.id)} style={{ background: 'transparent', border: `1px solid ${border}`, color: textSub, padding: '0.28rem 0.65rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.72rem', fontFamily: "'Outfit', sans-serif" }}>
+                                                        {viajeActivo === viaje.id ? 'Ocultar ▲' : 'Ver lista ▼'}
                                                     </button>
-                                                    <button onClick={() => imprimirManifiesto(viaje)} style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid #065f46', color: '#6ee7b7', padding: '0.3rem 0.65rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.73rem' }}>🖨️</button>
+                                                    <button className="action-btn" onClick={() => imprimirManifiesto(viaje)} style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', color: '#6ee7b7', padding: '0.28rem 0.6rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.72rem' }}>
+                                                        🖨️
+                                                    </button>
                                                 </div>
                                             </div>
 
                                             {viajeActivo === viaje.id && (
-                                                <>
-                                                    <input type="text" placeholder="Buscar por nombre o CI..."
-                                                        value={busquedaPasajero} onChange={e => setBusquedaPasajero(e.target.value)}
-                                                        style={{ ...inputStyle, marginBottom: '0.65rem', fontSize: '0.8rem', padding: '0.45rem 0.75rem' }}
+                                                <div>
+                                                    <input type="text" placeholder="Buscar nombre o CI..." value={busquedaPasajero}
+                                                        onChange={e => setBusquedaPasajero(e.target.value)}
+                                                        className="cond-input"
+                                                        style={{ ...inputStyle, marginBottom: '0.6rem', fontSize: '0.8rem', padding: '0.5rem 0.85rem' }}
                                                     />
                                                     {pasajeros.length === 0 ? (
-                                                        <div style={{ color: '#475569', fontSize: '0.82rem', textAlign: 'center', padding: '1rem' }}>Sin pasajeros registrados.</div>
+                                                        <div style={{ color: textMuted, fontSize: '0.82rem', textAlign: 'center', padding: '1.25rem' }}>Sin pasajeros registrados.</div>
                                                     ) : (
-                                                        <div style={{ overflowX: 'auto' }}>
-                                                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
-                                                                <thead>
-                                                                    <tr style={{ borderBottom: `1px solid ${tema.color}20` }}>
-                                                                        {['Asiento', 'Nombre', 'CI', 'Tel'].map(h => (
-                                                                            <th key={h} style={{ textAlign: 'left', padding: '0.4rem', color: '#475569', fontWeight: 500 }}>{h}</th>
-                                                                        ))}
-                                                                    </tr>
-                                                                </thead>
-                                                                <tbody>
-                                                                    {pasajeros.filter(p =>
-                                                                        !busquedaPasajero ||
-                                                                        p.nombre.toLowerCase().includes(busquedaPasajero.toLowerCase()) ||
-                                                                        p.ci.includes(busquedaPasajero)
-                                                                    ).map((p, i) => (
-                                                                        <tr key={i} style={{ borderBottom: '1px solid #1e293b' }}>
-                                                                            <td style={{ padding: '0.45rem 0.4rem', color: tema.acento, fontWeight: 700 }}>{p.asiento}</td>
-                                                                            <td style={{ padding: '0.45rem 0.4rem', color: '#f1f5f9' }}>{p.nombre}</td>
-                                                                            <td style={{ padding: '0.45rem 0.4rem', color: '#94a3b8' }}>{p.ci}</td>
-                                                                            <td style={{ padding: '0.45rem 0.4rem', color: '#64748b' }}>{p.telefono}</td>
-                                                                        </tr>
-                                                                    ))}
-                                                                </tbody>
-                                                            </table>
+                                                        <div style={{ borderRadius: '8px', overflow: 'hidden', border: `1px solid ${border}` }}>
+                                                            {pasajeros
+                                                                .filter(p => !busquedaPasajero || p.nombre.toLowerCase().includes(busquedaPasajero.toLowerCase()) || p.ci.includes(busquedaPasajero))
+                                                                .map((p, i) => (
+                                                                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.55rem 0.75rem', borderBottom: i < pasajeros.length - 1 ? `1px solid ${border}` : 'none', background: i % 2 === 0 ? 'transparent' : `${surfaceHi}80` }}>
+                                                                        <span style={{ fontFamily: 'ui-monospace, monospace', fontSize: '0.75rem', fontWeight: 700, color: empresaColor, minWidth: 32, textAlign: 'center', background: `${empresaColor}15`, padding: '0.18rem 0.3rem', borderRadius: '4px' }}>{p.asiento}</span>
+                                                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                                                            <div style={{ color: '#e2e8f0', fontSize: '0.82rem', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.nombre}</div>
+                                                                            <div style={{ color: textMuted, fontSize: '0.7rem' }}>{p.ci}{p.telefono ? ` · ${p.telefono}` : ''}</div>
+                                                                        </div>
+                                                                    </div>
+                                                                ))
+                                                            }
                                                         </div>
                                                     )}
-                                                </>
+                                                </div>
                                             )}
                                         </div>
                                     )}
 
-                                    {/* Controls */}
-                                    <div style={{ padding: '0.85rem 1.25rem', background: tema.bg, borderTop: '1px solid #1e293b', display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
-                                        {esConductor ? (
-                                            <>
-                                                {(viaje.estado === 'programado' || viaje.estado === 'autorizado') && (
-                                                    <>
-                                                        <button onClick={() => cambiarEstado(viaje.id, 'en_viaje')} style={{
-                                                            flex: 1, padding: '0.7rem',
-                                                            background: temprano ? '#d97706' : empresaColor,
-                                                            color: '#fff', border: 'none', borderRadius: '8px',
-                                                            fontWeight: 700, cursor: 'pointer', fontSize: '0.85rem', minWidth: 120,
-                                                        }}>
-                                                            {temprano ? '⚡ Inicio anticipado' : '🚀 Iniciar viaje'}
+                                    {/* Actions */}
+                                    {!cancelado && esConductor && (
+                                        <div style={{ borderTop: `1px solid ${border}`, padding: '0.75rem 1.1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                            {(viaje.estado === 'programado' || viaje.estado === 'autorizado') && (
+                                                <>
+                                                    <button className="action-btn" onClick={() => cambiarEstado(viaje.id, 'en_viaje')} style={{
+                                                        flex: 1, padding: '0.65rem 1rem', borderRadius: '8px', border: 'none',
+                                                        background: temprano ? '#d97706' : empresaColor,
+                                                        color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '0.85rem',
+                                                        fontFamily: "'Outfit', sans-serif", minWidth: 120,
+                                                    }}>
+                                                        {temprano ? '⚡ Inicio anticipado' : '🚀 Iniciar viaje'}
+                                                    </button>
+                                                    {confirmandoCancelar === viaje.id ? (
+                                                        <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+                                                            <span style={{ color: '#fca5a5', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>¿Confirmar?</span>
+                                                            <button className="action-btn" onClick={() => handleCancelar(viaje.id)} style={{ background: '#dc2626', color: '#fff', border: 'none', borderRadius: '6px', padding: '0.5rem 0.75rem', cursor: 'pointer', fontWeight: 700, fontSize: '0.75rem' }}>Sí</button>
+                                                            <button className="action-btn" onClick={() => setConfirmandoCancelar(null)} style={{ background: surfaceHi, color: textSub, border: `1px solid ${border}`, borderRadius: '6px', padding: '0.5rem 0.75rem', cursor: 'pointer', fontSize: '0.75rem' }}>No</button>
+                                                        </div>
+                                                    ) : (
+                                                        <button className="action-btn" onClick={() => setConfirmandoCancelar(viaje.id)} style={{ padding: '0.65rem 0.9rem', background: 'rgba(220,38,38,0.07)', border: '1px solid rgba(220,38,38,0.2)', color: '#fca5a5', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', fontSize: '0.8rem' }}>
+                                                            Cancelar
                                                         </button>
-                                                        {confirmandoCancelar === viaje.id ? (
-                                                            <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', flex: 1 }}>
-                                                                <span style={{ color: '#fca5a5', fontSize: '0.75rem' }}>¿Confirmar?</span>
-                                                                <button onClick={() => handleCancelar(viaje.id)} style={{ background: '#dc2626', color: '#fff', border: 'none', borderRadius: '6px', padding: '0.45rem 0.7rem', cursor: 'pointer', fontWeight: 600, fontSize: '0.75rem' }}>Sí</button>
-                                                                <button onClick={() => setConfirmandoCancelar(null)} style={{ background: '#1e293b', color: '#94a3b8', border: '1px solid #334155', borderRadius: '6px', padding: '0.45rem 0.7rem', cursor: 'pointer', fontSize: '0.75rem' }}>No</button>
-                                                            </div>
-                                                        ) : (
-                                                            <button onClick={() => setConfirmandoCancelar(viaje.id)} style={{ padding: '0.7rem 0.9rem', background: 'rgba(220,38,38,0.08)', border: '1px solid #7f1d1d', color: '#fca5a5', borderRadius: '8px', fontWeight: 600, cursor: 'pointer', fontSize: '0.8rem' }}>❌ Cancelar</button>
-                                                        )}
-                                                    </>
-                                                )}
-                                                {viaje.estado === 'en_viaje' && (
-                                                    <button onClick={() => cambiarEstado(viaje.id, 'completado')} style={{ flex: 1, padding: '0.7rem', background: '#dc2626', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer', fontSize: '0.85rem' }}>🏁 Finalizar viaje</button>
-                                                )}
-                                                {viaje.estado === 'completado' && (
-                                                    <div style={{ flex: 1, textAlign: 'center', color: '#475569', padding: '0.7rem', fontSize: '0.85rem' }}>
-                                                        Viaje completado ✅
-                                                    </div>
-                                                )}
-                                            </>
-                                        ) : (
-                                            <div style={{ color: '#475569', fontSize: '0.78rem', padding: '0.5rem 0' }}>
-                                                Solo el conductor puede cambiar el estado del viaje.
-                                            </div>
-                                        )}
-                                    </div>
+                                                    )}
+                                                </>
+                                            )}
+                                            {viaje.estado === 'en_viaje' && (
+                                                <button className="action-btn" onClick={() => cambiarEstado(viaje.id, 'completado')} style={{ flex: 1, padding: '0.65rem', background: '#dc2626', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer', fontSize: '0.85rem', fontFamily: "'Outfit', sans-serif" }}>
+                                                    🏁 Finalizar viaje
+                                                </button>
+                                            )}
+                                            {viaje.estado === 'completado' && (
+                                                <div style={{ flex: 1, textAlign: 'center', color: textMuted, padding: '0.65rem', fontSize: '0.85rem' }}>
+                                                    Viaje completado ✓
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                    {cancelado && (
+                                        <div style={{ borderTop: `1px solid rgba(239,68,68,0.1)`, padding: '0.6rem 1.1rem' }}>
+                                            <span style={{ color: '#fca5a5', fontSize: '0.78rem' }}>Viaje cancelado</span>
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })}
                     </div>
                 )}
 
-                {/* ── Tab Notificar ── */}
+                {/* ── Tab: NOTIFICAR ── */}
                 {tab === 'notificar' && (
                     <div>
-                        <div style={{ color: '#94a3b8', fontSize: '0.82rem', fontWeight: 600, marginBottom: '1.25rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                            Enviar notificación de incidente
-                        </div>
+                        <p style={sectionTitle}>Reportar incidente</p>
 
                         {notifResultado && (
-                            <div style={{ padding: '0.85rem 1rem', marginBottom: '1.25rem', borderRadius: '10px', background: notifResultado.tipo === 'ok' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', border: `1px solid ${notifResultado.tipo === 'ok' ? '#065f46' : '#7f1d1d'}`, color: notifResultado.tipo === 'ok' ? '#6ee7b7' : '#fca5a5', fontSize: '0.85rem' }}>
-                                {notifResultado.texto}
+                            <div style={{
+                                padding: '0.85rem 1rem', marginBottom: '1.25rem', borderRadius: '10px',
+                                background: notifResultado.tipo === 'ok' ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)',
+                                border: `1px solid ${notifResultado.tipo === 'ok' ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.25)'}`,
+                                color: notifResultado.tipo === 'ok' ? '#6ee7b7' : '#fca5a5',
+                                fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem',
+                            }}>
+                                {notifResultado.tipo === 'ok' ? '✓' : '✕'} {notifResultado.texto}
                             </div>
                         )}
 
-                        <form onSubmit={handleEnviarNotificacion} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        <form onSubmit={handleEnviarNotificacion} style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
+                            {/* Viaje */}
                             <div>
-                                <label style={{ display: 'block', fontSize: '0.73rem', color: '#94a3b8', marginBottom: '0.35rem' }}>Viaje afectado</label>
-                                <select value={notifViajeId} onChange={e => setNotifViajeId(e.target.value)} required style={inputStyle}>
-                                    <option value="">— Selecciona un viaje —</option>
+                                <label style={labelStyle}>Viaje afectado</label>
+                                <select value={notifViajeId} onChange={e => setNotifViajeId(e.target.value)} required className="cond-input" style={inputStyle}>
+                                    <option value="">Selecciona un viaje</option>
                                     {viajes.filter(v => v.estado !== 'completado' && v.estado !== 'cancelado').map(v => (
-                                        <option key={v.id} value={v.id}>{v.origen} → {v.destino} · {new Date(v.fecha_salida).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' })}</option>
+                                        <option key={v.id} value={v.id}>
+                                            {v.origen} → {v.destino} · {new Date(v.fecha_salida).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' })}
+                                        </option>
                                     ))}
                                 </select>
                             </div>
 
+                            {/* Tipo — pill grid */}
                             <div>
-                                <label style={{ display: 'block', fontSize: '0.73rem', color: '#94a3b8', marginBottom: '0.35rem' }}>Tipo de incidente</label>
-                                <select value={notifTipo} onChange={e => setNotifTipo(e.target.value)} style={inputStyle}>
-                                    {TIPOS_INCIDENTE.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                                </select>
+                                <label style={labelStyle}>Tipo de incidente</label>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
+                                    {TIPOS_INCIDENTE.map(t => {
+                                        const sel = notifTipo === t.value;
+                                        return (
+                                            <button key={t.value} type="button" className="cond-incident-pill"
+                                                onClick={() => setNotifTipo(t.value)}
+                                                style={{
+                                                    padding: '0.6rem 0.4rem', borderRadius: '8px',
+                                                    border: `1px solid ${sel ? `${empresaColor}60` : border}`,
+                                                    background: sel ? `${empresaColor}18` : surfaceHi,
+                                                    color: sel ? empresaColor : textSub,
+                                                    fontSize: '0.75rem', fontWeight: sel ? 700 : 500,
+                                                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem',
+                                                    fontFamily: "'Outfit', sans-serif",
+                                                }}>
+                                                <span style={{ fontSize: '1rem' }}>{t.icon}</span>
+                                                <span>{t.label}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
                             </div>
 
+                            {/* Descripción */}
                             <div>
-                                <label style={{ display: 'block', fontSize: '0.73rem', color: '#94a3b8', marginBottom: '0.35rem' }}>Descripción del incidente</label>
-                                <textarea value={notifDesc} onChange={e => setNotifDesc(e.target.value)} required rows={4} placeholder="Describe brevemente lo que ocurrió..."
-                                    style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5 }}
+                                <label style={labelStyle}>Descripción</label>
+                                <textarea value={notifDesc} onChange={e => setNotifDesc(e.target.value)} required rows={4}
+                                    placeholder="Describe brevemente lo que ocurrió..."
+                                    className="cond-input"
+                                    style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }}
                                 />
+                                <div style={{ textAlign: 'right', fontSize: '0.65rem', color: textMuted, marginTop: '0.3rem' }}>
+                                    {notifDesc.length} caracteres
+                                </div>
                             </div>
 
-                            <div style={{ background: '#0d1a2e', border: `1px solid ${tema.color}20`, borderRadius: '10px', padding: '0.85rem 1rem' }}>
-                                <div style={{ fontSize: '0.7rem', color: '#64748b', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Se notificará a:</div>
+                            {/* Recipients info */}
+                            <div style={{ background: surfaceHi, border: `1px solid ${border}`, borderRadius: '10px', padding: '0.85rem 1rem' }}>
+                                <div style={{ ...labelStyle, marginBottom: '0.65rem' }}>Se notificará a:</div>
                                 {[
-                                    { icon: '🛠️', label: 'Administradores', desc: 'Registro permanente en sección Incidentes' },
-                                    { icon: '🎫', label: 'Cajeros de tu sucursal', desc: 'Alerta del viaje y bus afectado' },
+                                    { icon: '🛠️', title: 'Administradores', desc: 'Registro permanente en incidentes' },
+                                    { icon: '🎫', title: 'Cajeros de tu sucursal', desc: 'Alerta del viaje y bus afectado' },
                                 ].map(item => (
-                                    <div key={item.icon} style={{ display: 'flex', gap: '0.6rem', marginBottom: '0.4rem', alignItems: 'flex-start' }}>
-                                        <span style={{ fontSize: '1rem' }}>{item.icon}</span>
+                                    <div key={item.icon} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem', marginBottom: '0.5rem' }}>
+                                        <span style={{ fontSize: '0.95rem', flexShrink: 0, marginTop: '0.05rem' }}>{item.icon}</span>
                                         <div>
-                                            <div style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>{item.label}</div>
-                                            <div style={{ fontSize: '0.7rem', color: '#475569' }}>{item.desc}</div>
+                                            <div style={{ fontSize: '0.8rem', color: textSub, fontWeight: 600 }}>{item.title}</div>
+                                            <div style={{ fontSize: '0.7rem', color: textMuted }}>{item.desc}</div>
                                         </div>
                                     </div>
                                 ))}
                             </div>
 
-                            <button type="submit" disabled={notifEnviando || !notifViajeId || !notifDesc.trim()} style={{ background: notifEnviando || !notifViajeId || !notifDesc.trim() ? '#1e293b' : '#dc2626', color: notifEnviando || !notifViajeId || !notifDesc.trim() ? '#475569' : '#fff', border: 'none', borderRadius: '10px', padding: '0.9rem', fontWeight: 700, fontSize: '0.95rem', cursor: notifEnviando || !notifViajeId || !notifDesc.trim() ? 'not-allowed' : 'pointer', transition: 'all 0.2s' }}>
-                                🔔 {notifEnviando ? 'Enviando...' : 'Enviar notificación'}
+                            <button type="submit" className="action-btn"
+                                disabled={notifEnviando || !notifViajeId || !notifDesc.trim()}
+                                style={{
+                                    background: (notifEnviando || !notifViajeId || !notifDesc.trim()) ? surfaceHi : '#dc2626',
+                                    color:      (notifEnviando || !notifViajeId || !notifDesc.trim()) ? textMuted  : '#fff',
+                                    border:     (notifEnviando || !notifViajeId || !notifDesc.trim()) ? `1px solid ${border}` : 'none',
+                                    borderRadius: '9px', padding: '0.88rem',
+                                    fontWeight: 700, fontSize: '0.9rem', cursor: (!notifViajeId || !notifDesc.trim()) ? 'not-allowed' : 'pointer',
+                                    fontFamily: "'Outfit', sans-serif",
+                                }}>
+                                {notifEnviando ? 'Enviando...' : 'Enviar notificación'}
                             </button>
                         </form>
                     </div>
                 )}
 
-                {/* ── Tab Escanear QR ── */}
+                {/* ── Tab: ESCANEAR ── */}
                 {tab === 'escanear' && (
                     <div>
-                        <div style={{ color: '#94a3b8', fontSize: '0.82rem', fontWeight: 600, marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                            Validar abordaje con QR
-                        </div>
+                        <p style={sectionTitle}>Validar abordaje con QR</p>
 
-                        <select value={scanViajeId} onChange={e => setScanViajeId(e.target.value)} style={{ ...inputStyle, marginBottom: '1rem' }}>
-                            <option value="">— Todos los viajes —</option>
+                        <select value={scanViajeId} onChange={e => setScanViajeId(e.target.value)} className="cond-input" style={{ ...inputStyle, marginBottom: '1rem' }}>
+                            <option value="">Todos los viajes</option>
                             {viajes.filter(v => v.estado !== 'completado' && v.estado !== 'cancelado').map(v => (
                                 <option key={v.id} value={v.id}>{v.origen} → {v.destino} · {v.buses?.placa}</option>
                             ))}
                         </select>
 
                         {scanResultado && (
-                            <div style={{ padding: '1rem', marginBottom: '1rem', borderRadius: '12px', textAlign: 'center', background: 'rgba(59,130,246,0.12)', border: '1px solid #1e40af', color: '#93c5fd' }}>
-                                <div style={{ fontSize: '1.75rem', marginBottom: '0.4rem' }}>📷</div>
-                                <div style={{ fontWeight: 700, fontSize: '0.92rem' }}>{scanResultado.mensaje}</div>
-                                <button onClick={reanudarScanner} style={{ marginTop: '0.85rem', background: tema.color, color: '#fff', border: 'none', borderRadius: '8px', padding: '0.55rem 1.25rem', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem' }}>
-                                    📷 Escanear siguiente
+                            <div style={{
+                                padding: '1.1rem', marginBottom: '1rem', borderRadius: '12px', textAlign: 'center',
+                                background: scanResultado.tipo === 'ok' ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)',
+                                border: `1px solid ${scanResultado.tipo === 'ok' ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`,
+                            }}>
+                                <div style={{ fontSize: '1.75rem', marginBottom: '0.4rem' }}>
+                                    {scanResultado.tipo === 'ok' ? '✅' : '❌'}
+                                </div>
+                                <div style={{ color: scanResultado.tipo === 'ok' ? '#6ee7b7' : '#fca5a5', fontWeight: 700, fontSize: '0.88rem' }}>
+                                    {scanResultado.mensaje}
+                                </div>
+                                <button className="action-btn" onClick={reanudarScanner} style={{
+                                    marginTop: '0.85rem', background: empresaColor, color: '#fff',
+                                    border: 'none', borderRadius: '8px', padding: '0.55rem 1.25rem',
+                                    cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem',
+                                    fontFamily: "'Outfit', sans-serif",
+                                }}>
+                                    Escanear siguiente
                                 </button>
                             </div>
                         )}
 
-                        <div style={{ background: '#0d1a2e', borderRadius: '14px', border: `1px solid ${tema.color}25`, overflow: 'hidden', marginBottom: '1.25rem' }}>
-                            <div style={{ padding: '0.75rem 1rem', background: tema.bg, borderBottom: `1px solid ${tema.color}20`, fontSize: '0.75rem', color: '#64748b' }}>
-                                📷 Apunta la cámara al código QR del boleto
+                        {/* Scanner container with animated scan line */}
+                        <div style={{ background: surface, borderRadius: '12px', border: `1px solid ${border}`, overflow: 'hidden', marginBottom: '1.25rem' }}>
+                            <div style={{ padding: '0.7rem 1rem', borderBottom: `1px solid ${border}`, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <span style={{ width: 6, height: 6, borderRadius: '50%', background: scannerActivo ? '#10b981' : textMuted, display: 'inline-block', transition: 'background 0.3s' }} />
+                                <span style={{ fontSize: '0.72rem', color: textMuted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                                    {scannerActivo ? 'Cámara activa' : 'Esperando cámara'}
+                                </span>
                             </div>
-                            <div id="qr-lector-conductor" style={{ padding: '0.5rem' }} />
+                            <div style={{ position: 'relative' }}>
+                                {scannerActivo && (
+                                    <div style={{
+                                        position: 'absolute', left: '10%', right: '10%', height: '2px',
+                                        background: `linear-gradient(90deg, transparent, ${empresaColor}, transparent)`,
+                                        zIndex: 10, pointerEvents: 'none',
+                                        animation: 'scanMove 2.5s ease-in-out infinite',
+                                    }} />
+                                )}
+                                <div id="qr-lector-conductor" style={{ padding: '0.5rem' }} />
+                            </div>
+                        </div>
+
+                        <div style={{ background: surfaceHi, border: `1px solid ${border}`, borderRadius: '10px', padding: '0.8rem 1rem' }}>
+                            <div style={{ fontSize: '0.72rem', color: textMuted, lineHeight: 1.55 }}>
+                                Apunta la cámara al código QR del boleto del pasajero. El sistema validará automáticamente el abordaje.
+                            </div>
                         </div>
                     </div>
                 )}
 
-                {/* ── Tab Pasajeros ── */}
+                {/* ── Tab: PASAJEROS ── */}
                 {tab === 'pasajeros' && (
                     <div>
-                        <div style={{ color: '#94a3b8', fontSize: '0.82rem', fontWeight: 600, marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                            Lista de pasajeros por viaje
-                        </div>
+                        <p style={sectionTitle}>Lista de pasajeros</p>
 
-                        <select value={listaViajeId} onChange={e => setListaViajeId(e.target.value)} style={{ ...inputStyle, marginBottom: '1.25rem' }}>
-                            <option value="">— Selecciona un viaje —</option>
+                        <select value={listaViajeId} onChange={e => setListaViajeId(e.target.value)} className="cond-input" style={{ ...inputStyle, marginBottom: '1.1rem' }}>
+                            <option value="">Selecciona un viaje</option>
                             {viajes.map(v => (
                                 <option key={v.id} value={v.id}>
                                     {v.origen} → {v.destino} · {new Date(v.fecha_salida).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit', hour12: false })} · {v.buses?.placa}
-                                    {v.estado === 'en_viaje' ? ' 🚌' : v.estado === 'completado' ? ' ✅' : ''}
                                 </option>
                             ))}
                         </select>
 
+                        {!listaViajeId && (
+                            <div style={{ textAlign: 'center', padding: '3rem 1.5rem', background: surfaceHi, borderRadius: '12px', border: `1px solid ${border}` }}>
+                                <div style={{ fontSize: '1.75rem', marginBottom: '0.65rem', opacity: 0.5 }}>👥</div>
+                                <div style={{ color: textSub, fontWeight: 600, fontSize: '0.88rem' }}>Selecciona un viaje</div>
+                                <div style={{ color: textMuted, fontSize: '0.78rem', marginTop: '0.3rem' }}>Para ver la lista de pasajeros.</div>
+                            </div>
+                        )}
+
                         {listaViajeId && (() => {
                             const v = viajes.find(x => x.id === listaViajeId);
-                            const total = listaPasajeros.length;
                             return (
                                 <div>
+                                    {/* Viaje info + stats */}
                                     {v && (
-                                        <div style={{ background: '#0d1a2e', border: `1px solid ${tema.color}25`, borderRadius: '10px', padding: '0.85rem 1.1rem', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-                                            <div>
-                                                <div style={{ fontWeight: 700, color: '#f1f5f9', fontSize: '0.92rem' }}>{v.origen} → {v.destino}</div>
-                                                <div style={{ color: '#64748b', fontSize: '0.73rem', marginTop: '0.15rem' }}>🚍 {v.buses?.placa} · {new Date(v.fecha_salida).toLocaleString('es-BO')}</div>
+                                        <div style={{ background: surface, border: `1px solid ${border}`, borderRadius: '10px', padding: '0.85rem 1.1rem', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem' }}>
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div style={{ fontWeight: 700, color: '#f1f5f9', fontSize: '0.92rem', letterSpacing: '-0.01em' }}>{v.origen} → {v.destino}</div>
+                                                <div style={{ color: textMuted, fontSize: '0.72rem', marginTop: '0.2rem' }}>
+                                                    {v.buses?.placa} · {new Date(v.fecha_salida).toLocaleString('es-BO')}
+                                                </div>
                                             </div>
-                                            <div style={{ textAlign: 'right' }}>
-                                                <div style={{ fontSize: '1.3rem', fontWeight: 800, color: tema.acento }}>{total}</div>
-                                                <div style={{ fontSize: '0.65rem', color: '#64748b' }}>pasajeros</div>
+                                            <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                                                <div style={{ fontSize: '1.4rem', fontWeight: 800, color: empresaColor, lineHeight: 1 }}>{listaPasajeros.length}</div>
+                                                <div style={{ fontSize: '0.62rem', color: textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: '0.1rem' }}>pasajeros</div>
                                             </div>
                                         </div>
                                     )}
 
                                     {listaPasajeros.length === 0 ? (
-                                        <div style={{ textAlign: 'center', color: '#475569', padding: '2.5rem', background: '#0d1a2e', borderRadius: '10px', border: '1px solid #1e293b' }}>
-                                            Sin pasajeros registrados para este viaje.
+                                        <div style={{ textAlign: 'center', color: textMuted, padding: '2.5rem', background: surfaceHi, borderRadius: '10px', border: `1px solid ${border}` }}>
+                                            Sin pasajeros registrados.
                                         </div>
                                     ) : (
-                                        <div style={{ background: '#0d1a2e', borderRadius: '12px', border: '1px solid #1e293b', overflow: 'hidden' }}>
-                                            <div style={{ display: 'grid', gridTemplateColumns: '52px 1fr auto', gap: '0.5rem', padding: '0.55rem 1rem', background: tema.bg, borderBottom: `1px solid ${tema.color}15` }}>
+                                        <div style={{ background: surface, borderRadius: '12px', border: `1px solid ${border}`, overflow: 'hidden' }}>
+                                            {/* Header row */}
+                                            <div style={{ display: 'grid', gridTemplateColumns: '44px 1fr 80px', gap: '0.75rem', padding: '0.5rem 0.9rem', borderBottom: `1px solid ${border}` }}>
                                                 {['Asiento', 'Pasajero', 'CI'].map(h => (
-                                                    <div key={h} style={{ fontSize: '0.65rem', color: '#475569', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</div>
+                                                    <div key={h} style={{ fontSize: '0.62rem', color: textMuted, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em' }}>{h}</div>
                                                 ))}
                                             </div>
                                             {listaPasajeros.map((p, i) => (
-                                                <div key={i} style={{ display: 'grid', gridTemplateColumns: '52px 1fr auto', gap: '0.5rem', padding: '0.65rem 1rem', borderBottom: '1px solid #1e293b', background: i % 2 === 0 ? 'transparent' : 'rgba(15,23,42,0.3)', alignItems: 'center' }}>
-                                                    <div style={{ color: tema.acento, fontWeight: 800, fontSize: '0.88rem' }}>{p.asiento}</div>
-                                                    <div>
-                                                        <div style={{ color: '#f1f5f9', fontSize: '0.85rem', fontWeight: 500 }}>{p.nombre}</div>
-                                                        <div style={{ color: '#475569', fontSize: '0.7rem' }}>{p.telefono}</div>
+                                                <div key={i} style={{
+                                                    display: 'grid', gridTemplateColumns: '44px 1fr 80px',
+                                                    gap: '0.75rem', padding: '0.65rem 0.9rem', alignItems: 'center',
+                                                    borderBottom: i < listaPasajeros.length - 1 ? `1px solid ${border}` : 'none',
+                                                    background: i % 2 === 0 ? 'transparent' : `${surfaceHi}60`,
+                                                }}>
+                                                    <div style={{
+                                                        fontFamily: 'ui-monospace, monospace', fontSize: '0.78rem', fontWeight: 700,
+                                                        color: empresaColor, background: `${empresaColor}14`,
+                                                        padding: '0.2rem 0', borderRadius: '5px', textAlign: 'center',
+                                                    }}>
+                                                        {p.asiento}
                                                     </div>
-                                                    <div style={{ color: '#94a3b8', fontSize: '0.78rem' }}>{p.ci}</div>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', minWidth: 0 }}>
+                                                        <InitialsAvatar name={p.nombre} color={empresaColor} />
+                                                        <div style={{ minWidth: 0 }}>
+                                                            <div style={{ color: '#e2e8f0', fontSize: '0.83rem', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.nombre}</div>
+                                                            {p.telefono && <div style={{ color: textMuted, fontSize: '0.7rem' }}>{p.telefono}</div>}
+                                                        </div>
+                                                    </div>
+                                                    <div style={{ color: textSub, fontSize: '0.75rem', fontFamily: 'ui-monospace, monospace' }}>{p.ci}</div>
                                                 </div>
                                             ))}
-                                            <div style={{ padding: '0.65rem 1rem', background: tema.bg, borderTop: `1px solid ${tema.color}15`, fontSize: '0.75rem', color: '#64748b' }}>
-                                                Total: <strong style={{ color: '#f1f5f9' }}>{total}</strong> pasajero(s)
+                                            <div style={{ padding: '0.6rem 0.9rem', borderTop: `1px solid ${border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <span style={{ fontSize: '0.72rem', color: textMuted }}>
+                                                    Total: <strong style={{ color: textSub }}>{listaPasajeros.length}</strong> pasajero(s)
+                                                </span>
+                                                <button className="action-btn" onClick={() => getReservasViaje(listaViajeId).then(setListaPasajeros)} style={{ background: 'transparent', border: `1px solid ${border}`, color: textMuted, padding: '0.28rem 0.65rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.72rem', fontFamily: "'Outfit', sans-serif" }}>
+                                                    Actualizar
+                                                </button>
                                             </div>
                                         </div>
                                     )}
-
-                                    <button onClick={() => getReservasViaje(listaViajeId).then(setListaPasajeros)} style={{ marginTop: '0.85rem', width: '100%', background: `${tema.color}12`, border: `1px solid ${tema.color}30`, color: tema.acento, borderRadius: '8px', padding: '0.6rem', cursor: 'pointer', fontSize: '0.8rem' }}>
-                                        🔄 Actualizar lista
-                                    </button>
                                 </div>
                             );
                         })()}
-
-                        {!listaViajeId && (
-                            <div style={{ textAlign: 'center', color: '#475569', padding: '3rem 2rem', background: '#0d1a2e', borderRadius: '12px', border: '1px solid #1e293b' }}>
-                                <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>👥</div>
-                                Selecciona un viaje para ver la lista.
-                            </div>
-                        )}
                     </div>
                 )}
 
                 </div>
             </main>
 
-            {/* Bottom Nav Bar */}
+            {/* ── Bottom nav (mobile) ─────────────────────────────────────── */}
             <div className="conductor-tab-bar-bottom" style={{
                 position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 40,
-                background: 'linear-gradient(180deg, #020203 0%, #2b3542 100%)',
-                backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
-                borderTop: '1px solid rgba(255,255,255,0.12)',
-                display: 'none', justifyContent: 'space-around', alignItems: 'center',
-                padding: '0.4rem 0.4rem calc(0.4rem + env(safe-area-inset-bottom, 0px)) 0.4rem',
+                background: 'rgba(8,15,26,0.95)',
+                backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+                borderTop: `1px solid ${border}`,
+                display: 'none', justifyContent: 'space-around', alignItems: 'stretch',
+                padding: `0.35rem 0.25rem calc(0.35rem + env(safe-area-inset-bottom, 0px)) 0.25rem`,
             }}>
                 {TABS.map(t => {
                     const activo = tab === t.id;
-                    const itemColor = activo ? (empresaTextColor || '#ffffff') : '#64748b';
                     return (
                         <button key={t.id} onClick={() => setTab(t.id)} style={{
-                            background: activo ? empresaColor : 'transparent', border: 'none', borderRadius: '10px',
+                            background: 'transparent', border: 'none', borderRadius: '10px',
                             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                            gap: '0.1rem', flex: 1, padding: '0.44rem 0.2rem', margin: '0 0.2rem', cursor: 'pointer',
-                            color: itemColor, boxShadow: activo ? `0 3px 10px ${empresaColor}30` : 'none',
-                            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                            gap: '0.18rem', flex: 1, padding: '0.45rem 0.2rem', cursor: 'pointer',
+                            color: activo ? empresaColor : '#475569',
+                            transition: 'color 0.18s',
+                            position: 'relative',
                         }}>
-                            <t.icon color={itemColor} size={17} />
-                            <span style={{ fontSize: '0.53rem', fontWeight: activo ? 800 : 500, color: itemColor, fontFamily: "'Outfit', sans-serif", textTransform: 'uppercase', letterSpacing: '0.04em', marginTop: '0.08rem' }}>{t.label}</span>
+                            {activo && (
+                                <span style={{ position: 'absolute', top: 0, left: '20%', right: '20%', height: '2px', borderRadius: '0 0 3px 3px', background: empresaColor }} />
+                            )}
+                            <t.icon color={activo ? empresaColor : '#475569'} size={18} />
+                            <span style={{ fontSize: '0.52rem', fontWeight: activo ? 700 : 500, fontFamily: "'Outfit', sans-serif", textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                                {t.label}
+                            </span>
                         </button>
                     );
                 })}
