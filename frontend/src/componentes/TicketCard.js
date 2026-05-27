@@ -1,5 +1,5 @@
 import React from 'react';
-import { QRCodeSVG } from 'qrcode.react';
+import { QRCodeCanvas } from 'qrcode.react';
 
 const TEMAS_EMPRESA = {
     "Andino":     { c1:'#4CD964', c2:'#FFD700', c3:'#121212', bg:'#131C16' },
@@ -206,7 +206,7 @@ const TicketCard = ({ boleto, te, logoSrc, empresaNombre, isMobile = false }) =>
 
                 {/* QR flotante */}
                 <div style={{ position: 'absolute', right: s(16), bottom: s(16), zIndex: 20, background: 'white', padding: s(5), borderRadius: s(8), border: '2.5px solid #111', boxShadow: '0 2px 10px rgba(0,0,0,0.22)' }}>
-                    <QRCodeSVG value={qrVal} size={s(80)} level="M" />
+                    <QRCodeCanvas value={qrVal} size={s(80)} level="M" />
                 </div>
             </div>
 
@@ -255,7 +255,7 @@ const TicketCard = ({ boleto, te, logoSrc, empresaNombre, isMobile = false }) =>
                             <p style={{ margin: 0, fontSize: s(40), fontWeight: 900, lineHeight: 1, ...txt2 }}>{boleto.asiento}</p>
                         </div>
                         <div style={{ background: 'white', padding: s(5), borderRadius: s(6), border: '2px solid #111', boxShadow: '0 1px 6px rgba(0,0,0,0.2)' }}>
-                            <QRCodeSVG value={qrVal} size={s(72)} level="M" />
+                            <QRCodeCanvas value={qrVal} size={s(72)} level="M" />
                         </div>
                     </div>
                 </div>

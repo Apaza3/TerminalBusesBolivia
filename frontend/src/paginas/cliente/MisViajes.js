@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contextos/AuthContext';
 import { useDepartamento } from '../../contextos/DepartamentoContext';
-import { obtenerBoletos } from '../../data/mockStorage';
+import { obtenerBoletos, obtenerReservas } from '../../data/mockStorage';
 import { getReservasByUsuario, updateReservaEstado } from '../../servicios/api';
 import { QRCodeSVG } from 'qrcode.react';
 import TicketCard, { getTemaEmpresa, getLogoEmpresa } from '../../componentes/TicketCard';
@@ -295,9 +295,16 @@ const MisViajes = () => {
     const ahora = new Date();
 
     const cargar = useCallback(async () => {
-        if (!perfil?.id) return;
-        const data = await getReservasByUsuario(perfil.id);
-        setReservas(data);
+        // Supabase
+        const remota = perfil?.id ? await getReservasByUsuario(perfil.id) : [];
+        // localStorage — filtrar por CI del perfil
+        const local = perfil?.ci
+            ? (obtenerReservas() || []).filter(r => r.pasajeroCI === perfil.ci)
+            : [];
+        // Fusionar sin duplicados por id
+        const ids = new Set(remota.map(r => r.id));
+        const combinadas = [...remota, ...local.filter(r => !ids.has(r.id))];
+        setReservas(combinadas);
     }, [perfil]);
 
     useEffect(() => {
