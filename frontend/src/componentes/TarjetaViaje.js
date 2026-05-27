@@ -253,8 +253,7 @@ const TarjetaViaje = ({ viaje, onSeleccionar }) => {
                 boxShadow: hov && ds.canBook
                     ? `0 6px 32px ${dest.color}45, 0 0 0 1px ${dest.color}18`
                     : '0 2px 14px rgba(0,0,0,0.45)',
-                opacity: ds.label === 'Partió' ? 0.38 : ds.canBook ? 1 : 0.62,
-                filter: ds.label === 'Partió' ? 'grayscale(85%)' : 'none',
+                opacity: ds.label === 'Partió' ? 0.32 : ds.canBook ? 1 : 0.62,
                 cursor: ds.canBook ? 'pointer' : 'default',
             }}
             onClick={() => ds.canBook ? onSeleccionar?.(viaje) : undefined}
