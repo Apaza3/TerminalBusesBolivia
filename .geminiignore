@@ -1,0 +1,10 @@
+node_modules/
+dist/
+build/
+*.log
+*.png
+*.jpg
+*.pdf
+.env
+.git/
+mockStorage.js
