@@ -29,11 +29,11 @@ const PagoQRMovil = () => {
             if (data.estado && data.estado !== 'pendiente') setEstado(data.estado);
             // enrich viaje info from reserva if URL params incomplete
             setViajeInfo(prev => ({
-                origen: data.origen || prev.origen,
-                destino: data.destino || prev.destino,
-                fecha: data.fecha_salida || prev.fecha,
-                monto: data.precio_total || prev.monto,
-                empresa: data.sucursal?.nombre || data.empresa || prev.empresa,
+                origen: data.viajes?.origen || prev.origen,
+                destino: data.viajes?.destino || prev.destino,
+                fecha: data.viajes?.fecha_salida || prev.fecha,
+                monto: data.monto || prev.monto,
+                empresa: data.viajes?.sucursales?.nombre || prev.empresa,
             }));
         }).catch(() => {});
     }, [token]); // eslint-disable-line
