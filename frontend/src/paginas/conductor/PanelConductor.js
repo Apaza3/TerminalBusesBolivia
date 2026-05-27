@@ -9,6 +9,8 @@ import {
     getTripulacionByUsuario, getViajesConductor,
     getReservasViaje, updateViajeEstado,
 } from '../../servicios/api';
+import { supabase } from '../../servicios/supabase';
+import { API_BASE } from '../../config';
 import FragmentoDept from '../../componentes/FragmentoDept';
 import gsap from 'gsap';
 
@@ -114,6 +116,7 @@ const PanelConductor = () => {
     const [scanResultado,  setScanResultado]  = useState(null);
     const [scanViajeId,    setScanViajeId]    = useState('');
     const [scannerActivo,  setScannerActivo]  = useState(false);
+    const [scanValidando,  setScanValidando]  = useState(false);
 
     const [listaViajeId,  setListaViajeId]  = useState('');
     const [listaPasajeros,setListaPasajeros]= useState([]);
@@ -140,10 +143,37 @@ const PanelConductor = () => {
         return activos.length > 0 ? activos[activos.length - 1].id : '';
     }, []);
 
+    // Parsea "8h 30min" | "2h" | "45min" → minutos
+    const parseDuracion = (texto) => {
+        if (!texto) return 0;
+        const h = texto.match(/(\d+)\s*h/);
+        const m = texto.match(/(\d+)\s*min/);
+        return (h ? parseInt(h[1]) * 60 : 0) + (m ? parseInt(m[1]) : 0);
+    };
+
     const cargarViajes = useCallback(async () => {
         if (!tripulacionId) return;
         const data   = await getViajesConductor(tripulacionId, 1);
         const sorted = [...data].sort((a, b) => new Date(a.fecha_salida) - new Date(b.fecha_salida));
+        const ahora  = Date.now();
+
+        // Auto-estado por tiempo — independiente del botón del conductor
+        for (const v of sorted) {
+            const tSalida   = new Date(v.fecha_salida).getTime();
+            const durMin    = parseDuracion(v.duracion_estimada);
+            const tLlegada  = tSalida + durMin * 60 * 1000;
+
+            if ((v.estado === 'programado' || v.estado === 'autorizado') && ahora >= tSalida) {
+                // Pasó la hora de salida → iniciar automáticamente
+                await updateViajeEstado(v.id, 'en_viaje');
+                v.estado = 'en_viaje';
+            } else if (v.estado === 'en_viaje' && durMin > 0 && ahora >= tLlegada) {
+                // Pasó el tiempo estimado de llegada → completar automáticamente
+                await updateViajeEstado(v.id, 'completado');
+                v.estado = 'completado';
+            }
+        }
+
         setViajes(sorted);
         setCargando(false);
         const actual = detectarViajeActual(sorted);
@@ -190,6 +220,98 @@ const PanelConductor = () => {
         );
     }, [tab]);
 
+    // QR scanner con validación real contra backend
+    const validarQR = useCallback(async (texto) => {
+        setScanValidando(true);
+
+        // Intentar parsear JSON del QR (formato: { id, asiento, ci } o { qr_codigo, ... })
+        let qrCodigo = texto.trim();
+        let qrData   = null;
+        try {
+            qrData   = JSON.parse(texto);
+            // TicketGenerator embeds: { id: "reservaId-asiento", asiento, ci }
+            // Flujo Supabase embeds: qr_codigo = UUID
+            qrCodigo = qrData.qr_codigo || qrData.id || texto.trim();
+        } catch { /* texto plano = código directo */ }
+
+        if (!scanViajeId) {
+            setScanResultado({ tipo: 'error', mensaje: 'Selecciona el viaje antes de escanear.' });
+            setScanValidando(false);
+            return;
+        }
+
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+
+            const resp = await fetch(`${API_BASE}/conductor/validar-qr`, {
+                method:  'POST',
+                headers: {
+                    'Content-Type':  'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify({ qr_codigo: qrCodigo, viaje_id: scanViajeId }),
+            });
+
+            const json = await resp.json();
+
+            if (resp.ok && json.valido) {
+                setScanResultado({
+                    tipo:    'ok',
+                    mensaje: `Abordaje válido`,
+                    pasajero: json.pasajero,
+                    ci:       json.ci,
+                    asiento:  json.asiento,
+                });
+                // Refrescar lista de pasajeros del viaje escaneado
+                getReservasViaje(scanViajeId).then(ps =>
+                    setPasajerosMap(prev => ({ ...prev, [scanViajeId]: ps }))
+                );
+            } else if (resp.status === 409 && json.boleto) {
+                const b = json.boleto;
+                setScanResultado({
+                    tipo:    'yaAbordado',
+                    mensaje: json.error,
+                    pasajero: b.pasajero_nombre,
+                    ci:       b.pasajero_ci,
+                    asiento:  b.asiento,
+                });
+            } else if (resp.status === 409) {
+                setScanResultado({ tipo: 'error', mensaje: json.error });
+            } else if (resp.status === 404) {
+                // Boleto no está en Supabase (flujo mockStorage) — mostrar info del QR
+                if (qrData) {
+                    setScanResultado({
+                        tipo:    'info',
+                        mensaje: 'Boleto local (sin verificación backend)',
+                        pasajero: qrData.nombre || qrData.ci || '—',
+                        ci:       qrData.ci   || '—',
+                        asiento:  qrData.asiento || '—',
+                    });
+                } else {
+                    setScanResultado({ tipo: 'error', mensaje: 'Boleto no encontrado.' });
+                }
+            } else {
+                setScanResultado({ tipo: 'error', mensaje: json.error || 'Error al validar.' });
+            }
+        } catch (err) {
+            // Sin backend — mostrar datos del QR directamente
+            if (qrData) {
+                setScanResultado({
+                    tipo:    'info',
+                    mensaje: 'Sin conexión al backend',
+                    pasajero: qrData.nombre || qrData.ci || '—',
+                    ci:       qrData.ci   || '—',
+                    asiento:  qrData.asiento || '—',
+                });
+            } else {
+                setScanResultado({ tipo: 'error', mensaje: `Sin conexión: ${err.message}` });
+            }
+        }
+
+        setScanValidando(false);
+    }, [scanViajeId]); // eslint-disable-line
+
     // QR scanner
     useEffect(() => {
         if (tab !== 'escanear') return;
@@ -201,9 +323,9 @@ const PanelConductor = () => {
         );
         scanner.render(
             (texto) => {
-                setScanResultado({ tipo: 'ok', mensaje: `QR leído: ${texto.trim().slice(0, 60)}` });
                 scanner.pause(true);
                 setScannerActivo(false);
+                validarQR(texto);
             },
             () => {}
         );
@@ -214,7 +336,7 @@ const PanelConductor = () => {
             scannerRef.current = null;
             setScannerActivo(false);
         };
-    }, [tab]);
+    }, [tab]); // eslint-disable-line
 
     const reanudarScanner = () => {
         setScanResultado(null);
@@ -696,28 +818,49 @@ const PanelConductor = () => {
                             ))}
                         </select>
 
-                        {scanResultado && (
-                            <div style={{
-                                padding: '1.1rem', marginBottom: '1rem', borderRadius: '12px', textAlign: 'center',
-                                background: scanResultado.tipo === 'ok' ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)',
-                                border: `1px solid ${scanResultado.tipo === 'ok' ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`,
-                            }}>
-                                <div style={{ fontSize: '1.75rem', marginBottom: '0.4rem' }}>
-                                    {scanResultado.tipo === 'ok' ? '✅' : '❌'}
-                                </div>
-                                <div style={{ color: scanResultado.tipo === 'ok' ? '#6ee7b7' : '#fca5a5', fontWeight: 700, fontSize: '0.88rem' }}>
-                                    {scanResultado.mensaje}
-                                </div>
-                                <button className="action-btn" onClick={reanudarScanner} style={{
-                                    marginTop: '0.85rem', background: empresaColor, color: '#fff',
-                                    border: 'none', borderRadius: '8px', padding: '0.55rem 1.25rem',
-                                    cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem',
-                                    fontFamily: "'Outfit', sans-serif",
-                                }}>
-                                    Escanear siguiente
-                                </button>
+                        {scanValidando && (
+                            <div style={{ padding: '1.25rem', textAlign: 'center', background: `${empresaColor}10`, border: `1px solid ${empresaColor}30`, borderRadius: '12px', marginBottom: '1rem' }}>
+                                <div style={{ fontSize: '1.5rem', marginBottom: '0.4rem' }}>⏳</div>
+                                <div style={{ color: empresaColor, fontWeight: 600, fontSize: '0.85rem' }}>Verificando boleto...</div>
                             </div>
                         )}
+
+                        {!scanValidando && scanResultado && (() => {
+                            const colores = {
+                                ok:        { bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.3)', text: '#6ee7b7', icon: '✅' },
+                                yaAbordado:{ bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.3)', text: '#fbbf24', icon: '⚠️' },
+                                info:      { bg: `${empresaColor}10`,     border: `${empresaColor}30`,    text: empresaColor, icon: 'ℹ️' },
+                                error:     { bg: 'rgba(239,68,68,0.08)',  border: 'rgba(239,68,68,0.3)',  text: '#fca5a5', icon: '❌' },
+                            };
+                            const c = colores[scanResultado.tipo] || colores.error;
+                            return (
+                                <div style={{ padding: '1.1rem', marginBottom: '1rem', borderRadius: '12px', background: c.bg, border: `1px solid ${c.border}` }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: scanResultado.pasajero ? '0.75rem' : 0 }}>
+                                        <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>{c.icon}</span>
+                                        <span style={{ color: c.text, fontWeight: 700, fontSize: '0.88rem' }}>{scanResultado.mensaje}</span>
+                                    </div>
+                                    {scanResultado.pasajero && (
+                                        <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: '8px', padding: '0.65rem 0.9rem', display: 'grid', gridTemplateColumns: '44px 1fr', gap: '0.5rem 0.75rem', alignItems: 'center' }}>
+                                            <div style={{ fontFamily: 'ui-monospace, monospace', fontSize: '0.85rem', fontWeight: 800, color: empresaColor, background: `${empresaColor}18`, borderRadius: '5px', textAlign: 'center', padding: '0.25rem 0' }}>
+                                                {scanResultado.asiento}
+                                            </div>
+                                            <div>
+                                                <div style={{ color: '#f1f5f9', fontWeight: 600, fontSize: '0.85rem' }}>{scanResultado.pasajero}</div>
+                                                <div style={{ color: textMuted, fontSize: '0.72rem' }}>CI: {scanResultado.ci}</div>
+                                            </div>
+                                        </div>
+                                    )}
+                                    <button className="action-btn" onClick={reanudarScanner} style={{
+                                        marginTop: '0.85rem', width: '100%', background: empresaColor, color: '#fff',
+                                        border: 'none', borderRadius: '8px', padding: '0.55rem 1rem',
+                                        cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem',
+                                        fontFamily: "'Outfit', sans-serif",
+                                    }}>
+                                        Escanear siguiente
+                                    </button>
+                                </div>
+                            );
+                        })()}
 
                         {/* Scanner container with animated scan line */}
                         <div style={{ background: surface, borderRadius: '12px', border: `1px solid ${border}`, overflow: 'hidden', marginBottom: '1.25rem' }}>
@@ -775,20 +918,40 @@ const PanelConductor = () => {
                             return (
                                 <div>
                                     {/* Viaje info + stats */}
-                                    {v && (
-                                        <div style={{ background: surface, border: `1px solid ${border}`, borderRadius: '10px', padding: '0.85rem 1.1rem', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem' }}>
-                                            <div style={{ flex: 1, minWidth: 0 }}>
-                                                <div style={{ fontWeight: 700, color: '#f1f5f9', fontSize: '0.92rem', letterSpacing: '-0.01em' }}>{v.origen} → {v.destino}</div>
-                                                <div style={{ color: textMuted, fontSize: '0.72rem', marginTop: '0.2rem' }}>
-                                                    {v.buses?.placa} · {new Date(v.fecha_salida).toLocaleString('es-BO')}
+                                    {v && (() => {
+                                        const abordados = listaPasajeros.filter(p => p.abordado).length;
+                                        const total     = listaPasajeros.length;
+                                        return (
+                                            <div style={{ background: surface, border: `1px solid ${border}`, borderRadius: '10px', padding: '0.85rem 1.1rem', marginBottom: '1rem' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', marginBottom: total > 0 ? '0.65rem' : 0 }}>
+                                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                                        <div style={{ fontWeight: 700, color: '#f1f5f9', fontSize: '0.92rem', letterSpacing: '-0.01em' }}>{v.origen} → {v.destino}</div>
+                                                        <div style={{ color: textMuted, fontSize: '0.72rem', marginTop: '0.2rem' }}>
+                                                            {v.buses?.placa} · {new Date(v.fecha_salida).toLocaleString('es-BO')}
+                                                        </div>
+                                                    </div>
+                                                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                                                        <div style={{ fontSize: '1.3rem', fontWeight: 800, lineHeight: 1 }}>
+                                                            <span style={{ color: '#10b981' }}>{abordados}</span>
+                                                            <span style={{ color: textMuted, fontSize: '0.9rem' }}>/{total}</span>
+                                                        </div>
+                                                        <div style={{ fontSize: '0.58rem', color: textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: '0.1rem' }}>abordaron</div>
+                                                    </div>
                                                 </div>
+                                                {total > 0 && (
+                                                    <div style={{ height: 4, background: border, borderRadius: '999px', overflow: 'hidden' }}>
+                                                        <div style={{
+                                                            height: '100%',
+                                                            width: `${Math.round((abordados / total) * 100)}%`,
+                                                            background: '#10b981',
+                                                            borderRadius: '999px',
+                                                            transition: 'width 0.6s ease',
+                                                        }} />
+                                                    </div>
+                                                )}
                                             </div>
-                                            <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                                                <div style={{ fontSize: '1.4rem', fontWeight: 800, color: empresaColor, lineHeight: 1 }}>{listaPasajeros.length}</div>
-                                                <div style={{ fontSize: '0.62rem', color: textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: '0.1rem' }}>pasajeros</div>
-                                            </div>
-                                        </div>
-                                    )}
+                                        );
+                                    })()}
 
                                     {listaPasajeros.length === 0 ? (
                                         <div style={{ textAlign: 'center', color: textMuted, padding: '2.5rem', background: surfaceHi, borderRadius: '10px', border: `1px solid ${border}` }}>
@@ -804,26 +967,36 @@ const PanelConductor = () => {
                                             </div>
                                             {listaPasajeros.map((p, i) => (
                                                 <div key={i} style={{
-                                                    display: 'grid', gridTemplateColumns: '44px 1fr 80px',
-                                                    gap: '0.75rem', padding: '0.65rem 0.9rem', alignItems: 'center',
+                                                    display: 'grid', gridTemplateColumns: '44px 1fr auto',
+                                                    gap: '0.6rem', padding: '0.6rem 0.9rem', alignItems: 'center',
                                                     borderBottom: i < listaPasajeros.length - 1 ? `1px solid ${border}` : 'none',
-                                                    background: i % 2 === 0 ? 'transparent' : `${surfaceHi}60`,
+                                                    background: p.abordado ? 'rgba(16,185,129,0.04)' : (i % 2 === 0 ? 'transparent' : `${surfaceHi}60`),
+                                                    transition: 'background 0.3s',
                                                 }}>
                                                     <div style={{
                                                         fontFamily: 'ui-monospace, monospace', fontSize: '0.78rem', fontWeight: 700,
-                                                        color: empresaColor, background: `${empresaColor}14`,
+                                                        color: p.abordado ? '#6ee7b7' : empresaColor,
+                                                        background: p.abordado ? 'rgba(16,185,129,0.12)' : `${empresaColor}14`,
                                                         padding: '0.2rem 0', borderRadius: '5px', textAlign: 'center',
                                                     }}>
                                                         {p.asiento}
                                                     </div>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', minWidth: 0 }}>
-                                                        <InitialsAvatar name={p.nombre} color={empresaColor} />
+                                                        <InitialsAvatar name={p.nombre} color={p.abordado ? '#10b981' : empresaColor} />
                                                         <div style={{ minWidth: 0 }}>
                                                             <div style={{ color: '#e2e8f0', fontSize: '0.83rem', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.nombre}</div>
-                                                            {p.telefono && <div style={{ color: textMuted, fontSize: '0.7rem' }}>{p.telefono}</div>}
+                                                            <div style={{ color: textMuted, fontSize: '0.7rem' }}>{p.ci}{p.telefono && p.telefono !== '—' ? ` · ${p.telefono}` : ''}</div>
                                                         </div>
                                                     </div>
-                                                    <div style={{ color: textSub, fontSize: '0.75rem', fontFamily: 'ui-monospace, monospace' }}>{p.ci}</div>
+                                                    <span style={{
+                                                        fontSize: '0.62rem', fontWeight: 700, padding: '0.18rem 0.55rem',
+                                                        borderRadius: '999px', whiteSpace: 'nowrap',
+                                                        background: p.abordado ? 'rgba(16,185,129,0.12)' : 'rgba(255,255,255,0.04)',
+                                                        border: `1px solid ${p.abordado ? 'rgba(16,185,129,0.35)' : border}`,
+                                                        color: p.abordado ? '#6ee7b7' : textMuted,
+                                                    }}>
+                                                        {p.abordado ? '✓ Abordó' : 'Pendiente'}
+                                                    </span>
                                                 </div>
                                             ))}
                                             <div style={{ padding: '0.6rem 0.9rem', borderTop: `1px solid ${border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

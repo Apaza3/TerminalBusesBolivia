@@ -14,11 +14,12 @@ router.get('/buscar', async (req, res) => {
         .select(`
             id,
             asiento,
-            nombre_pasajero,
-            ci_pasajero,
-            precio_individual,
+            pasajero_nombre,
+            pasajero_ci,
+            precio,
             estado,
-            qr_token,
+            qr_codigo,
+            abordado_en,
             creado_en,
             reserva:reservas(id, monto, estado, creado_en, metodo_pago,
                 viaje:viajes(origen, destino, fecha_salida, precio, estado, anden,
@@ -186,20 +187,18 @@ router.post('/', optionalAuth, async (req, res) => {
     if (reservaError) return res.status(500).json({ error: reservaError.message });
 
     // Crear boletos (uno por pasajero)
+    // Columnas según schema: pasajero_nombre, pasajero_ci, precio, estado:'emitido'
     const boletosInsert = pasajerosConMonto.map(p => ({
-        reserva_id: reserva.id,
+        reserva_id:      reserva.id,
         viaje_id,
-        asiento: p.asiento,
-        nombre_pasajero: p.nombre,
-        ci_pasajero: p.ci,
-        email_pasajero: p.email || null,
-        precio_individual: p.precio,
-        declaraciones: {
-            equipaje_maletas: p.equipaje_maletas || 0,
-            equipaje_peso_kg: p.equipaje_peso_kg || 0,
-            equipaje_cobro_extra: p.cobroEquipaje || 0
-        },
-        estado: 'pendiente'
+        asiento:         p.asiento,
+        pasajero_nombre: p.nombre,
+        pasajero_ci:     p.ci,
+        precio:          p.precio,
+        equipaje_maletas:    p.equipaje_maletas    || 0,
+        equipaje_peso_kg:    p.equipaje_peso_kg    || 0,
+        equipaje_cobro_extra: p.cobroEquipaje      || 0,
+        estado: 'emitido',
     }));
 
     const { data: boletos, error: boletosError } = await supabaseAdmin
@@ -233,10 +232,10 @@ router.post('/', optionalAuth, async (req, res) => {
         .select()
         .single();
 
-    // Pago en efectivo → confirmar reserva y boletos de inmediato
+    // Pago en efectivo → confirmar reserva; boletos ya están en 'emitido' (válido para abordaje)
     if (estadoPago === 'confirmado') {
         await supabaseAdmin.from('reservas').update({ estado: 'pagado' }).eq('id', reserva.id);
-        await supabaseAdmin.from('boletos').update({ estado: 'autorizado' }).eq('reserva_id', reserva.id);
+        // Estado 'emitido' ya es el correcto para boletos listos para abordar
         reserva.estado = 'pagado';
     }
 

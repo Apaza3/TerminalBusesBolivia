@@ -110,55 +110,62 @@ router.post('/mantenimiento', requireAuth, SOLO_CONDUCTOR, async (req, res) => {
 });
 
 // POST /api/conductor/validar-qr — escanear QR de boleto para abordaje
+// Body: { qr_codigo: string, viaje_id: uuid }
 router.post('/validar-qr', requireAuth, SOLO_CONDUCTOR, async (req, res) => {
-    const { qr_token, viaje_id } = req.body;
-    if (!qr_token || !viaje_id) {
-        return res.status(400).json({ error: 'qr_token y viaje_id son requeridos.' });
+    const { qr_codigo, viaje_id } = req.body;
+    if (!qr_codigo || !viaje_id) {
+        return res.status(400).json({ error: 'qr_codigo y viaje_id son requeridos.' });
     }
 
-    const { data: boleto } = await supabaseAdmin
+    // qr_codigo = UUID del boleto (generado por trigger generar_numero_boleto)
+    const { data: boleto, error: bErr } = await supabaseAdmin
         .from('boletos')
-        .select('id, qr_token, nombre_pasajero, ci_pasajero, precio_individual, estado, asiento, viaje_id')
-        .eq('qr_token', qr_token)
+        .select('id, qr_codigo, pasajero_nombre, pasajero_ci, precio, estado, asiento, viaje_id')
+        .eq('qr_codigo', qr_codigo)
         .single();
 
-    if (!boleto) return res.status(404).json({ error: 'Boleto no encontrado.' });
+    if (bErr || !boleto) return res.status(404).json({ error: 'Boleto no encontrado.' });
     if (boleto.viaje_id !== viaje_id) {
-        return res.status(409).json({ error: 'El boleto no corresponde a este viaje.' });
+        return res.status(409).json({ error: 'El boleto no corresponde a este viaje.', boleto });
     }
-    if (boleto.estado === 'validado') {
+    if (boleto.estado === 'abordado') {
         return res.status(409).json({ error: 'Pasajero ya abordó.', boleto });
     }
     if (boleto.estado === 'cancelado') {
         return res.status(409).json({ error: 'Boleto cancelado.', boleto });
     }
-    if (boleto.estado === 'pendiente') {
-        return res.status(409).json({ error: 'Boleto pendiente de pago.', boleto });
-    }
+    // 'emitido' es el único estado válido para abordar
 
-    // Marcar como validado (abordado)
-    await supabaseAdmin
+    // Marcar como abordado
+    const { error: updErr } = await supabaseAdmin
         .from('boletos')
         .update({
-            estado: 'validado',
-            escaneado_en: new Date().toISOString(),
-            escaneado_por: req.usuario.id
+            estado:     'abordado',
+            abordado_en: new Date().toISOString(),
         })
         .eq('id', boleto.id);
 
-    // Marcar asiento como ocupado
+    if (updErr) return res.status(500).json({ error: updErr.message });
+
+    // Marcar asiento como ocupado en asientos_viaje
     await supabaseAdmin
         .from('asientos_viaje')
-        .update({ estado: 'ocupado', presente: true })
+        .update({ estado: 'ocupado' })
         .eq('viaje_id', viaje_id)
         .eq('numero_asiento', boleto.asiento);
 
+    req.app.locals.broadcast('pasajero_abordado', {
+        viajeId: viaje_id,
+        asiento: boleto.asiento,
+        pasajero: boleto.pasajero_nombre,
+    });
+
     res.json({
         valido: true,
-        pasajero: boleto.nombre_pasajero,
-        ci: boleto.ci_pasajero,
-        asiento: boleto.asiento,
-        qr_token: boleto.qr_token
+        pasajero: boleto.pasajero_nombre,
+        ci:       boleto.pasajero_ci,
+        asiento:  boleto.asiento,
+        qr_codigo: boleto.qr_codigo,
     });
 });
 

@@ -240,22 +240,29 @@ export async function getViajesConductor(tripulacionId, dias = 1) {
 }
 
 export async function getReservasViaje(viajeId) {
+  // Consultar tabla boletos directamente para obtener estado por asiento (emitido / abordado / cancelado)
   const { data, error } = await supabase
-    .from('reservas')
-    .select('id,asientos,estado,email_cliente,telefono_cliente,metodo_pago,usuarios(nombre_completo,ci)')
+    .from('boletos')
+    .select(`
+      id, asiento, pasajero_nombre, pasajero_ci, precio,
+      qr_codigo, estado, abordado_en,
+      reservas!reserva_id(email_cliente, telefono_cliente)
+    `)
     .eq('viaje_id', viajeId)
-    .neq('estado', 'cancelada');
+    .neq('estado', 'cancelado')
+    .order('asiento');
   if (error) { console.error('getReservasViaje:', error.message); return []; }
-  return (data || [])
-    .flatMap(r => (r.asientos || []).map(asiento => ({
-      asiento,
-      nombre: r.usuarios?.nombre_completo || r.email_cliente || 'Pasajero',
-      ci:     r.usuarios?.ci || '—',
-      telefono: r.telefono_cliente || '—',
-      email:    r.email_cliente || '',
-      reservaId: r.id,
-    })))
-    .sort((a, b) => a.asiento.localeCompare(b.asiento, undefined, { numeric: true }));
+  return (data || []).map(b => ({
+    reservaId: b.id,
+    asiento:   b.asiento,
+    nombre:    b.pasajero_nombre || 'Pasajero',
+    ci:        b.pasajero_ci    || '—',
+    telefono:  b.reservas?.telefono_cliente || '—',
+    email:     b.reservas?.email_cliente   || '',
+    qr_codigo: b.qr_codigo,
+    abordado:  b.estado === 'abordado',
+    abordado_en: b.abordado_en || null,
+  }));
 }
 
 export async function updateViajeEstado(viajeId, estado) {
