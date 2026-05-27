@@ -825,16 +825,16 @@ const SucursalDetalle = () => {
                                 .sd-dia-footer { font-size: 0.82rem !important; justify-content: center !important; }
                             }
                         `}</style>
-                        <div className="sd-dia-bar" style={{ marginBottom: '1.1rem', padding: '1rem', background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(8px)', border: `1px solid rgba(255,255,255,0.10)`, borderRadius: 16 }}>
-                            {/* Título + ver todos */}
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                                <span className="sd-dia-titulo" style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.14em', color: '#e2e8f0' }}>
+                        <div className="sd-dia-bar" style={{ marginBottom: '1.1rem', padding: '1rem 1rem 0.85rem', background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(8px)', border: `1px solid rgba(255,255,255,0.10)`, borderRadius: 16 }}>
+                            {/* Título centrado + ver todos */}
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.85rem', position: 'relative' }}>
+                                <span className="sd-dia-titulo" style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.14em', color: '#e2e8f0', textAlign: 'center' }}>
                                     📅 ¿QUÉ DÍA QUIERES VIAJAR?
                                 </span>
                                 {diaFiltro && (
                                     <button
                                         onClick={() => seleccionarDia(diaFiltro)}
-                                        style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: '0.73rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#f1f5f9', background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 8, padding: '0.3rem 0.9rem', cursor: 'pointer' }}
+                                        style={{ position: 'absolute', right: 0, fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: '0.73rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#f1f5f9', background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 8, padding: '0.3rem 0.9rem', cursor: 'pointer' }}
                                     >
                                         ✕ VER TODOS
                                     </button>
@@ -846,13 +846,11 @@ const SucursalDetalle = () => {
                                     const esHoy   = idx === 0;
                                     const activo  = diaFiltro === fecha;
                                     const tieneViajes = viajesTotales.some(v => (v.fecha_salida || '').startsWith(fecha));
-                                    // Color fijo para "Hoy": ámbar cálido
-                                    const HOY_COLOR = '#f59e0b';
-                                    const bgActivo  = esHoy ? HOY_COLOR : color;
-                                    const bdActivo  = esHoy ? HOY_COLOR : color;
-                                    const bgNormal  = esHoy && tieneViajes ? 'rgba(245,158,11,0.14)' : tieneViajes ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.02)';
-                                    const bdNormal  = esHoy && tieneViajes ? 'rgba(245,158,11,0.5)'  : tieneViajes ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.06)';
-                                    const txtNormal = esHoy && tieneViajes ? '#fbbf24' : tieneViajes ? '#cbd5e1' : '#334155';
+                                    // HOY: borde color empresa siempre visible
+                                    const bgActivo  = color;
+                                    const bgNormal  = esHoy ? `${color}15` : tieneViajes ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.02)';
+                                    const bdNormal  = esHoy ? `2px solid ${color}` : tieneViajes ? '1px solid rgba(255,255,255,0.16)' : '1px solid rgba(255,255,255,0.05)';
+                                    const txtNormal = esHoy ? color : tieneViajes ? '#cbd5e1' : '#334155';
                                     return (
                                         <button
                                             key={fecha}
@@ -862,7 +860,7 @@ const SucursalDetalle = () => {
                                             style={{
                                                 display: 'flex', flexDirection: 'column', alignItems: 'center',
                                                 padding: '0.45rem 0.7rem', borderRadius: 10, minWidth: 56,
-                                                border: activo ? `2px solid ${bdActivo}` : `1px solid ${bdNormal}`,
+                                                border: activo ? `2px solid ${color}` : bdNormal,
                                                 background: activo ? bgActivo : bgNormal,
                                                 color: activo ? '#fff' : txtNormal,
                                                 cursor: tieneViajes ? 'pointer' : 'default',
@@ -881,7 +879,7 @@ const SucursalDetalle = () => {
                             <div className="sd-dia-footer" style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginTop: '0.65rem', fontFamily: "'Rajdhani', sans-serif", fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#64748b' }}>
                                 <strong style={{ color: '#94a3b8' }}>{viajesFiltrados.length}</strong>
                                 <span>VIAJE{viajesFiltrados.length !== 1 ? 'S' : ''} DISPONIBLE{viajesFiltrados.length !== 1 ? 'S' : ''}</span>
-                                {diaFiltro && <><span>·</span><span style={{ color: diasSemana[0]?.fecha === diaFiltro ? '#f59e0b' : color }}>{(diasSemana.find(d => d.fecha === diaFiltro)?.label || '').toUpperCase()}</span></>}
+                                {diaFiltro && <><span>·</span><span style={{ color }}>{(diasSemana.find(d => d.fecha === diaFiltro)?.label || '').toUpperCase()}</span></>}
                                 {sinFiltroFecha && <><span>·</span><span style={{ color: '#f59e0b' }}>TODOS LOS HORARIOS</span></>}
                             </div>
                         </div>
