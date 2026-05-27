@@ -107,7 +107,7 @@ const BoletoCard = ({ b, col, onEmail, emailEnviado }) => {
 const TicketMini = ({ boleto, nombreEmpresa, onExpand }) => {
     const te      = getTemaEmpresa(nombreEmpresa);
     const logoSrc = getLogoEmpresa(nombreEmpresa);
-    const W = 600, H = 360, SCALE = 0.36;
+    const W = 600, H = 260, SCALE = 0.36;
     return (
         <div
             onClick={onExpand}
@@ -117,7 +117,7 @@ const TicketMini = ({ boleto, nombreEmpresa, onExpand }) => {
             onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
         >
             <div style={{ width: W, height: H, transform: `scale(${SCALE})`, transformOrigin: 'top left', pointerEvents: 'none' }}>
-                <TicketCard boleto={boleto} te={te} logoSrc={logoSrc} empresaNombre={nombreEmpresa} />
+                <TicketCard boleto={boleto} te={te} logoSrc={logoSrc} empresaNombre={nombreEmpresa} isMobile={true} />
             </div>
         </div>
     );

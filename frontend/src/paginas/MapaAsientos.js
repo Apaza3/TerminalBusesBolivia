@@ -2546,7 +2546,7 @@ const MapaAsientos = () => {
 
                                 {/* Hidden desktop cards — captura PDF en mobile */}
                                 {isMobile && (
-                                    <div style={{ position: 'fixed', left: '-9999px', top: 0, pointerEvents: 'none', zIndex: -1 }}>
+                                    <div style={{ position: 'fixed', left: '-9999px', top: 0, pointerEvents: 'none', zIndex: -1, width: '800px' }}>
                                         {boletos.map(boleto => (
                                             <div key={`pdf-${boleto.id}`} ref={el => { if (el) boletoRefsDesktopMap.current[boleto.id] = el; }}>
                                                 <TicketCard boleto={boleto} te={te} logoSrc={qrLogoSrc} empresaNombre={empresaNombre} isMobile={false} />
