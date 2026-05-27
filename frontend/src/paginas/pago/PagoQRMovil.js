@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { updateReservaEstado, getReservaById } from '../../servicios/api';
+import { supabase } from '../../servicios/supabase';
 import gsap from 'gsap';
 import { getTemaEmpresa } from '../../componentes/TicketCard';
 import { getEmpresaLogo } from '../../utils/assets';
@@ -13,6 +14,7 @@ const PagoQRMovil = () => {
     const token = searchParams.get('token') || '';
     const [estado, setEstado] = useState('pendiente');
     const [procesando, setProcesando] = useState(false);
+    const [debugInfo, setDebugInfo] = useState('');
 
     const [viajeInfo, setViajeInfo] = useState({
         origen: searchParams.get('origen') || '—',
@@ -23,11 +25,15 @@ const PagoQRMovil = () => {
     });
 
     useEffect(() => {
-        if (!token) { setEstado('expirado'); return; }
-        getReservaById(token).then(data => {
-            if (!data) { setEstado('expirado'); return; }
+        if (!token) { setDebugInfo('token vacio'); setEstado('expirado'); return; }
+        supabase.from('reservas')
+          .select('id,estado,monto,metodo_pago,asientos,viaje_id,email_cliente,creado_en,viajes(origen,destino,fecha_salida,sucursales(nombre))')
+          .eq('id', token)
+          .single()
+          .then(({ data, error }) => {
+            if (error) { setDebugInfo(`err: ${error.code} ${error.message}`); setEstado('expirado'); return; }
+            if (!data)  { setDebugInfo('data null sin error'); setEstado('expirado'); return; }
             if (data.estado && data.estado !== 'pendiente') setEstado(data.estado);
-            // enrich viaje info from reserva if URL params incomplete
             setViajeInfo(prev => ({
                 origen: data.viajes?.origen || prev.origen,
                 destino: data.viajes?.destino || prev.destino,
@@ -35,7 +41,7 @@ const PagoQRMovil = () => {
                 monto: data.monto || prev.monto,
                 empresa: data.viajes?.sucursales?.nombre || prev.empresa,
             }));
-        }).catch(() => {});
+          }).catch(e => { setDebugInfo(`catch: ${e.message}`); setEstado('expirado'); });
     }, [token]); // eslint-disable-line
 
     useEffect(() => {
@@ -233,6 +239,7 @@ const PagoQRMovil = () => {
                             <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>⏱️</div>
                             <div style={{ color: '#fca5a5', fontWeight: 700, fontSize: '1.1rem' }}>Enlace expirado</div>
                             <div style={{ color: '#64748b', fontSize: '0.82rem', marginTop: '0.5rem', textTransform: 'none' }}>Este código QR ya no es válido. Solicita uno nuevo.</div>
+                            {debugInfo && <div style={{ color: '#f59e0b', fontSize: '0.7rem', marginTop: '0.75rem', fontFamily: 'monospace', wordBreak: 'break-all' }}>DEBUG: {debugInfo} | token: {token?.substring(0,8) || 'EMPTY'}</div>}
                         </div>
                     )}
 
