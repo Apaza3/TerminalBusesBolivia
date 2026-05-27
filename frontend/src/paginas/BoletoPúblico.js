@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import gsap from 'gsap';
 import { getTemaEmpresa, getLogoEmpresa } from '../componentes/TicketCard';
-import { obtenerBoletoPorId } from '../data/mockStorage';
+import { validarBoleto, obtenerBoletos } from '../data/mockStorage';
 
 const TIPO_INFO = {
     infante:   { label: 'NIÑO',     color: '#f59e0b' },
@@ -44,16 +44,11 @@ const BoletoPúblico = () => {
 
     useEffect(() => {
         if (!id) return;
-        const b = obtenerBoletoPorId(id);
+        const b = validarBoleto(id);
         if (b) {
             setBoleto(b);
-            // Si hay reservaId obtener todos los boletos de la reserva
-            if (b.reservaId) {
-                const { obtenerBoletos } = require('../data/mockStorage');
-                setBoletos(obtenerBoletos(b.reservaId));
-            } else {
-                setBoletos([b]);
-            }
+            const todos = b.reservaId ? obtenerBoletos(b.reservaId) : [b];
+            setBoletos(todos);
         } else {
             // Reconstruir desde URL params
             setBoleto({ id, pasajeroNombre: nombre, pasajeroCI: ci, asiento, origen, destino, fechaSalida: fecha, empresa, busPlaca: placa, precio, esInfante: tipo === 'infante', lleva1000: tipo === 'dinero', llevaAnimales: tipo === 'animales', llevaProductos: tipo === 'productos' });

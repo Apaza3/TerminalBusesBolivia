@@ -120,7 +120,7 @@ const TicketCard = ({ boleto, te, logoSrc, empresaNombre, isMobile = false }) =>
           </svg>;
 
     return (
-        <div style={{ position: 'relative', width: '100%', height: s(360), display: 'flex', background: '#f4f6f8', borderRadius: s(24), overflow: 'hidden', boxShadow: '0 4px 28px rgba(0,0,0,0.25)', color: '#111', fontFamily: FONT }}>
+        <div style={{ position: 'relative', width: '100%', minHeight: s(360), display: 'flex', background: '#f4f6f8', borderRadius: s(24), overflow: 'hidden', boxShadow: '0 4px 28px rgba(0,0,0,0.25)', color: '#111', fontFamily: FONT }}>
 
             {/* ── Franja superior ── */}
             <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: s(18), background: TIPO_HDR.color, zIndex: 5 }}>
@@ -132,10 +132,10 @@ const TicketCard = ({ boleto, te, logoSrc, empresaNombre, isMobile = false }) =>
             </div>
 
             {/* ══ SECCIÓN PRINCIPAL ══ */}
-            <div style={{ width: isMobile ? '100%' : '72%', padding: `${s(30)}px ${s(20)}px ${s(16)}px ${s(30)}px`, position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ width: isMobile ? '100%' : '72%', padding: `${s(30)}px ${s(20)}px ${s(16)}px ${s(30)}px`, position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'column' }}>
 
                 {/* Marca de agua */}
-                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', zIndex: 0 }}>
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', zIndex: 0, overflow: 'hidden' }}>
                     <WatermarkLogo size={s(300)} />
                 </div>
 

@@ -123,30 +123,10 @@ const TicketMini = ({ boleto, nombreEmpresa, onExpand }) => {
     );
 };
 
-const TicketModalFullscreen = ({ boleto, nombreEmpresa, onClose }) => {
-    const te      = getTemaEmpresa(nombreEmpresa);
-    const logoSrc = getLogoEmpresa(nombreEmpresa);
-    return (
-        <div
-            style={{ position: 'fixed', inset: 0, zIndex: 2000, background: 'rgba(0,0,0,0.88)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
-            onClick={onClose}
-        >
-            <div style={{ width: '100%', maxWidth: 640, position: 'relative' }} onClick={e => e.stopPropagation()}>
-                <button
-                    onClick={onClose}
-                    style={{ position: 'absolute', top: -16, right: -16, zIndex: 10, background: '#dc2626', border: 'none', borderRadius: '50%', width: 36, height: 36, color: '#fff', cursor: 'pointer', fontSize: '1.1rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 10px rgba(220,38,38,0.5)' }}
-                >✕</button>
-                <TicketCard boleto={boleto} te={te} logoSrc={logoSrc} empresaNombre={nombreEmpresa} />
-            </div>
-        </div>
-    );
-};
-
 const TarjetaReserva = ({ reserva, ahora, tema, onCancelar }) => {
     const navigate = useNavigate();
     const [expandido, setExpandido] = useState(false);
     const [emailEnv,  setEmailEnv]  = useState({});
-    const [boletoExpandido, setBoletoExpandido] = useState(null);
     const ms = useCountdown(reserva.expiraEn);
 
     const pendiente  = reserva.estado === 'pendiente_documentos' || reserva.estado === 'pendiente_efectivo';
@@ -257,14 +237,9 @@ const TarjetaReserva = ({ reserva, ahora, tema, onCancelar }) => {
             {expandido && !completado && bls.length > 0 && (
                 <div style={{ padding: '0 1.2rem 1.2rem', display: 'flex', flexWrap: 'wrap', gap: '1rem', background: col.dark, justifyContent: 'center' }}>
                     {bls.map(b => (
-                        <TicketMini key={b.id} boleto={b} nombreEmpresa={nombreEmpresa} onExpand={() => setBoletoExpandido(b)} />
+                        <TicketMini key={b.id} boleto={b} nombreEmpresa={nombreEmpresa} onExpand={() => window.open('/boleto?id=' + b.id, '_blank')} />
                     ))}
                 </div>
-            )}
-
-            {/* ── Modal fullscreen boleto ── */}
-            {boletoExpandido && (
-                <TicketModalFullscreen boleto={boletoExpandido} nombreEmpresa={nombreEmpresa} onClose={() => setBoletoExpandido(null)} />
             )}
 
             {/* ── Calificar ── */}
