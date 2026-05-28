@@ -27,8 +27,12 @@ export const obtenerKPIsGlobales = async ({ sucursalId, empresaNombre, periodo =
         if (!viajeIds.length) return { ingresosTotales: 0, totalBoletos: 0, totalViajes: 0, rutasActivas };
 
         const [{ data: reservas }, { data: boletos }] = await Promise.all([
-            supabase.from('reservas').select('monto').in('viaje_id', viajeIds).not('estado', 'in', '("cancelada","cancelado")'),
-            supabase.from('boletos').select('id').in('viaje_id', viajeIds).neq('estado', 'cancelado'),
+            supabase.from('reservas').select('monto,viajes!inner(sucursal_id,fecha_salida)')
+                .in('viajes.sucursal_id', ids).gte('viajes.fecha_salida', desde)
+                .not('estado', 'in', '("cancelada","cancelado")'),
+            supabase.from('boletos').select('id,viajes!inner(sucursal_id,fecha_salida)')
+                .in('viajes.sucursal_id', ids).gte('viajes.fecha_salida', desde)
+                .neq('estado', 'cancelado'),
         ]);
 
         return {
@@ -47,27 +51,28 @@ export const obtenerRendimientoRutas = async ({ sucursalId, empresaNombre } = {}
         if (!ids.length) return [];
 
         const desde = new Date(Date.now() - 30 * 86400000).toISOString();
+
+        // Boletos con viaje embebido !inner — filtra por sucursal sin array gigante
+        const { data: boletos } = await supabase
+            .from('boletos')
+            .select('precio_individual,viajes!inner(origen,destino,sucursal_id,fecha_salida)')
+            .in('viajes.sucursal_id', ids)
+            .neq('estado', 'cancelado')
+            .gte('viajes.fecha_salida', desde);
+
+        // Viajes por ruta (conteo)
         const { data: viajes } = await supabase
-            .from('viajes').select('id,origen,destino,precio')
+            .from('viajes').select('origen,destino')
             .in('sucursal_id', ids).gte('fecha_salida', desde);
 
-        if (!viajes?.length) return [];
-
-        const viajeIds = viajes.map(v => v.id);
-        const { data: boletos } = await supabase
-            .from('boletos').select('viaje_id,precio_individual')
-            .in('viaje_id', viajeIds).neq('estado', 'cancelado');
-
         const rutas = {};
-        for (const v of viajes) {
+        for (const v of (viajes || [])) {
             const key = `${v.origen}→${v.destino}`;
             if (!rutas[key]) rutas[key] = { ruta: key, origen: v.origen, destino: v.destino, viajes: 0, ingresos: 0, boletos: 0, incidencias: 0 };
             rutas[key].viajes++;
         }
         for (const b of (boletos || [])) {
-            const v = viajes.find(vv => vv.id === b.viaje_id);
-            if (!v) continue;
-            const key = `${v.origen}→${v.destino}`;
+            const key = `${b.viajes?.origen}→${b.viajes?.destino}`;
             if (rutas[key]) { rutas[key].ingresos += Number(b.precio_individual) || 0; rutas[key].boletos++; }
         }
 
