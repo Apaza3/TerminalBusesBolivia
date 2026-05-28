@@ -326,17 +326,6 @@ export async function crearReservaSupabase({
     .from('reservas').insert(insertObj).select('id').single();
   if (error) { console.error('crearReservaSupabase:', error.message); return { error: error.message }; }
 
-  // Enviar email de confirmación si ya está pagado (sin bloquear)
-  if (emailCliente && estado === 'pagado') {
-    const SURL = process.env.REACT_APP_SUPABASE_URL || '';
-    const AKEY = process.env.REACT_APP_SUPABASE_ANON_KEY || '';
-    fetch(`${SURL}/functions/v1/send-booking-confirmation`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': AKEY },
-      body:    JSON.stringify({ email: emailCliente, nombre, origen, destino, fechaSalida, asientos, monto, empresa, reservaId: data.id }),
-    }).catch(() => {});
-  }
-
   return { id: data.id };
 }
 

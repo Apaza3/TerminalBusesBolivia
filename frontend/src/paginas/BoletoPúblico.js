@@ -100,7 +100,10 @@ const BoletoPúblico = () => {
         return () => ctx.revert();
     }, [boleto]);
 
-    const qrData = (b) => JSON.stringify({ id: b.id, asiento: b.asiento, nombre: b.pasajeroNombre, ci: b.pasajeroCI, origen: b.origen || origen, destino: b.destino || destino, salida: b.fechaSalida || fecha, placa: b.busPlaca || placa });
+    const qrData = (b) => {
+        const tok = b.qrToken || b.qr_token || b.id;
+        return tok ? `${window.location.origin}/boleto?token=${tok}` : window.location.href;
+    };
 
     if (!qrToken) return (
         <div style={{ minHeight: '100vh', background: '#07111f', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontFamily: 'Rajdhani, sans-serif' }}>
@@ -197,8 +200,13 @@ const BoletoPúblico = () => {
                             </div>
                             <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                                 {/* QR */}
-                                <div style={{ background: '#ffffff', padding: 6, borderRadius: 8, flexShrink: 0, border: `2px solid ${ti.color}` }}>
-                                    <QRCodeSVG value={qrData(b)} size={90} level="M" />
+                                <div style={{ position: 'relative', background: '#ffffff', padding: 6, borderRadius: 8, flexShrink: 0, border: `2px solid ${ti.color}` }}>
+                                    <QRCodeSVG value={qrData(b)} size={90} level="H" />
+                                    {b.estado === 'validado' && (
+                                        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.62)', borderRadius: 6 }}>
+                                            <span style={{ color: '#fff', fontWeight: 900, fontSize: '0.55rem', letterSpacing: '0.1em', textAlign: 'center', textTransform: 'uppercase', padding: '2px 4px', background: '#dc2626', borderRadius: 4 }}>USADO</span>
+                                        </div>
+                                    )}
                                 </div>
                                 {/* Info pasajero */}
                                 <div style={{ flex: 1 }}>

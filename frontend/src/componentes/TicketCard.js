@@ -96,7 +96,8 @@ const TicketCard = ({ boleto, te, logoSrc, empresaNombre, isMobile = false }) =>
 
     const fechaStr = formatFecha(boleto.fechaSalida);
     const horaStr  = formatHora(boleto.fechaSalida);
-    const qrVal    = JSON.stringify({ id: boleto.id, reservaId: boleto.reservaId, pasajero: boleto.pasajeroNombre, ci: boleto.pasajeroCI, asiento: boleto.asiento, origen: boleto.origen, destino: boleto.destino, salida: boleto.fechaSalida, bus: boleto.busPlaca });
+    const rawToken = boleto.qrToken || boleto.qr_token || boleto.id || '';
+    const qrVal    = rawToken ? `${window.location.origin}/boleto?token=${rawToken}` : `${window.location.origin}/boleto`;
     const boletoNum = (boleto.id || '').slice(-10).toUpperCase();
 
     const s = v => Math.round(v * sc);
@@ -206,7 +207,7 @@ const TicketCard = ({ boleto, te, logoSrc, empresaNombre, isMobile = false }) =>
 
                 {/* QR flotante */}
                 <div style={{ position: 'absolute', right: s(16), bottom: s(16), zIndex: 20, background: 'white', padding: s(5), borderRadius: s(8), border: '2.5px solid #111', boxShadow: '0 2px 10px rgba(0,0,0,0.22)' }}>
-                    <QRCodeCanvas value={qrVal} size={s(80)} level="M" />
+                    <QRCodeCanvas value={qrVal} size={s(80)} level="H" />
                 </div>
             </div>
 
@@ -255,7 +256,7 @@ const TicketCard = ({ boleto, te, logoSrc, empresaNombre, isMobile = false }) =>
                             <p style={{ margin: 0, fontSize: s(40), fontWeight: 900, lineHeight: 1, ...txt2 }}>{boleto.asiento}</p>
                         </div>
                         <div style={{ background: 'white', padding: s(5), borderRadius: s(6), border: '2px solid #111', boxShadow: '0 1px 6px rgba(0,0,0,0.2)' }}>
-                            <QRCodeCanvas value={qrVal} size={s(72)} level="M" />
+                            <QRCodeCanvas value={qrVal} size={s(72)} level="H" />
                         </div>
                     </div>
                 </div>

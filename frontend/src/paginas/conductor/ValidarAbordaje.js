@@ -52,10 +52,17 @@ const ValidarAbordaje = () => {
 
     const handleValidar = async (e) => {
         e?.preventDefault();
-        const id = inputQR.trim();
-        if (!id) return;
+        const raw = inputQR.trim();
+        if (!raw) return;
 
-        const boleto = await getBoletoPorQR(id);
+        let token = raw;
+        try {
+            const url = new URL(raw);
+            const t = url.searchParams.get('token');
+            if (t) token = t;
+        } catch {}
+
+        const boleto = await getBoletoPorQR(token);
         if (!boleto) {
             setResultado({ tipo: 'error', mensaje: 'Boleto no encontrado. Código inválido.' });
             gsap.from('[data-v="result"]', { scale: 0.95, opacity: 0, duration: 0.3, ease: 'back.out(1.7)' });

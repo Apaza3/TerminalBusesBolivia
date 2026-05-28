@@ -235,7 +235,7 @@ const PanelCajero = () => {
                 horarioSalida:  boleto.fechaSalida,
             });
             setBoletoCreado(reservaCompleta);
-            setBoletosEmitidos(bs || []);
+            setBoletosEmitidos(bs?.boletos || []);
             setPagado(true);
             recargar();
         }
@@ -262,7 +262,7 @@ const PanelCajero = () => {
             horarioSalida:  reserva.fecha_salida || reserva.fechaSalida,
         });
         const email = reserva.email_cliente || null;
-        setAprobados(prev => ({ ...prev, [reservaId]: { boletos: bs, nombreEmpresa: sucursalNombre, email } }));
+        setAprobados(prev => ({ ...prev, [reservaId]: { boletos: bs?.boletos || [], nombreEmpresa: sucursalNombre, email } }));
         if (email) setTimeout(() => alert(`📧 Boletos enviados a ${email}`), 400);
         recargar();
     };
