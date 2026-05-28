@@ -32,7 +32,7 @@ const DashboardAnalitico = () => {
     const [tabActiva, setTabActiva] = useState('trafico');
 
     useEffect(() => {
-        obtenerKPIsGlobales({ periodo }).then(data => setKpis(data));
+        obtenerKPIsGlobales({ sucursalId: perfil?.sucursal_id, periodo }).then(data => setKpis(data));
         setVentasHistorico(obtenerVentasHistorico(periodo === 'semana' ? 7 : periodo === 'trimestre' ? 90 : 30));
     }, [periodo]);
 

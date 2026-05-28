@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../../contextos/AuthContext';
 import { DEPARTAMENTOS } from '../../contextos/DepartamentoContext';
 import {
-    getBusesSucursal, getViajesSucursal, getUsuariosSucursal,
+    getBusesSucursal, getViajesSucursal, getUsuariosEmpresa,
     getReservasSucursal, getViajesHistoricosSucursal,
 } from '../../servicios/api';
 
@@ -57,7 +57,7 @@ const AdminDashboard = () => {
         const [b, v, u, r, h] = await Promise.all([
             getBusesSucursal(perfil.sucursal_id),
             getViajesSucursal(perfil.sucursal_id),
-            getUsuariosSucursal(perfil.sucursal_id),
+            getUsuariosEmpresa(perfil.sucursal_id),
             getReservasSucursal(perfil.sucursal_id),
             getViajesHistoricosSucursal(perfil.sucursal_id, 30),
         ]);
@@ -111,11 +111,6 @@ const AdminDashboard = () => {
     return (
         <div style={{ minHeight: '100vh', color: '#dde5f0', fontFamily: "'Inter', system-ui, sans-serif" }}>
             <div style={{ padding: '1.75rem 2rem' }}>
-
-                {/* DEBUG TEMPORAL */}
-                <div style={{ background: '#1e293b', border: '1px solid #f59e0b', borderRadius: 8, padding: '0.5rem 1rem', marginBottom: '1rem', fontSize: '0.72rem', color: '#fde68a', fontFamily: 'monospace' }}>
-                    sucursal_id: {perfil?.sucursal_id || 'NULL'} · buses: {buses.length} · viajes: {viajes.length} · usuarios: {usuarios.length}
-                </div>
 
                 {/* Título */}
                 <div style={{ marginBottom: '1.75rem' }}>
@@ -274,7 +269,7 @@ const AdminDashboard = () => {
                                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.83rem' }}>
                                     <thead>
                                         <tr style={{ background: '#07111f', borderBottom: `1px solid ${tema.color}12` }}>
-                                            {['Nombre', 'Correo', 'Rol', 'CI', 'Estado'].map(h => (
+                                            {['Nombre', 'Correo', 'Rol', 'Departamento', 'CI', 'Estado'].map(h => (
                                                 <th key={h} style={{ padding: '0.75rem 0.9rem', textAlign: 'left', color: '#475569', fontWeight: 500 }}>{h}</th>
                                             ))}
                                         </tr>
@@ -291,6 +286,7 @@ const AdminDashboard = () => {
                                                     <td style={{ padding: '0.7rem 0.9rem' }}>
                                                         <span style={{ background: rb.bg, color: rb.color, padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 600 }}>{rb.label}</span>
                                                     </td>
+                                                    <td style={{ padding: '0.7rem 0.9rem', color: '#94a3b8', fontSize: '0.78rem' }}>{u.departamento || '—'}</td>
                                                     <td style={{ padding: '0.7rem 0.9rem', color: '#64748b' }}>{u.ci || '—'}</td>
                                                     <td style={{ padding: '0.7rem 0.9rem' }}>
                                                         <span style={{ background: u.activo ? '#14532d22' : '#7f1d1d22', color: u.activo ? '#86efac' : '#fca5a5', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.7rem' }}>

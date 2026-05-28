@@ -105,6 +105,26 @@ export async function getUsuariosSucursal(sucursalId) {
   return (data || []).map(u => ({ ...u, departamento: u.departamentos?.nombre || '' }));
 }
 
+/** Todos los empleados de la misma empresa (por nombre de sucursal) */
+export async function getUsuariosEmpresa(sucursalId) {
+  const { data: suc } = await supabase.from('sucursales').select('nombre').eq('id', sucursalId).single();
+  if (!suc) return getUsuariosSucursal(sucursalId);
+  const { data: sucs } = await supabase.from('sucursales').select('id').eq('nombre', suc.nombre);
+  const ids = (sucs || []).map(s => s.id);
+  const { data, error } = await supabase
+    .from('usuarios')
+    .select('id,email,nombre_completo,ci,telefono,rol,activo,sucursales(nombre),departamentos(nombre)')
+    .in('sucursal_id', ids)
+    .in('rol', ['admin_sucursal', 'cajero', 'conductor'])
+    .order('rol');
+  if (error) { console.error('getUsuariosEmpresa:', error.message); return []; }
+  return (data || []).map(u => ({
+    ...u,
+    departamento: u.departamentos?.nombre || '—',
+    sucursalNombre: u.sucursales?.nombre || '—',
+  }));
+}
+
 export async function getViajesSucursal(sucursalId, fecha) {
   const f = fecha || new Date().toISOString().split('T')[0];
   const { data, error } = await supabase
