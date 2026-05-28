@@ -94,6 +94,21 @@ export async function getBusesSucursal(sucursalId) {
   return data || [];
 }
 
+/** Todos los buses de la empresa (todos los departamentos) con info de departamento */
+export async function getBusesEmpresa(sucursalId) {
+  const { data: suc } = await supabase.from('sucursales').select('nombre').eq('id', sucursalId).single();
+  if (!suc) return getBusesSucursal(sucursalId);
+  const { data: sucs } = await supabase.from('sucursales').select('id').eq('nombre', suc.nombre);
+  const ids = (sucs || []).map(s => s.id);
+  const { data, error } = await supabase
+    .from('buses')
+    .select('id,placa,marca,modelo,capacidad,pisos,columnas,tiene_bano,amenidades,estado,categoria,anio,sucursales!sucursal_id(departamentos(nombre))')
+    .in('sucursal_id', ids)
+    .order('placa');
+  if (error) { console.error('getBusesEmpresa:', error.message); return []; }
+  return (data || []).map(b => ({ ...b, departamento: b.sucursales?.departamentos?.nombre || '—' }));
+}
+
 export async function getUsuariosSucursal(sucursalId) {
   const { data, error } = await supabase
     .from('usuarios')

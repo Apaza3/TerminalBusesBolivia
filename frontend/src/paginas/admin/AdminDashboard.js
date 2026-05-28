@@ -2,9 +2,19 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../../contextos/AuthContext';
 import { DEPARTAMENTOS } from '../../contextos/DepartamentoContext';
 import {
-    getBusesSucursal, getViajesSucursal, getUsuariosEmpresa,
+    getBusesEmpresa, getViajesSucursal, getUsuariosEmpresa,
     getReservasSucursal, getViajesHistoricosSucursal,
 } from '../../servicios/api';
+
+const DEPT_COLORES = {
+  'La Paz':     '#00F0FF', 'Cochabamba': '#7209B7', 'Santa Cruz': '#39FF14',
+  'Oruro':      '#FF6B00', 'Potosí':     '#90E0EF', 'Chuquisaca': '#EF233C',
+  'Tarija':     '#70E000', 'Beni':       '#FEE440', 'Pando':      '#06D6A0',
+};
+const deptBadge = (dept) => {
+  const c = DEPT_COLORES[dept] || '#64748b';
+  return <span style={{ background: c + '22', color: c, border: `1px solid ${c}55`, padding: '0.12rem 0.5rem', borderRadius: 4, fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{dept || '—'}</span>;
+};
 
 const TABS = [
     { id: 'flota',     icon: '🚌', label: 'Flota'      },
@@ -55,7 +65,7 @@ const AdminDashboard = () => {
         if (!perfil?.sucursal_id) return;
         setCargando(true);
         const [b, v, u, r, h] = await Promise.all([
-            getBusesSucursal(perfil.sucursal_id),
+            getBusesEmpresa(perfil.sucursal_id),
             getViajesSucursal(perfil.sucursal_id),
             getUsuariosEmpresa(perfil.sucursal_id),
             getReservasSucursal(perfil.sucursal_id),
@@ -181,7 +191,7 @@ const AdminDashboard = () => {
                                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.87rem' }}>
                                     <thead>
                                         <tr style={{ background: '#07111f', borderBottom: `1px solid ${tema.color}12` }}>
-                                            {['Placa', 'Marca / Modelo', 'Pisos', 'Capacidad', 'Categoría', 'Estado'].map(h => (
+                                            {['Placa', 'Marca / Modelo', 'Departamento', 'Pisos', 'Capacidad', 'Categoría', 'Estado'].map(h => (
                                                 <th key={h} style={{ padding: '0.75rem 0.9rem', textAlign: 'left', color: '#475569', fontWeight: 500 }}>{h}</th>
                                             ))}
                                         </tr>
@@ -193,6 +203,7 @@ const AdminDashboard = () => {
                                                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                                                 <td style={{ padding: '0.75rem 0.9rem', fontWeight: 700, color: tema.acento, fontFamily: 'monospace' }}>{bus.placa}</td>
                                                 <td style={{ padding: '0.75rem 0.9rem', color: '#94a3b8' }}>{[bus.marca, bus.modelo].filter(Boolean).join(' ') || '—'}</td>
+                                                <td style={{ padding: '0.75rem 0.9rem' }}>{deptBadge(bus.departamento)}</td>
                                                 <td style={{ padding: '0.75rem 0.9rem', color: '#94a3b8' }}>{bus.pisos}</td>
                                                 <td style={{ padding: '0.75rem 0.9rem', color: '#94a3b8' }}>{bus.capacidad}</td>
                                                 <td style={{ padding: '0.75rem 0.9rem', color: '#94a3b8', textTransform: 'capitalize' }}>{bus.categoria || '—'}</td>
@@ -286,7 +297,7 @@ const AdminDashboard = () => {
                                                     <td style={{ padding: '0.7rem 0.9rem' }}>
                                                         <span style={{ background: rb.bg, color: rb.color, padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 600 }}>{rb.label}</span>
                                                     </td>
-                                                    <td style={{ padding: '0.7rem 0.9rem', color: '#94a3b8', fontSize: '0.78rem' }}>{u.departamento || '—'}</td>
+                                                    <td style={{ padding: '0.7rem 0.9rem' }}>{deptBadge(u.departamento)}</td>
                                                     <td style={{ padding: '0.7rem 0.9rem', color: '#64748b' }}>{u.ci || '—'}</td>
                                                     <td style={{ padding: '0.7rem 0.9rem' }}>
                                                         <span style={{ background: u.activo ? '#14532d22' : '#7f1d1d22', color: u.activo ? '#86efac' : '#fca5a5', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.7rem' }}>
