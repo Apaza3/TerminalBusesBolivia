@@ -11,79 +11,35 @@ async function getSucursalesEmpresa(empresaNombre) {
 // ── KPIs globales de la empresa ───────────────────────────────────────────────
 export const obtenerKPIsGlobales = async ({ sucursalId, empresaNombre, periodo = 'mes' } = {}) => {
     try {
-        const ids = await getSucursalesEmpresa(empresaNombre);
-        if (!ids.length) return { ingresosTotales: 0, totalBoletos: 0, totalViajes: 0, rutasActivas: 0 };
-
+        if (!empresaNombre) return { ingresosTotales: 0, totalBoletos: 0, totalViajes: 0, rutasActivas: 0 };
         const dias = periodo === 'semana' ? 7 : periodo === 'trimestre' ? 90 : 30;
         const desde = new Date(Date.now() - dias * 86400000).toISOString();
-
-        const { data: viajes } = await supabase
-            .from('viajes').select('id,origen,destino')
-            .in('sucursal_id', ids).gte('fecha_salida', desde);
-
-        const viajeIds = (viajes || []).map(v => v.id);
-        const rutasActivas = new Set((viajes || []).map(v => `${v.origen}-${v.destino}`)).size;
-
-        if (!viajeIds.length) return { ingresosTotales: 0, totalBoletos: 0, totalViajes: 0, rutasActivas };
-
-        const [{ data: reservas }, { data: boletos }] = await Promise.all([
-            supabase.from('reservas').select('monto,viajes!inner(sucursal_id,fecha_salida)')
-                .in('viajes.sucursal_id', ids).gte('viajes.fecha_salida', desde)
-                .not('estado', 'in', '("cancelada","cancelado")'),
-            supabase.from('boletos').select('id,viajes!inner(sucursal_id,fecha_salida)')
-                .in('viajes.sucursal_id', ids).gte('viajes.fecha_salida', desde)
-                .neq('estado', 'cancelado'),
-        ]);
-
-        return {
-            ingresosTotales: (reservas || []).reduce((s, r) => s + (Number(r.monto) || 0), 0),
-            totalBoletos: (boletos || []).length,
-            totalViajes: viajeIds.length,
-            rutasActivas,
-        };
+        const { data, error } = await supabase.rpc('get_kpis_empresa', { p_empresa: empresaNombre, p_desde: desde });
+        if (error) throw error;
+        return data || { ingresosTotales: 0, totalBoletos: 0, totalViajes: 0, rutasActivas: 0 };
     } catch { return { ingresosTotales: 0, totalBoletos: 0, totalViajes: 0, rutasActivas: 0 }; }
 };
 
 // ── Rendimiento por ruta ──────────────────────────────────────────────────────
 export const obtenerRendimientoRutas = async ({ sucursalId, empresaNombre } = {}) => {
     try {
-        const ids = await getSucursalesEmpresa(empresaNombre);
-        if (!ids.length) return [];
-
+        if (!empresaNombre) return [];
         const desde = new Date(Date.now() - 30 * 86400000).toISOString();
-
-        // Boletos con viaje embebido !inner — filtra por sucursal sin array gigante
-        const { data: boletos } = await supabase
-            .from('boletos')
-            .select('precio_individual,viajes!inner(origen,destino,sucursal_id,fecha_salida)')
-            .in('viajes.sucursal_id', ids)
-            .neq('estado', 'cancelado')
-            .gte('viajes.fecha_salida', desde);
-
-        // Viajes por ruta (conteo)
-        const { data: viajes } = await supabase
-            .from('viajes').select('origen,destino')
-            .in('sucursal_id', ids).gte('fecha_salida', desde);
-
-        const rutas = {};
-        for (const v of (viajes || [])) {
-            const key = `${v.origen}→${v.destino}`;
-            if (!rutas[key]) rutas[key] = { ruta: key, origen: v.origen, destino: v.destino, viajes: 0, ingresos: 0, boletos: 0, incidencias: 0 };
-            rutas[key].viajes++;
-        }
-        for (const b of (boletos || [])) {
-            const key = `${b.viajes?.origen}→${b.viajes?.destino}`;
-            if (rutas[key]) { rutas[key].ingresos += Number(b.precio_individual) || 0; rutas[key].boletos++; }
-        }
-
-        return Object.values(rutas).map(r => ({
-            ...r,
-            ingresos:     Math.round(r.ingresos),
-            ocupacion:    r.viajes > 0 ? Math.min(99, Math.round((r.boletos / (r.viajes * 40)) * 100)) : 0,
+        const { data, error } = await supabase.rpc('get_rendimiento_rutas', { p_empresa: empresaNombre, p_desde: desde });
+        if (error) throw error;
+        return (data || []).map(r => ({
+            ruta:         r.ruta,
+            origen:       r.origen,
+            destino:      r.destino,
+            viajes:       Number(r.num_viajes),
+            ingresos:     Math.round(Number(r.ingresos)),
+            boletos:      Number(r.num_boletos),
+            incidencias:  0,
+            ocupacion:    r.num_viajes > 0 ? Math.min(99, Math.round((r.num_boletos / (r.num_viajes * 40)) * 100)) : 0,
             puntualidad:  88 + Math.round(Math.random() * 10),
-            estado:       r.boletos > 30 ? 'alta' : r.boletos > 10 ? 'media' : 'baja',
-            recomendacion: r.boletos > 30 ? 'Ruta rentable — mantener frecuencia' : r.boletos > 10 ? 'Optimizar horarios' : 'Evaluar continuidad',
-        })).sort((a, b) => b.ingresos - a.ingresos).slice(0, 15);
+            estado:       r.num_boletos > 30 ? 'alta' : r.num_boletos > 10 ? 'media' : 'baja',
+            recomendacion: r.num_boletos > 30 ? 'Ruta rentable — mantener frecuencia' : r.num_boletos > 10 ? 'Optimizar horarios' : 'Evaluar continuidad',
+        }));
     } catch { return []; }
 };
 
