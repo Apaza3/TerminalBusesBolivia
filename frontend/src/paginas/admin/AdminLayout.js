@@ -217,10 +217,10 @@ const AdminLayout = () => {
                             ? <img
                                 src={getIconoEmpresa(perfil?.sucursal_nombre)}
                                 alt={perfil?.sucursal_nombre}
-                                style={{ width: '100%', height: 'auto', display: 'block' }}
+                                style={{ width: '100%', height: 'auto', maxHeight: '140px', objectFit: 'cover', display: 'block' }}
                               />
                             : <div style={{
-                                height: '160px',
+                                height: '140px',
                                 background: `linear-gradient(135deg, ${tema.bandera1}55, ${tema.bandera2}38)`,
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 fontSize: '4rem',
