@@ -112,6 +112,11 @@ const AdminDashboard = () => {
         <div style={{ minHeight: '100vh', color: '#dde5f0', fontFamily: "'Inter', system-ui, sans-serif" }}>
             <div style={{ padding: '1.75rem 2rem' }}>
 
+                {/* DEBUG TEMPORAL */}
+                <div style={{ background: '#1e293b', border: '1px solid #f59e0b', borderRadius: 8, padding: '0.5rem 1rem', marginBottom: '1rem', fontSize: '0.72rem', color: '#fde68a', fontFamily: 'monospace' }}>
+                    sucursal_id: {perfil?.sucursal_id || 'NULL'} · buses: {buses.length} · viajes: {viajes.length} · usuarios: {usuarios.length}
+                </div>
+
                 {/* Título */}
                 <div style={{ marginBottom: '1.75rem' }}>
                     <div style={{
