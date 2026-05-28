@@ -2,18 +2,16 @@
 import { supabase } from './supabase';
 
 // ── Helper: IDs de todas las sucursales de la misma empresa ──────────────────
-async function getSucursalesEmpresa(sucursalId) {
-    if (!sucursalId) return [];
-    const { data: suc } = await supabase.from('sucursales').select('nombre').eq('id', sucursalId).single();
-    if (!suc) return [sucursalId];
-    const { data } = await supabase.from('sucursales').select('id').eq('nombre', suc.nombre);
+async function getSucursalesEmpresa(empresaNombre) {
+    if (!empresaNombre) return [];
+    const { data } = await supabase.from('sucursales').select('id').eq('nombre', empresaNombre);
     return (data || []).map(s => s.id);
 }
 
 // ── KPIs globales de la empresa ───────────────────────────────────────────────
-export const obtenerKPIsGlobales = async ({ sucursalId, periodo = 'mes' } = {}) => {
+export const obtenerKPIsGlobales = async ({ sucursalId, empresaNombre, periodo = 'mes' } = {}) => {
     try {
-        const ids = await getSucursalesEmpresa(sucursalId);
+        const ids = await getSucursalesEmpresa(empresaNombre);
         if (!ids.length) return { ingresosTotales: 0, totalBoletos: 0, totalViajes: 0, rutasActivas: 0 };
 
         const dias = periodo === 'semana' ? 7 : periodo === 'trimestre' ? 90 : 30;
@@ -43,9 +41,9 @@ export const obtenerKPIsGlobales = async ({ sucursalId, periodo = 'mes' } = {}) 
 };
 
 // ── Rendimiento por ruta ──────────────────────────────────────────────────────
-export const obtenerRendimientoRutas = async ({ sucursalId } = {}) => {
+export const obtenerRendimientoRutas = async ({ sucursalId, empresaNombre } = {}) => {
     try {
-        const ids = await getSucursalesEmpresa(sucursalId);
+        const ids = await getSucursalesEmpresa(empresaNombre);
         if (!ids.length) return [];
 
         const desde = new Date(Date.now() - 30 * 86400000).toISOString();
