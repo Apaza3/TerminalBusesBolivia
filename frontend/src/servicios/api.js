@@ -144,13 +144,13 @@ export async function getViajesSucursal(sucursalId, fecha) {
   const f = fecha || new Date().toISOString().split('T')[0];
   const { data, error } = await supabase
     .from('viajes')
-    .select('id,origen,destino,fecha_salida,precio,duracion_estimada,estado,anden,buses(id,placa,capacidad)')
+    .select('id,origen,destino,fecha_salida,precio,duracion_estimada,estado,anden,buses(id,placa,capacidad),tripulacion!conductor_id(nombre,ci,rol)')
     .eq('sucursal_id', sucursalId)
     .gte('fecha_salida', `${f}T00:00:00`)
     .lte('fecha_salida', `${f}T23:59:59`)
     .order('fecha_salida');
   if (error) return [];
-  return data || [];
+  return (data || []).map(v => ({ ...v, conductorNombre: v.tripulacion?.nombre || '—', conductorCI: v.tripulacion?.ci || '' }));
 }
 
 export async function getViajesSucursalProximos(sucursalId, dias = 30) {
@@ -158,7 +158,7 @@ export async function getViajesSucursalProximos(sucursalId, dias = 30) {
   const limite = new Date(Date.now() + dias * 86400000).toISOString().split('T')[0];
   const { data, error } = await supabase
     .from('viajes')
-    .select('id,origen,destino,fecha_salida,precio,duracion_estimada,estado,anden,buses(id,placa,capacidad,pisos,tiene_bano,amenidades)')
+    .select('id,origen,destino,fecha_salida,precio,duracion_estimada,estado,anden,buses(id,placa,capacidad,pisos,tiene_bano,amenidades),tripulacion!conductor_id(nombre,ci)')
     .eq('sucursal_id', sucursalId)
     .gte('fecha_salida', `${hoy}T00:00:00`)
     .lte('fecha_salida', `${limite}T23:59:59`)
@@ -166,7 +166,7 @@ export async function getViajesSucursalProximos(sucursalId, dias = 30) {
     .order('fecha_salida')
     .limit(80);
   if (error) { console.error('getViajesSucursalProximos:', error.message); return []; }
-  return data || [];
+  return (data || []).map(v => ({ ...v, conductorNombre: v.tripulacion?.nombre || '—', conductorCI: v.tripulacion?.ci || '' }));
 }
 
 export async function getTodosViajesSucursal(sucursalId) {

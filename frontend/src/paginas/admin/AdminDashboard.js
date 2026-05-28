@@ -239,7 +239,7 @@ const AdminDashboard = () => {
                                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                                     <thead>
                                         <tr style={{ background: '#07111f', borderBottom: `1px solid ${tema.color}12` }}>
-                                            {['Origen', 'Destino', 'Salida', 'Duración', 'Precio', 'Estado'].map(h => (
+                                            {['Origen', 'Destino', 'Salida', 'Bus', 'Conductor', 'Precio', 'Estado'].map(h => (
                                                 <th key={h} style={{ padding: '0.75rem 0.9rem', textAlign: 'left', color: '#475569', fontWeight: 500 }}>{h}</th>
                                             ))}
                                         </tr>
@@ -254,7 +254,8 @@ const AdminDashboard = () => {
                                                 <td style={{ padding: '0.65rem 0.9rem', color: tema.acento, whiteSpace: 'nowrap', fontFamily: 'monospace' }}>
                                                     {new Date(v.fecha_salida).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' })}
                                                 </td>
-                                                <td style={{ padding: '0.65rem 0.9rem', color: '#64748b' }}>{v.duracion_estimada || '—'}</td>
+                                                <td style={{ padding: '0.65rem 0.9rem', color: '#94a3b8', fontFamily: 'monospace', fontWeight: 700 }}>{v.buses?.placa || '—'}</td>
+                                                <td style={{ padding: '0.65rem 0.9rem', color: '#94a3b8', fontSize: '0.8rem' }}>{v.conductorNombre}</td>
                                                 <td style={{ padding: '0.65rem 0.9rem', color: '#10b981', fontWeight: 600 }}>Bs {v.precio}</td>
                                                 <td style={{ padding: '0.65rem 0.9rem' }}>{badge(v.estado)}</td>
                                             </tr>
