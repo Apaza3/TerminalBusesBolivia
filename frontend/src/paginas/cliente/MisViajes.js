@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contextos/AuthContext';
 import { useDepartamento } from '../../contextos/DepartamentoContext';
-import { getReservasByUsuario, updateReservaEstado } from '../../servicios/api';
+import { getReservasByUsuario, updateReservaEstado, getBoletosReserva } from '../../servicios/api';
 import { QRCodeSVG } from 'qrcode.react';
 import TicketCard, { getTemaEmpresa, getLogoEmpresa } from '../../componentes/TicketCard';
 
@@ -140,7 +140,24 @@ const TarjetaReserva = ({ reserva, ahora, tema, onCancelar }) => {
     // Colores de empresa — siempre definidos (fallback hash)
     const col = getColoresCard(nombreEmpresa, reserva.id);
 
-    const bls = []; // boletos cargados por reserva si se necesitan
+    const [bls, setBls] = useState([]);
+    useEffect(() => {
+        if (cancelada || reserva.estado === 'pendiente_documentos') return;
+        getBoletosReserva(reserva.id).then(bs => {
+            setBls(bs.map(b => ({
+                ...b,
+                pasajeroNombre: b.pasajeroNombre,
+                pasajeroCI:     b.pasajeroCI,
+                origen:         reserva.origen,
+                destino:        reserva.destino,
+                fechaSalida:    reserva.fechaSalida,
+                busPlaca:       reserva.busPlaca,
+                empresa:        reserva.sucursalNombre,
+                reservaId:      reserva.id,
+            })));
+        });
+    }, [reserva.id]); // eslint-disable-line
+
     const handleEmail = (b) => {
         setEmailEnv(p => ({ ...p, [b.id]: true }));
         setTimeout(() => setEmailEnv(p => ({ ...p, [b.id]: false })), 3000);
@@ -236,7 +253,7 @@ const TarjetaReserva = ({ reserva, ahora, tema, onCancelar }) => {
             {expandido && !completado && bls.length > 0 && (
                 <div style={{ padding: '0 1.2rem 1.2rem', display: 'flex', flexWrap: 'wrap', gap: '1rem', background: col.dark, justifyContent: 'center' }}>
                     {bls.map(b => (
-                        <TicketMini key={b.id} boleto={b} nombreEmpresa={nombreEmpresa} onExpand={() => window.open('/boleto?id=' + b.id, '_blank')} />
+                        <TicketMini key={b.id} boleto={b} nombreEmpresa={nombreEmpresa} onExpand={() => window.open('/boleto?token=' + (b.qrToken || b.id), '_blank')} />
                     ))}
                 </div>
             )}

@@ -490,19 +490,17 @@ export async function getBoletoPorQR(qrToken) {
   const { data, error } = await supabase
     .from('boletos')
     .select(`
-      id,asiento,nombre_pasajero,ci_pasajero,qr_token,precio_individual,estado,es_infante,declaraciones,
-      reservas!reserva_id(
-        viaje_id, email_cliente,
-        viajes(origen,destino,fecha_salida,anden,
-          sucursales(id,nombre,logo_emoji,color_accent),
-          buses(placa,marca,modelo)
-        )
-      )
+      id,asiento,nombre_pasajero,ci_pasajero,qr_token,precio_individual,estado,es_infante,declaraciones,viaje_id,
+      viajes!viaje_id(origen,destino,fecha_salida,anden,
+        sucursales(id,nombre,logo_emoji,color_accent),
+        buses(placa,marca,modelo)
+      ),
+      reservas!reserva_id(email_cliente)
     `)
     .eq('qr_token', qrToken)
     .maybeSingle();
   if (error || !data) return null;
-  const viaje = data.reservas?.viajes || {};
+  const viaje = data.viajes || {};
   return {
     id:             data.id,
     asiento:        data.asiento,
@@ -514,7 +512,7 @@ export async function getBoletoPorQR(qrToken) {
     esInfante:      data.es_infante,
     declaraciones:  data.declaraciones || {},
     email:          data.reservas?.email_cliente,
-    viajeId:        data.reservas?.viaje_id,
+    viajeId:        data.viaje_id,
     origen:         viaje.origen    || '—',
     destino:        viaje.destino   || '—',
     fechaSalida:    viaje.fecha_salida,
