@@ -46,7 +46,6 @@ const NAV = [
     { path: '/admin/incidentes', icon: '⚠️', label: 'Incidentes', grupo: 'operaciones' },
     { path: '/admin/pasajeros', icon: '🧑‍✈️', label: 'Pasajeros', grupo: 'operaciones' },
     { path: '/admin/bus/nuevo', icon: '🚌', label: 'Registrar Bus', grupo: 'acciones' },
-    { path: '/admin/tripulacion/nuevo', icon: '🧍', label: 'Registrar Tripulación', grupo: 'acciones' },
 ];
 
 const AdminLayout = () => {

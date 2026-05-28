@@ -133,11 +133,40 @@ export async function getUsuariosEmpresa(sucursalId) {
     .in('rol', ['admin_sucursal', 'cajero', 'conductor'])
     .order('rol');
   if (error) { console.error('getUsuariosEmpresa:', error.message); return []; }
+
+  // Bus asignado por conductor: próximo viaje de cada conductor
+  const conductorIds = (data || []).filter(u => u.rol === 'conductor').map(u => u.id);
+  const busMap = {};
+  if (conductorIds.length > 0) {
+    const hoy = new Date().toISOString();
+    const { data: trips } = await supabase
+      .from('tripulacion')
+      .select('usuario_id,viajes!conductor_id(fecha_salida,buses(placa))')
+      .in('usuario_id', conductorIds)
+      .gte('viajes.fecha_salida', hoy)
+      .limit(1);
+    for (const t of (trips || [])) {
+      const proximos = (t.viajes || []).sort((a, b) => a.fecha_salida.localeCompare(b.fecha_salida));
+      if (proximos[0]?.buses?.placa) busMap[t.usuario_id] = proximos[0].buses.placa;
+    }
+  }
+
   return (data || []).map(u => ({
     ...u,
-    departamento: u.departamentos?.nombre || '—',
-    sucursalNombre: u.sucursales?.nombre || '—',
+    departamento:  u.departamentos?.nombre || '—',
+    sucursalNombre: u.sucursales?.nombre   || '—',
+    busAsignado:   busMap[u.id] || '—',
   }));
+}
+
+export async function actualizarUsuario(id, campos) {
+  const { error } = await supabase.from('usuarios').update(campos).eq('id', id);
+  return !error;
+}
+
+export async function eliminarUsuario(id) {
+  const { error } = await supabase.from('usuarios').update({ activo: false }).eq('id', id);
+  return !error;
 }
 
 export async function getViajesSucursal(sucursalId, fecha) {

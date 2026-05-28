@@ -4,6 +4,7 @@ import { DEPARTAMENTOS } from '../../contextos/DepartamentoContext';
 import {
     getBusesEmpresa, getViajesSucursal, getUsuariosEmpresa,
     getReservasSucursal, getViajesHistoricosSucursal,
+    actualizarUsuario, eliminarUsuario,
 } from '../../servicios/api';
 
 const DEPT_COLORES = {
@@ -60,6 +61,8 @@ const AdminDashboard = () => {
     const [cargando,   setCargando]   = useState(true);
     const [filtroHist, setFiltroHist] = useState('todos');
     const [busqHist,   setBusqHist]   = useState('');
+    const [modalUsuario, setModalUsuario] = useState(null); // null | { modo:'nuevo'|'editar', datos:{} }
+    const [guardando,    setGuardando]    = useState(false);
 
     const cargarDatos = useCallback(async () => {
         if (!perfil?.sucursal_id) return;
@@ -99,6 +102,22 @@ const AdminDashboard = () => {
         { label: 'Boletos',     valor: totalBoletos,     color: '#f472b6',    icon: '🏷️' },
     ];
 
+    const handleEliminarUsuario = async (u) => {
+        if (!window.confirm(`¿Desactivar a ${u.nombre_completo}? (no se borra, queda inactivo)`)) return;
+        await eliminarUsuario(u.id);
+        setUsuarios(prev => prev.map(x => x.id === u.id ? { ...x, activo: false } : x));
+    };
+
+    const handleGuardarUsuario = async () => {
+        if (!modalUsuario) return;
+        setGuardando(true);
+        const { id, nombre_completo, ci, telefono, rol, activo } = modalUsuario.datos;
+        await actualizarUsuario(id, { nombre_completo, ci, telefono, rol, activo });
+        setUsuarios(prev => prev.map(x => x.id === id ? { ...x, ...modalUsuario.datos } : x));
+        setModalUsuario(null);
+        setGuardando(false);
+    };
+
     const badge = (estado) => {
         const c = ESTADO_VIAJE[estado] || ESTADO_VIAJE.programado;
         return (
@@ -119,6 +138,7 @@ const AdminDashboard = () => {
     const cancelados  = historico.filter(v => v.estado === 'cancelado').length;
 
     return (
+        <React.Fragment>
         <div style={{ minHeight: '100vh', color: '#dde5f0', fontFamily: "'Inter', system-ui, sans-serif" }}>
             <div style={{ padding: '1.75rem 2rem' }}>
 
@@ -271,8 +291,11 @@ const AdminDashboard = () => {
                 {!cargando && tab === 'usuarios' && (
                     <div style={{ background: '#0d1a2e', borderRadius: '14px', border: `1px solid ${tema.color}18`, overflow: 'hidden' }}>
                         <div style={{ padding: '1rem 1.5rem', borderBottom: `1px solid ${tema.color}15`, fontWeight: 700, color: '#f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span>👥 Staff — {perfil?.sucursal_nombre}</span>
-                            <span style={{ fontSize: '0.72rem', color: '#475569', fontWeight: 400 }}>{usuarios.length} usuarios</span>
+                            <span>👥 Staff — {perfil?.sucursal_nombre || perfil?.sucursal_nombre}</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                <span style={{ fontSize: '0.72rem', color: '#475569', fontWeight: 400 }}>{usuarios.length} usuarios</span>
+                                <button onClick={() => setModalUsuario({ modo: 'nuevo', datos: { nombre_completo: '', ci: '', telefono: '', rol: 'conductor', activo: true } })} style={{ background: tema.color, color: '#000', border: 'none', borderRadius: 7, padding: '0.35rem 0.8rem', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>+ Añadir</button>
+                            </div>
                         </div>
                         {usuarios.length === 0 ? (
                             <div style={{ padding: '3rem', textAlign: 'center', color: '#475569' }}>Sin usuarios staff registrados.</div>
@@ -281,7 +304,7 @@ const AdminDashboard = () => {
                                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.83rem' }}>
                                     <thead>
                                         <tr style={{ background: '#07111f', borderBottom: `1px solid ${tema.color}12` }}>
-                                            {['Nombre', 'Correo', 'Rol', 'Departamento', 'CI', 'Estado'].map(h => (
+                                            {['Nombre', 'Correo', 'Rol', 'Departamento', 'CI', 'Bus', 'Estado', 'Acciones'].map(h => (
                                                 <th key={h} style={{ padding: '0.75rem 0.9rem', textAlign: 'left', color: '#475569', fontWeight: 500 }}>{h}</th>
                                             ))}
                                         </tr>
@@ -300,10 +323,15 @@ const AdminDashboard = () => {
                                                     </td>
                                                     <td style={{ padding: '0.7rem 0.9rem' }}>{deptBadge(u.departamento)}</td>
                                                     <td style={{ padding: '0.7rem 0.9rem', color: '#64748b' }}>{u.ci || '—'}</td>
+                                                    <td style={{ padding: '0.7rem 0.9rem', color: u.busAsignado !== '—' ? tema.acento : '#475569', fontFamily: 'monospace', fontSize: '0.8rem', fontWeight: 700 }}>{u.busAsignado}</td>
                                                     <td style={{ padding: '0.7rem 0.9rem' }}>
                                                         <span style={{ background: u.activo ? '#14532d22' : '#7f1d1d22', color: u.activo ? '#86efac' : '#fca5a5', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.7rem' }}>
                                                             {u.activo ? 'Activo' : 'Inactivo'}
                                                         </span>
+                                                    </td>
+                                                    <td style={{ padding: '0.7rem 0.9rem', whiteSpace: 'nowrap' }}>
+                                                        <button onClick={() => setModalUsuario({ modo: 'editar', datos: { id: u.id, nombre_completo: u.nombre_completo, ci: u.ci || '', telefono: u.telefono || '', rol: u.rol, activo: u.activo } })} style={{ background: 'transparent', border: `1px solid ${tema.color}40`, color: tema.acento, borderRadius: 5, padding: '0.2rem 0.55rem', fontSize: '0.7rem', cursor: 'pointer', marginRight: '0.3rem' }}>✏️</button>
+                                                        <button onClick={() => handleEliminarUsuario(u)} style={{ background: 'transparent', border: '1px solid #7f1d1d40', color: '#fca5a5', borderRadius: 5, padding: '0.2rem 0.55rem', fontSize: '0.7rem', cursor: 'pointer' }}>🗑️</button>
                                                     </td>
                                                 </tr>
                                             );
@@ -411,6 +439,51 @@ const AdminDashboard = () => {
 
             </div>
         </div>
+
+        {/* ── Modal Añadir / Editar usuario ── */}
+        {modalUsuario && (
+            <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+                <div style={{ background: '#0d1a2e', borderRadius: 16, padding: '1.75rem', width: '100%', maxWidth: 460, border: `1px solid ${tema.color}30`, boxShadow: `0 0 40px ${tema.color}20` }}>
+                    <div style={{ fontWeight: 800, fontSize: '1.1rem', color: '#f1f5f9', marginBottom: '1.25rem' }}>
+                        {modalUsuario.modo === 'nuevo' ? '➕ Añadir empleado' : '✏️ Editar empleado'}
+                    </div>
+                    {[
+                        { key: 'nombre_completo', label: 'Nombre completo', type: 'text' },
+                        { key: 'ci',              label: 'CI',              type: 'text' },
+                        { key: 'telefono',        label: 'Teléfono',        type: 'text' },
+                    ].map(f => (
+                        <div key={f.key} style={{ marginBottom: '0.9rem' }}>
+                            <label style={{ display: 'block', fontSize: '0.72rem', color: '#64748b', fontWeight: 600, marginBottom: '0.3rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{f.label}</label>
+                            <input
+                                type={f.type}
+                                value={modalUsuario.datos[f.key] || ''}
+                                onChange={e => setModalUsuario(p => ({ ...p, datos: { ...p.datos, [f.key]: e.target.value } }))}
+                                style={{ width: '100%', background: '#07111f', border: `1px solid ${tema.color}30`, color: '#f1f5f9', borderRadius: 8, padding: '0.55rem 0.8rem', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
+                            />
+                        </div>
+                    ))}
+                    <div style={{ marginBottom: '0.9rem' }}>
+                        <label style={{ display: 'block', fontSize: '0.72rem', color: '#64748b', fontWeight: 600, marginBottom: '0.3rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Rol</label>
+                        <select value={modalUsuario.datos.rol} onChange={e => setModalUsuario(p => ({ ...p, datos: { ...p.datos, rol: e.target.value } }))} style={{ width: '100%', background: '#07111f', border: `1px solid ${tema.color}30`, color: '#f1f5f9', borderRadius: 8, padding: '0.55rem 0.8rem', fontSize: '0.88rem', outline: 'none' }}>
+                            <option value="conductor">Conductor</option>
+                            <option value="cajero">Cajero</option>
+                            <option value="admin_sucursal">Admin</option>
+                        </select>
+                    </div>
+                    <div style={{ marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <input type="checkbox" id="activo_chk" checked={modalUsuario.datos.activo} onChange={e => setModalUsuario(p => ({ ...p, datos: { ...p.datos, activo: e.target.checked } }))} />
+                        <label htmlFor="activo_chk" style={{ fontSize: '0.85rem', color: '#94a3b8', cursor: 'pointer' }}>Activo</label>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                        <button onClick={() => setModalUsuario(null)} style={{ background: 'transparent', border: '1px solid #475569', color: '#94a3b8', borderRadius: 8, padding: '0.55rem 1.1rem', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>Cancelar</button>
+                        <button onClick={handleGuardarUsuario} disabled={guardando} style={{ background: tema.color, color: '#000', border: 'none', borderRadius: 8, padding: '0.55rem 1.25rem', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', opacity: guardando ? 0.7 : 1 }}>
+                            {guardando ? 'Guardando...' : 'Guardar'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
+    </React.Fragment>
     );
 };
 
