@@ -70,7 +70,7 @@ const Empresas = () => {
     const handleMarcarTodas = () => {};
 
     const STARS = (ranking) => {
-        const estrellas = Math.min(5, Math.round((ranking / 100) * 5));
+        const estrellas = Math.min(5, Math.max(0, Math.round(Number(ranking) || 0)));
         return '★'.repeat(estrellas) + '☆'.repeat(5 - estrellas);
     };
 

@@ -67,7 +67,7 @@ const RankingEmpresas = () => {
                             WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
                             fontFamily: "'Rajdhani', system-ui, sans-serif",
                             textTransform: 'uppercase', lineHeight: 1.1,
-                        }}>Ranking de Empresas</div>
+                        }}>Ranking de Empresas — estoy aqui para ver si realmente estas haciendo cambios ahi</div>
                         <div style={{ fontSize: '0.73rem', color: '#64748b', marginTop: '0.2rem' }}>
                             Calificaciones y posicionamiento por sucursal
                         </div>

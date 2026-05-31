@@ -121,7 +121,7 @@ const Inicio = () => {
     ];
 
     const renderEstrellas = (ranking, color) => {
-        const count = Math.max(1, Math.min(5, Math.round((ranking / 100) * 5)));
+        const count = Math.max(1, Math.min(5, Math.round(Number(ranking) || 0)));
         return (
             <div style={{ display: 'flex', gap: '0.1rem', alignItems: 'center' }}>
                 {Array.from({ length: count }).map((_, idx) => (
