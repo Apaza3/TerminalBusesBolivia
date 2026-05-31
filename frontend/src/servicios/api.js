@@ -143,8 +143,7 @@ export async function getUsuariosEmpresa(sucursalId) {
       .from('tripulacion')
       .select('usuario_id,viajes!conductor_id(fecha_salida,buses(placa))')
       .in('usuario_id', conductorIds)
-      .gte('viajes.fecha_salida', hoy)
-      .limit(1);
+      .gte('viajes.fecha_salida', hoy);
     for (const t of (trips || [])) {
       const proximos = (t.viajes || []).sort((a, b) => a.fecha_salida.localeCompare(b.fecha_salida));
       if (proximos[0]?.buses?.placa) busMap[t.usuario_id] = proximos[0].buses.placa;
@@ -162,6 +161,19 @@ export async function getUsuariosEmpresa(sucursalId) {
 export async function actualizarUsuario(id, campos) {
   const { error } = await supabase.from('usuarios').update(campos).eq('id', id);
   return !error;
+}
+
+/** Crea un empleado (login + fila usuarios) vía Edge Function `crear-staff` (service role en Supabase). */
+export async function crearUsuario(payload) {
+  const { data, error } = await supabase.functions.invoke('crear-staff', { body: payload });
+  if (error) {
+    // intentar leer el mensaje del cuerpo de la respuesta
+    let msg = error.message;
+    try { const ctx = await error.context?.json?.(); if (ctx?.error) msg = ctx.error; } catch { /* noop */ }
+    return { ok: false, error: msg };
+  }
+  if (data?.error) return { ok: false, error: data.error };
+  return { ok: true, id: data?.id };
 }
 
 export async function eliminarUsuario(id) {

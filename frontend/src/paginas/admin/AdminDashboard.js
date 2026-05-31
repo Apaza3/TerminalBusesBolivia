@@ -4,7 +4,7 @@ import { DEPARTAMENTOS } from '../../contextos/DepartamentoContext';
 import {
     getBusesEmpresa, getViajesSucursal, getUsuariosEmpresa,
     getReservasSucursal, getViajesHistoricosSucursal,
-    actualizarUsuario, eliminarUsuario,
+    actualizarUsuario, eliminarUsuario, crearUsuario,
 } from '../../servicios/api';
 
 const DEPT_COLORES = {
@@ -111,9 +111,21 @@ const AdminDashboard = () => {
     const handleGuardarUsuario = async () => {
         if (!modalUsuario) return;
         setGuardando(true);
-        const { id, nombre_completo, ci, telefono, rol, activo } = modalUsuario.datos;
-        await actualizarUsuario(id, { nombre_completo, ci, telefono, rol, activo });
-        setUsuarios(prev => prev.map(x => x.id === id ? { ...x, ...modalUsuario.datos } : x));
+        const d = modalUsuario.datos;
+        if (modalUsuario.modo === 'nuevo') {
+            if (!d.email || !d.password) { alert('Email y contraseña son obligatorios'); setGuardando(false); return; }
+            const res = await crearUsuario({
+                email: d.email.trim(), password: d.password, nombre_completo: d.nombre_completo,
+                ci: d.ci, telefono: d.telefono, rol: d.rol,
+                sucursal_id: perfil.sucursal_id, departamento_id: perfil.departamento_id,
+            });
+            if (!res.ok) { alert('No se pudo crear: ' + res.error); setGuardando(false); return; }
+        } else {
+            const { id, nombre_completo, ci, telefono, rol, activo } = d;
+            const ok = await actualizarUsuario(id, { nombre_completo, ci, telefono, rol, activo });
+            if (!ok) { alert('No se pudo guardar los cambios'); setGuardando(false); return; }
+        }
+        await cargarDatos();          // recargar desde Supabase (nada local)
         setModalUsuario(null);
         setGuardando(false);
     };
@@ -294,7 +306,7 @@ const AdminDashboard = () => {
                             <span>👥 Staff — {perfil?.sucursal_nombre || perfil?.sucursal_nombre}</span>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                                 <span style={{ fontSize: '0.72rem', color: '#475569', fontWeight: 400 }}>{usuarios.length} usuarios</span>
-                                <button onClick={() => setModalUsuario({ modo: 'nuevo', datos: { nombre_completo: '', ci: '', telefono: '', rol: 'conductor', activo: true } })} style={{ background: tema.color, color: '#000', border: 'none', borderRadius: 7, padding: '0.35rem 0.8rem', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>+ Añadir</button>
+                                <button onClick={() => setModalUsuario({ modo: 'nuevo', datos: { email: '', password: 'Tbb2024!', nombre_completo: '', ci: '', telefono: '', rol: 'cajero', activo: true } })} style={{ background: tema.color, color: '#000', border: 'none', borderRadius: 7, padding: '0.35rem 0.8rem', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>+ Añadir</button>
                             </div>
                         </div>
                         {usuarios.length === 0 ? (
@@ -447,6 +459,20 @@ const AdminDashboard = () => {
                     <div style={{ fontWeight: 800, fontSize: '1.1rem', color: '#f1f5f9', marginBottom: '1.25rem' }}>
                         {modalUsuario.modo === 'nuevo' ? '➕ Añadir empleado' : '✏️ Editar empleado'}
                     </div>
+                    {modalUsuario.modo === 'nuevo' && [
+                        { key: 'email',    label: 'Email (login)', type: 'email' },
+                        { key: 'password', label: 'Contraseña',     type: 'text' },
+                    ].map(f => (
+                        <div key={f.key} style={{ marginBottom: '0.9rem' }}>
+                            <label style={{ display: 'block', fontSize: '0.72rem', color: '#64748b', fontWeight: 600, marginBottom: '0.3rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{f.label}</label>
+                            <input
+                                type={f.type}
+                                value={modalUsuario.datos[f.key] || ''}
+                                onChange={e => setModalUsuario(p => ({ ...p, datos: { ...p.datos, [f.key]: e.target.value } }))}
+                                style={{ width: '100%', background: '#07111f', border: `1px solid ${tema.color}30`, color: '#f1f5f9', borderRadius: 8, padding: '0.55rem 0.8rem', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
+                            />
+                        </div>
+                    ))}
                     {[
                         { key: 'nombre_completo', label: 'Nombre completo', type: 'text' },
                         { key: 'ci',              label: 'CI',              type: 'text' },
