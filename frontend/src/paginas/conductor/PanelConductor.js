@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Html5QrcodeScanner } from 'html5-qrcode';
+import { Html5Qrcode } from 'html5-qrcode';
 import { useAuth } from '../../contextos/AuthContext';
 import { DEPARTAMENTOS } from '../../contextos/DepartamentoContext';
 import { getEmpresaTema } from '../../data/empresasTemas';
@@ -8,6 +8,7 @@ import { crearNotificacion, crearIncidente } from '../../data/mockStorage';
 import {
     getTripulacionByUsuario, getViajesConductor,
     getReservasViaje, updateViajeEstado,
+    getBoletoPorQR, marcarBoletoValidado,
 } from '../../servicios/api';
 import { supabase } from '../../servicios/supabase';
 import { API_BASE } from '../../config';
@@ -241,109 +242,73 @@ const PanelConductor = () => {
         }
 
         try {
-            const { data: { session } } = await supabase.auth.getSession();
-            const token = session?.access_token;
+            // El QR codifica la URL .../boleto?token=<qr_token>; extraer el token
+            let qrToken = qrCodigo;
+            try { const u = new URL(qrCodigo); const t = u.searchParams.get('token'); if (t) qrToken = t; } catch { /* token plano */ }
 
-            const resp = await fetch(`${API_BASE}/conductor/validar-qr`, {
-                method:  'POST',
-                headers: {
-                    'Content-Type':  'application/json',
-                    'Authorization': `Bearer ${token}`,
-                },
-                body: JSON.stringify({ qr_codigo: qrCodigo, viaje_id: scanViajeId }),
-            });
-
-            const json = await resp.json();
-
-            if (resp.ok && json.valido) {
-                setScanResultado({
-                    tipo:    'ok',
-                    mensaje: `Abordaje válido`,
-                    pasajero: json.pasajero,
-                    ci:       json.ci,
-                    asiento:  json.asiento,
-                });
-                // Refrescar lista de pasajeros del viaje escaneado
-                getReservasViaje(scanViajeId).then(ps =>
-                    setPasajerosMap(prev => ({ ...prev, [scanViajeId]: ps }))
-                );
-            } else if (resp.status === 409 && json.boleto) {
-                const b = json.boleto;
-                setScanResultado({
-                    tipo:    'yaAbordado',
-                    mensaje: json.error,
-                    pasajero: b.pasajero_nombre,
-                    ci:       b.pasajero_ci,
-                    asiento:  b.asiento,
-                });
-            } else if (resp.status === 409) {
-                setScanResultado({ tipo: 'error', mensaje: json.error });
-            } else if (resp.status === 404) {
-                // Boleto no está en Supabase (flujo mockStorage) — mostrar info del QR
-                if (qrData) {
-                    setScanResultado({
-                        tipo:    'info',
-                        mensaje: 'Boleto local (sin verificación backend)',
-                        pasajero: qrData.nombre || qrData.ci || '—',
-                        ci:       qrData.ci   || '—',
-                        asiento:  qrData.asiento || '—',
-                    });
-                } else {
-                    setScanResultado({ tipo: 'error', mensaje: 'Boleto no encontrado.' });
-                }
+            const boleto = await getBoletoPorQR(qrToken);
+            if (!boleto) {
+                setScanResultado({ tipo: 'error', mensaje: 'Boleto no encontrado.' });
+            } else if (boleto.viajeId !== scanViajeId) {
+                setScanResultado({ tipo: 'error', mensaje: 'El boleto no pertenece a este viaje.' });
+            } else if (boleto.estado === 'validado') {
+                setScanResultado({ tipo: 'yaAbordado', mensaje: 'Este pasajero ya abordó', pasajero: boleto.pasajeroNombre, ci: boleto.pasajeroCI, asiento: boleto.asiento });
             } else {
-                setScanResultado({ tipo: 'error', mensaje: json.error || 'Error al validar.' });
+                const ok = await marcarBoletoValidado(boleto.id, perfil?.id || null);
+                if (ok) {
+                    setScanResultado({ tipo: 'ok', mensaje: 'Abordaje válido', pasajero: boleto.pasajeroNombre, ci: boleto.pasajeroCI, asiento: boleto.asiento });
+                    getReservasViaje(scanViajeId).then(ps => setPasajerosMap(prev => ({ ...prev, [scanViajeId]: ps })));
+                } else {
+                    setScanResultado({ tipo: 'error', mensaje: 'No se pudo registrar el abordaje.' });
+                }
             }
         } catch (err) {
-            // Sin backend — mostrar datos del QR directamente
-            if (qrData) {
-                setScanResultado({
-                    tipo:    'info',
-                    mensaje: 'Sin conexión al backend',
-                    pasajero: qrData.nombre || qrData.ci || '—',
-                    ci:       qrData.ci   || '—',
-                    asiento:  qrData.asiento || '—',
-                });
-            } else {
-                setScanResultado({ tipo: 'error', mensaje: `Sin conexión: ${err.message}` });
-            }
+            setScanResultado({ tipo: 'error', mensaje: `Error: ${err.message}` });
         }
 
         setScanValidando(false);
-    }, [scanViajeId]); // eslint-disable-line
+    }, [scanViajeId, perfil?.id]); // eslint-disable-line
 
-    // QR scanner
-    useEffect(() => {
-        if (tab !== 'escanear') return;
+    // QR scanner — Html5Qrcode (core): solo cámara trasera, control manual
+    const stopScan = useCallback(async () => {
+        const h = scannerRef.current;
+        scannerRef.current = null;
+        setScannerActivo(false);
+        if (h) { try { await h.stop(); } catch { /* */ } try { h.clear(); } catch { /* */ } }
+    }, []);
+
+    const startScan = useCallback(async () => {
         if (scannerRef.current) return;
-        const scanner = new Html5QrcodeScanner(
-            'qr-lector-conductor',
-            { fps: 10, qrbox: { width: 240, height: 240 }, supportedScanTypes: [0] },
-            false
-        );
-        scanner.render(
-            (texto) => {
-                scanner.pause(true);
-                setScannerActivo(false);
-                validarQR(texto);
-            },
-            () => {}
-        );
-        scannerRef.current = scanner;
-        setScannerActivo(true);
-        return () => {
-            scanner.clear().catch(() => {});
+        setScanResultado(null);
+        try {
+            const h = new Html5Qrcode('qr-lector-conductor');
+            scannerRef.current = h;
+            await h.start(
+                { facingMode: 'environment' },               // cámara trasera
+                { fps: 10, qrbox: { width: 240, height: 240 } },
+                async (texto) => {
+                    try { await h.stop(); } catch { /* */ } try { h.clear(); } catch { /* */ }
+                    scannerRef.current = null;
+                    setScannerActivo(false);
+                    validarQR(texto);
+                },
+                () => { /* sin lectura — ignorar */ },
+            );
+            setScannerActivo(true);
+        } catch {
             scannerRef.current = null;
             setScannerActivo(false);
-        };
-    }, [tab]); // eslint-disable-line
-
-    const reanudarScanner = () => {
-        setScanResultado(null);
-        if (scannerRef.current) {
-            try { scannerRef.current.resume(); setScannerActivo(true); } catch { /* ignore */ }
+            setScanResultado({ tipo: 'error', mensaje: 'No se pudo abrir la cámara. Permití el acceso desde el navegador.' });
         }
-    };
+    }, [validarQR]);
+
+    const reanudarScanner = () => { setScanResultado(null); startScan(); };
+
+    // Detener cámara al salir del tab o desmontar
+    useEffect(() => {
+        if (tab !== 'escanear') stopScan();
+        return () => { stopScan(); };
+    }, [tab, stopScan]);
 
     const cambiarEstado = async (viajeId, nuevoEstado) => {
         await updateViajeEstado(viajeId, nuevoEstado);
@@ -597,11 +562,11 @@ const PanelConductor = () => {
                                                 {viaje.origen} <span style={{ color: empresaColor }}>→</span> {viaje.destino}
                                             </div>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
-                                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.74rem', fontWeight: 700, color: empresaColor, background: `${empresaColor}18`, border: `1px solid ${empresaColor}38`, padding: '0.22rem 0.55rem', borderRadius: 6, textTransform: 'capitalize' }}>
-                                                    📅 {new Date(viaje.fecha_salida).toLocaleDateString('es-BO', { weekday: 'short', day: 'numeric', month: 'short' })}
+                                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.92rem', fontWeight: 800, color: empresaColor, background: `${empresaColor}18`, border: `1px solid ${empresaColor}40`, padding: '0.3rem 0.7rem', borderRadius: 7, textTransform: 'uppercase', letterSpacing: '0.02em' }}>
+                                                    📅 {new Date(viaje.fecha_salida).toLocaleDateString('es-BO', { weekday: 'long', day: 'numeric', month: 'long' })}
                                                 </span>
-                                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.78rem', fontWeight: 800, color: '#f8fafc', background: `${empresaColor}28`, border: `1px solid ${empresaColor}50`, padding: '0.22rem 0.55rem', borderRadius: 6, fontFamily: 'ui-monospace, monospace' }}>
-                                                    🕐 {new Date(viaje.fecha_salida).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.95rem', fontWeight: 900, color: '#f8fafc', background: `${empresaColor}2e`, border: `1px solid ${empresaColor}55`, padding: '0.3rem 0.7rem', borderRadius: 7 }}>
+                                                    🕐 {new Date(viaje.fecha_salida).toLocaleTimeString('es-BO', { hour: 'numeric', minute: '2-digit', hour12: true })}
                                                 </span>
                                                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.74rem', fontWeight: 600, color: textSub, background: surfaceHi, border: `1px solid ${border}`, padding: '0.22rem 0.55rem', borderRadius: 6 }}>🚍 {busPlaca}</span>
                                                 {viaje.anden && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.74rem', fontWeight: 600, color: textSub, background: surfaceHi, border: `1px solid ${border}`, padding: '0.22rem 0.55rem', borderRadius: 6 }}>📍 Andén {viaje.anden}</span>}
@@ -887,7 +852,24 @@ const PanelConductor = () => {
                                         animation: 'scanMove 2.5s ease-in-out infinite',
                                     }} />
                                 )}
-                                <div id="qr-lector-conductor" style={{ padding: '0.5rem' }} />
+                                <div id="qr-lector-conductor" style={{ padding: scannerActivo ? '0.5rem' : 0 }} />
+                                <div style={{ padding: scannerActivo ? '0 0.85rem 0.95rem' : '1.75rem 0.85rem' }}>
+                                    {!scannerActivo && (
+                                        <div style={{ textAlign: 'center', marginBottom: '1rem', color: textMuted, fontSize: '0.82rem' }}>
+                                            <div style={{ fontSize: '2.2rem', marginBottom: '0.4rem' }}>📷</div>
+                                            Cámara apagada
+                                        </div>
+                                    )}
+                                    <button className="action-btn" onClick={scannerActivo ? stopScan : startScan} style={{
+                                        width: '100%', padding: '0.9rem', borderRadius: 10, border: 'none', cursor: 'pointer',
+                                        fontWeight: 800, fontSize: '0.95rem', fontFamily: "'Outfit', sans-serif",
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                                        background: scannerActivo ? 'rgba(220,38,38,0.92)' : `linear-gradient(135deg, ${empresaColor}, ${empresaTema?.secondary || empresaColor})`,
+                                        color: '#fff', boxShadow: scannerActivo ? 'none' : `0 4px 16px ${empresaColor}45`,
+                                    }}>
+                                        {scannerActivo ? '⏹ Detener escaneo' : '📷 Iniciar escaneo'}
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
