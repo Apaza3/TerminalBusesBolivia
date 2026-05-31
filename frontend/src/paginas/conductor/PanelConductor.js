@@ -94,7 +94,9 @@ const PanelConductor = () => {
     const tema           = DEPARTAMENTOS[deptNombre] || DEPARTAMENTOS['La Paz'];
     const empresaTema    = getEmpresaTema(sucursalNombre);
     const empresaColor   = empresaTema?.primary || tema.primary;
+    const empresaColor2  = empresaTema?.secondary || tema.colorSecundario || empresaColor;  // color secundario (acentos del selector)
     const empresaTextColor = empresaTema?.primaryText || '#ffffff';
+    const diaKeyOf = (v) => new Date(v.fecha_salida).toISOString().slice(0, 10);
 
     const esConductor = perfil?.rol === 'conductor' || perfil?.rol === 'admin_sucursal';
 
@@ -520,7 +522,7 @@ const PanelConductor = () => {
                     const lista = diaFiltro ? viajes.filter(v => diaKey(v) === diaFiltro) : viajes;
                     const sel = viajes.find(v => v.id === viajeSel);
                     const horaTxt = (v) => new Date(v.fecha_salida).toLocaleTimeString('es-BO', { hour: 'numeric', minute: '2-digit', hour12: true });
-                    const chip = (on) => ({ padding: '0.3rem 0.7rem', borderRadius: 999, border: `1px solid ${on ? empresaColor : border}`, background: on ? `${empresaColor}22` : 'transparent', color: on ? empresaColor : textMuted, fontWeight: on ? 700 : 500, fontSize: '0.72rem', cursor: 'pointer', whiteSpace: 'nowrap', textTransform: 'capitalize', fontFamily: "'Outfit', sans-serif" });
+                    const chip = (on) => ({ padding: '0.3rem 0.7rem', borderRadius: 999, border: `1px solid ${on ? empresaColor2 : border}`, background: on ? `${empresaColor2}22` : 'transparent', color: on ? empresaColor2 : textMuted, fontWeight: on ? 700 : 500, fontSize: '0.72rem', cursor: 'pointer', whiteSpace: 'nowrap', textTransform: 'capitalize', fontFamily: "'Outfit', sans-serif" });
                     return (
                         <div style={{ marginBottom: '1.2rem' }}>
                             {dias.length > 1 && (
@@ -533,13 +535,13 @@ const PanelConductor = () => {
                                     ))}
                                 </div>
                             )}
-                            <div onClick={() => setSelectorAbierto(o => !o)} style={{ cursor: 'pointer', background: surface, border: `1px solid ${empresaColor}55`, borderLeft: `4px solid ${empresaColor}`, borderRadius: 12, padding: '0.85rem 1rem' }}>
+                            <div onClick={() => setSelectorAbierto(o => !o)} style={{ cursor: 'pointer', background: surface, border: `1.5px solid ${empresaColor2}`, borderLeft: `4px solid ${empresaColor2}`, borderRadius: 12, padding: '0.85rem 1rem', boxShadow: `0 0 0 1px ${empresaColor2}22` }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' }}>
                                     <div style={{ minWidth: 0 }}>
-                                        <div style={{ fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.1em', color: empresaColor, textTransform: 'uppercase', marginBottom: '0.2rem' }}>Viaje actual</div>
+                                        <div style={{ fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.1em', color: empresaColor2, textTransform: 'uppercase', marginBottom: '0.2rem' }}>Viaje actual</div>
                                         {sel ? (
                                             <>
-                                                <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#f8fafc', letterSpacing: '-0.02em' }}>{sel.origen} <span style={{ color: empresaColor }}>→</span> {sel.destino}</div>
+                                                <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#f8fafc', letterSpacing: '-0.02em' }}>{sel.origen} <span style={{ color: empresaColor2 }}>→</span> {sel.destino}</div>
                                                 <div style={{ fontSize: '0.8rem', fontWeight: 700, color: textSub, textTransform: 'uppercase', marginTop: '0.2rem' }}>
                                                     {new Date(sel.fecha_salida).toLocaleDateString('es-BO', { weekday: 'long', day: 'numeric', month: 'long' })} · {horaTxt(sel)} · 🚍 {sel.buses?.placa || '—'}
                                                 </div>
@@ -548,7 +550,7 @@ const PanelConductor = () => {
                                     </div>
                                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.4rem', flexShrink: 0 }}>
                                         {sel && <StatusBadge estado={sel.estado} empresaColor={empresaColor} />}
-                                        <span style={{ color: empresaColor, fontSize: '0.74rem', fontWeight: 700 }}>{selectorAbierto ? '▲ cerrar' : '▼ cambiar'}</span>
+                                        <span style={{ color: empresaColor2, fontSize: '0.74rem', fontWeight: 700 }}>{selectorAbierto ? '▲ cerrar' : '▼ cambiar'}</span>
                                     </div>
                                 </div>
                             </div>
@@ -559,8 +561,8 @@ const PanelConductor = () => {
                                         const fin = v.estado === 'completado' || v.estado === 'cancelado';
                                         return (
                                             <div key={v.id} onClick={() => { setViajeSel(v.id); setSelectorAbierto(false); }} style={{
-                                                cursor: 'pointer', background: activo ? `${empresaColor}1f` : surfaceHi,
-                                                border: `1px solid ${activo ? empresaColor : border}`, borderRadius: 10, padding: '0.6rem 0.85rem',
+                                                cursor: 'pointer', background: activo ? `${empresaColor2}1f` : surfaceHi,
+                                                border: `1px solid ${activo ? empresaColor2 : border}`, borderRadius: 10, padding: '0.6rem 0.85rem',
                                                 display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', opacity: fin ? 0.5 : 1,
                                             }}>
                                                 <div style={{ minWidth: 0 }}>
@@ -604,7 +606,7 @@ const PanelConductor = () => {
                             </div>
                         )}
 
-                        {viajes.map(viaje => {
+                        {(diaFiltro ? viajes.filter(v => diaKeyOf(v) === diaFiltro) : viajes).map(viaje => {
                             const busPlaca  = viaje.buses?.placa || '—';
                             const pasajeros = pasajerosMap[viaje.id] || [];
                             const temprano  = esTemprano(viaje);
