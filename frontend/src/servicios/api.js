@@ -43,7 +43,7 @@ export async function buscarViajes(origen, destino, fecha) {
   let q = supabase
     .from('viajes')
     .select(`
-      id,origen,destino,fecha_salida,precio,duracion_estimada,estado,anden,
+      id,origen,destino,fecha_salida,precio,duracion_estimada,estado,anden,sucursal_id,
       sucursales(id,nombre,logo_emoji,color_accent,ranking,amenidades,ciudad),
       buses(id,capacidad,pisos,filas_piso_1,filas_piso_2,columnas,tiene_bano,configuracion_asientos,amenidades)
     `)
