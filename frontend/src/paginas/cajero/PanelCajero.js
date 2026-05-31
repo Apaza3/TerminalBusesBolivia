@@ -12,6 +12,7 @@ import {
 } from '../../servicios/api';
 import { jsPDF } from 'jspdf';
 import TicketCard, { getTemaEmpresa, getLogoEmpresa } from '../../componentes/TicketCard';
+import { obtenerAnaliticaSucursal } from '../../servicios/analyticsService';
 import gsap from 'gsap';
 
 const ICONOS_EMPRESAS = {
@@ -44,7 +45,7 @@ const PanelCajero = () => {
 
     const [tab, setTab] = useState('dashboard');
     const [reservas, setReservas] = useState([]);
-    const [ventas, setVentas] = useState([]);
+    const [ana, setAna] = useState(null);
     const [busqueda, setBusqueda] = useState('');
     const [horaActual, setHoraActual] = useState(new Date());
 
@@ -92,6 +93,7 @@ const PanelCajero = () => {
         const sid = perfil?.sucursal_id;
         if (sid) {
             getReservasSucursal(sid).then(setReservas);
+            obtenerAnaliticaSucursal({ sucursalId: sid, periodo: 'mes' }).then(setAna);
         }
     }, [perfil?.sucursal_id]);
 
@@ -147,8 +149,24 @@ const PanelCajero = () => {
         r.id?.includes(busqueda)
     );
 
-    const totalIngresos = reservas.reduce((acc, r) => acc + (r.precio || 0), 0);
-    const totalBoletos  = reservas.reduce((acc, r) => acc + (r.asientos?.length || 0), 0);
+    // Ventas reales = reservas confirmadas (derivadas, no estado fantasma)
+    const ESTADOS_VENTA = ['pagado', 'autorizado', 'validado'];
+    const ventas = reservas
+        .filter(r => ESTADOS_VENTA.includes(r.estado))
+        .map(r => ({
+            id:      r.id,
+            ruta:    r.viajes ? `${r.viajes.origen} → ${r.viajes.destino}` : '—',
+            boletos: r.asientos?.length || 0,
+            monto:   r.monto || 0,
+            fecha:   r.creado_en,
+        }));
+    const hoyStr = new Date().toDateString();
+    const ventasHoy = ventas.filter(v => new Date(v.fecha).toDateString() === hoyStr).length;
+
+    // KPIs de venta desde el mismo RPC que alimenta el Panel Analítico (tabla boletos, 30d)
+    const kpis = ana?.kpis || {};
+    const totalIngresos = Number(kpis.ingresos) || 0;
+    const totalBoletos  = Number(kpis.boletos)  || 0;
 
     const viajeSeleccionado = viajes.find(v => v.id === boleto.viajeId);
 
@@ -595,9 +613,9 @@ const PanelCajero = () => {
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
                                     {[
                                         { label: 'Reservas totales', valor: reservas.length, color: tema.color, icon: '🎫' },
-                                        { label: 'Ventas del día', valor: ventas.length, color: '#10b981', icon: '💰' },
-                                        { label: 'Ingresos', valor: `Bs ${totalIngresos.toFixed(2)}`, color: '#f59e0b', icon: '📊' },
-                                        { label: 'Boletos vendidos', valor: totalBoletos, color: tema.acento, icon: '🏷️' },
+                                        { label: 'Ventas del día', valor: ventasHoy, color: '#10b981', icon: '💰' },
+                                        { label: 'Ingresos (30d)', valor: `Bs ${totalIngresos.toLocaleString('es-BO')}`, color: '#f59e0b', icon: '📊' },
+                                        { label: 'Boletos vendidos (30d)', valor: totalBoletos, color: tema.acento, icon: '🏷️' },
                                     ].map(kpi => (
                                         <div key={kpi.label} style={{
                                             background: '#0d1a2e', borderRadius: '12px', padding: '1.25rem',
