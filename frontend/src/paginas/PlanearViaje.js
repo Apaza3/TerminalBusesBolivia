@@ -216,8 +216,8 @@ const PlanearViaje = () => {
 
     // Compute departures when empresa selected (Supabase)
     useEffect(() => {
-        if (!empresa || !origen) return;
-        buscarViajes(origen, destino || '').then(viajes => {
+        if (!empresa || !origen || !destino) return;
+        buscarViajes(origen, destino, fecha || undefined).then(viajes => {
             const filtrados = viajes
                 .filter(v => v.sucursal_id === empresa.id)
                 .sort((a, b) => new Date(a.fecha_salida) - new Date(b.fecha_salida));
@@ -227,7 +227,7 @@ const PlanearViaje = () => {
                 empresa: v.sucursales?.nombre || empresa.nombre,
             })));
         });
-    }, [empresa, origen, destino]); // eslint-disable-line
+    }, [empresa, origen, destino, fecha]); // eslint-disable-line
 
     const handleSelectOrigen = (dept) => {
         if (paso !== 1) return;
@@ -243,10 +243,9 @@ const PlanearViaje = () => {
     };
 
     const esPasadaHora = (salida) => {
-        const d = new Date(salida);
-        const ahoraMin = horaActual.getHours() * 60 + horaActual.getMinutes();
-        const salidaMin = d.getHours() * 60 + d.getMinutes();
-        return salidaMin < ahoraMin;
+        // Compara fecha+hora completas, no solo la hora del día
+        void horaActual; // re-evalúa cada minuto al actualizar el reloj
+        return new Date(salida).getTime() < Date.now();
     };
 
     const STARS = (ranking) => '★'.repeat(Math.min(5, Math.round(ranking)));
@@ -695,8 +694,11 @@ const PlanearViaje = () => {
                                 {paso === 5 && (
                                     <div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
-                                            <div style={{ width: 48, height: 48, borderRadius: 12, background: `${empresa.colorAccent}18`, border: `1px solid ${empresa.colorAccent}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem' }}>
-                                                {empresa.logoEmoji}
+                                            <div style={{ width: 48, height: 48, borderRadius: 12, background: '#ffffff', border: `2px solid ${empresa.colorAccent}80`, boxShadow: `0 0 10px ${empresa.colorAccent}45`, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+                                                {getEmpresaLogo(empresa.nombre)
+                                                    ? <img src={getEmpresaLogo(empresa.nombre)} alt={empresa.nombre} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                                                    : <div style={{ fontSize: '1.5rem', lineHeight: 1 }}>{empresa.logoEmoji || '🚌'}</div>
+                                                }
                                             </div>
                                             <div>
                                                 <div style={{ fontWeight: 700, color: '#e2e8f0' }}>{empresa.nombre}</div>
@@ -723,31 +725,40 @@ const PlanearViaje = () => {
                                         ) : (
                                             <div className="pv-salidas" style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', maxHeight: '45vh', overflowY: 'auto', paddingRight: '0.25rem' }}>
                                                 {salidas.map(v => {
+                                                    const ac = empresa.colorAccent || tema.color;
                                                     const pasado = esPasadaHora(v.salida);
-                                                    const hora = new Date(v.salida).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit', hour12: false });
+                                                    const d = new Date(v.salida);
+                                                    const hora = d.toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit', hour12: false });
+                                                    const dia = d.toLocaleDateString('es-BO', { day: '2-digit', month: 'short' });
                                                     return (
                                                         <div key={v.id}
                                                             onClick={() => !pasado && navigate(`/reserva/${v.id}`)}
                                                             style={{
                                                                 display: 'flex', alignItems: 'center', gap: '1rem',
-                                                                background: pasado ? '#07111f' : '#0b1628',
-                                                                border: `1px solid ${pasado ? '#1e293b' : tema.color + '30'}`,
+                                                                background: pasado ? '#07111f' : `linear-gradient(135deg, ${ac}10, #0b1628 60%)`,
+                                                                border: `1px solid ${pasado ? '#1e293b' : ac + '30'}`,
+                                                                borderLeft: `3px solid ${pasado ? '#1e293b' : ac}`,
                                                                 borderRadius: 10, padding: '0.9rem 1.1rem',
                                                                 cursor: pasado ? 'not-allowed' : 'pointer',
                                                                 opacity: pasado ? 0.45 : 1, transition: 'all 0.15s',
                                                             }}
-                                                            onMouseEnter={e => { if (!pasado) { e.currentTarget.style.background = `${tema.color}10`; e.currentTarget.style.borderColor = tema.color; } }}
-                                                            onMouseLeave={e => { if (!pasado) { e.currentTarget.style.background = '#0b1628'; e.currentTarget.style.borderColor = `${tema.color}30`; } }}>
+                                                            onMouseEnter={e => { if (!pasado) { e.currentTarget.style.background = `linear-gradient(135deg, ${ac}22, #0b1628 70%)`; e.currentTarget.style.borderColor = ac; e.currentTarget.style.transform = 'translateX(2px)'; } }}
+                                                            onMouseLeave={e => { if (!pasado) { e.currentTarget.style.background = `linear-gradient(135deg, ${ac}10, #0b1628 60%)`; e.currentTarget.style.borderColor = `${ac}30`; e.currentTarget.style.transform = 'none'; } }}>
 
-                                                            <div style={{ fontFamily: 'monospace', fontSize: '1.4rem', fontWeight: 800, color: pasado ? '#334155' : tema.acento, minWidth: 70 }}>
-                                                                {hora}
+                                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 70 }}>
+                                                                <div style={{ fontFamily: 'monospace', fontSize: '1.4rem', fontWeight: 800, color: pasado ? '#334155' : ac, lineHeight: 1 }}>
+                                                                    {hora}
+                                                                </div>
+                                                                <div style={{ fontSize: '0.62rem', color: pasado ? '#334155' : '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '0.15rem' }}>
+                                                                    {dia}
+                                                                </div>
                                                             </div>
                                                             <div style={{ flex: 1 }}>
-                                                                <div style={{ color: pasado ? '#334155' : '#94a3b8', fontSize: '0.82rem' }}>
+                                                                <div style={{ color: pasado ? '#334155' : '#e2e8f0', fontSize: '0.85rem', fontWeight: 600 }}>
                                                                     {v.origen} → {v.destino}
                                                                 </div>
                                                                 <div style={{ color: '#475569', fontSize: '0.72rem' }}>
-                                                                    Duración: {v.duracion_estimada || 'N/D'}
+                                                                    🕒 {v.duracion_estimada || 'N/D'}{v.anden ? ` · Andén ${v.anden}` : ''}
                                                                 </div>
                                                             </div>
                                                             <div style={{ textAlign: 'right' }}>
@@ -756,7 +767,7 @@ const PlanearViaje = () => {
                                                                 </div>
                                                                 {pasado
                                                                     ? <span style={{ fontSize: '0.65rem', color: '#334155', background: '#1e293b', borderRadius: 4, padding: '0.1rem 0.4rem' }}>Salió</span>
-                                                                    : <span style={{ fontSize: '0.7rem', color: tema.acento }}>Reservar →</span>
+                                                                    : <span style={{ fontSize: '0.7rem', color: ac, fontWeight: 600 }}>Reservar →</span>
                                                                 }
                                                             </div>
                                                         </div>
