@@ -308,11 +308,17 @@ const PanelCajero = () => {
             bs = await autorizarReserva(reservaId);
         } else {
             await updateReservaEstado(reservaId, 'autorizado');
+            // Poblar cada asiento con los datos del titular de la reserva (no dejar "Pasajero")
+            const ciTitular = (reserva.pasajeroCI && reserva.pasajeroCI !== '—') ? reserva.pasajeroCI : '';
+            const datosPasajeros = (reserva.asientos || []).reduce((acc, a) => {
+                acc[a] = { nombre: reserva.pasajeroNombre || '', ci: ciTitular, email: reserva.email_cliente || '' };
+                return acc;
+            }, {});
             const r = await crearBoletosBatch({
                 reservaId,
                 viajeId:        reserva.viaje_id || reserva.viajeId,
                 asientos:       reserva.asientos || [],
-                datosPasajeros: {},
+                datosPasajeros,
                 precioUnitario: reserva.precio || 0,
                 sucursalId:     perfil?.sucursal_id,
                 departamentoId: perfil?.departamento_id,
