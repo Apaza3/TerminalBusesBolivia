@@ -197,15 +197,6 @@ const PanelCajero = () => {
         });
     };
 
-    const handleIrAPago = (e) => {
-        e.preventDefault();
-        setMensajeBoleto(null);
-        if (!boleto.viajeId) return setMensajeBoleto({ tipo: 'error', texto: 'Selecciona un viaje.' });
-        if (boleto.asientosSeleccionados.length === 0) return setMensajeBoleto({ tipo: 'error', texto: 'Selecciona al menos un asiento.' });
-        if (!boleto.pasajeroNombre || !boleto.pasajeroCI) return setMensajeBoleto({ tipo: 'error', texto: 'Nombre y CI son obligatorios.' });
-        setPasoCrear('pago');
-    };
-
     const handleConfirmarPago = async () => {
         const monto = boleto.precio * boleto.asientosSeleccionados.length;
         const resultado = await crearReservaSupabase({
@@ -220,7 +211,7 @@ const PanelCajero = () => {
             origen:          boleto.origen,
             destino:         boleto.destino,
             fechaSalida:     boleto.fechaSalida,
-            empresa:         boleto.sucursalNombre,
+            empresa:         sucursalNombre,
         });
 
         if (resultado.error) {
@@ -250,9 +241,13 @@ const PanelCajero = () => {
                 datosPasajeros: pasajerosObj,
                 precioUnitario: boleto.precio,
                 sucursalId:     perfil?.sucursal_id,
-                departamentoId: perfil?.departamento,
+                departamentoId: perfil?.departamento_id,
                 horarioSalida:  boleto.fechaSalida,
             });
+            if (bs?.error) {
+                setMensajeBoleto({ tipo: 'error', texto: 'Reserva creada pero falló emitir boletos: ' + bs.error });
+                return;
+            }
             setBoletoCreado(reservaCompleta);
             setBoletosEmitidos(bs?.boletos || []);
             setPagado(true);
@@ -286,7 +281,7 @@ const PanelCajero = () => {
                 datosPasajeros: {},
                 precioUnitario: reserva.precio || 0,
                 sucursalId:     perfil?.sucursal_id,
-                departamentoId: perfil?.departamento,
+                departamentoId: perfil?.departamento_id,
                 horarioSalida:  reserva.fecha_salida || reserva.fechaSalida,
             });
             bs = r?.boletos || [];
@@ -1060,8 +1055,17 @@ const PanelCajero = () => {
                                         )}
                                         {Object.entries(viajes.reduce((acc, v) => { (acc[v.destino] = acc[v.destino] || []).push(v); return acc; }, {})).map(([destino, lista]) => (
                                             <div key={destino} style={{ marginBottom: '1.4rem' }}>
-                                                <div style={{ fontSize: '0.8rem', fontWeight: 800, color: tema.color, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.6rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                                    📍 Hacia {destino} <span style={{ color: '#475569', fontWeight: 600 }}>({lista.length})</span>
+                                                <div style={{
+                                                    fontSize: '0.8rem', fontWeight: 800, color: tema.acento,
+                                                    textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.7rem',
+                                                    display: 'inline-flex', alignItems: 'center', gap: '0.45rem',
+                                                    background: `linear-gradient(135deg, ${tema.color}22, ${tema.color}08)`,
+                                                    border: `1px solid ${tema.color}40`, borderLeft: `3px solid ${tema.color}`,
+                                                    borderRadius: '8px', padding: '0.4rem 0.85rem',
+                                                    boxShadow: `0 2px 10px ${tema.color}14`,
+                                                }}>
+                                                    📍 Hacia {destino}
+                                                    <span style={{ background: `${tema.color}30`, color: tema.acento, fontWeight: 700, fontSize: '0.7rem', borderRadius: '999px', padding: '0.05rem 0.5rem' }}>{lista.length}</span>
                                                 </div>
                                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '0.6rem' }}>
                                                     {lista.map(v => {
@@ -1093,9 +1097,9 @@ const PanelCajero = () => {
                                             </div>
                                         ))}
                                         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                                            <button onClick={() => setPasoActivo(2)} style={{
-                                                background: boleto.viajeId ? tema.color : '#1e293b', color: '#fff', border: 'none',
-                                                borderRadius: 8, padding: '0.65rem 1.5rem', fontWeight: 700, cursor: 'pointer',
+                                            <button onClick={() => boleto.viajeId && setPasoActivo(2)} disabled={!boleto.viajeId} style={{
+                                                background: boleto.viajeId ? tema.color : '#1e293b', color: boleto.viajeId ? '#fff' : '#475569', border: 'none',
+                                                borderRadius: 8, padding: '0.65rem 1.5rem', fontWeight: 700, cursor: boleto.viajeId ? 'pointer' : 'not-allowed',
                                                 fontSize: '0.85rem', fontFamily: "'Rajdhani', system-ui, sans-serif", textTransform: 'uppercase',
                                                 boxShadow: boleto.viajeId ? `0 4px 14px ${tema.color}40` : 'none',
                                             }}>Siguiente →</button>
@@ -1145,10 +1149,10 @@ const PanelCajero = () => {
                                         </div>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem' }}>
                                             <button onClick={() => setPasoActivo(1)} style={{ background: 'transparent', border: '1px solid #334155', color: '#64748b', borderRadius: 8, padding: '0.65rem 1.25rem', fontWeight: 600, cursor: 'pointer', fontSize: '0.85rem', fontFamily: "'Rajdhani', system-ui, sans-serif", textTransform: 'uppercase' }}>← Anterior</button>
-                                            <button onClick={() => setPasoActivo(3)} style={{
+                                            <button onClick={() => boleto.pasajeroNombre && boleto.pasajeroCI && setPasoActivo(3)} disabled={!(boleto.pasajeroNombre && boleto.pasajeroCI)} style={{
                                                 background: boleto.pasajeroNombre && boleto.pasajeroCI ? tema.color : '#1e293b',
-                                                color: '#fff', border: 'none', borderRadius: 8, padding: '0.65rem 1.5rem',
-                                                fontWeight: 700, cursor: 'pointer', fontSize: '0.85rem',
+                                                color: boleto.pasajeroNombre && boleto.pasajeroCI ? '#fff' : '#475569', border: 'none', borderRadius: 8, padding: '0.65rem 1.5rem',
+                                                fontWeight: 700, cursor: boleto.pasajeroNombre && boleto.pasajeroCI ? 'pointer' : 'not-allowed', fontSize: '0.85rem',
                                                 fontFamily: "'Rajdhani', system-ui, sans-serif", textTransform: 'uppercase',
                                                 boxShadow: boleto.pasajeroNombre && boleto.pasajeroCI ? `0 4px 14px ${tema.color}40` : 'none',
                                             }}>Siguiente →</button>
