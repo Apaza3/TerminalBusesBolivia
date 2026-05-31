@@ -588,20 +588,23 @@ const PanelConductor = () => {
                                     background: surface, borderRadius: '12px', marginBottom: '1rem',
                                     overflow: 'hidden',
                                     border: `1px solid ${enViaje ? `${empresaColor}40` : cancelado ? 'rgba(239,68,68,0.15)' : border}`,
+                                    borderLeft: `4px solid ${cancelado ? '#dc2626' : empresaColor}`,
                                 }}>
                                     {/* Route header */}
                                     <div style={{ padding: '1rem 1.1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.75rem' }}>
                                         <div style={{ flex: 1, minWidth: 0 }}>
-                                            <div style={{ fontWeight: 700, fontSize: '1rem', color: '#f1f5f9', letterSpacing: '-0.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                                {viaje.origen} → {viaje.destino}
+                                            <div style={{ fontWeight: 800, fontSize: '1.15rem', color: '#f8fafc', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
+                                                {viaje.origen} <span style={{ color: empresaColor }}>→</span> {viaje.destino}
                                             </div>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.3rem', flexWrap: 'wrap' }}>
-                                                <span style={{ fontSize: '0.75rem', color: textMuted, fontFamily: 'ui-monospace, monospace' }}>
-                                                    {new Date(viaje.fecha_salida).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+                                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.74rem', fontWeight: 700, color: empresaColor, background: `${empresaColor}18`, border: `1px solid ${empresaColor}38`, padding: '0.22rem 0.55rem', borderRadius: 6, textTransform: 'capitalize' }}>
+                                                    📅 {new Date(viaje.fecha_salida).toLocaleDateString('es-BO', { weekday: 'short', day: 'numeric', month: 'short' })}
                                                 </span>
-                                                <span style={{ color: border }}>·</span>
-                                                <span style={{ fontSize: '0.75rem', color: textMuted }}>🚍 {busPlaca}</span>
-                                                {viaje.anden && <><span style={{ color: border }}>·</span><span style={{ fontSize: '0.75rem', color: textMuted }}>Andén {viaje.anden}</span></>}
+                                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.78rem', fontWeight: 800, color: '#f8fafc', background: `${empresaColor}28`, border: `1px solid ${empresaColor}50`, padding: '0.22rem 0.55rem', borderRadius: 6, fontFamily: 'ui-monospace, monospace' }}>
+                                                    🕐 {new Date(viaje.fecha_salida).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                                                </span>
+                                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.74rem', fontWeight: 600, color: textSub, background: surfaceHi, border: `1px solid ${border}`, padding: '0.22rem 0.55rem', borderRadius: 6 }}>🚍 {busPlaca}</span>
+                                                {viaje.anden && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.74rem', fontWeight: 600, color: textSub, background: surfaceHi, border: `1px solid ${border}`, padding: '0.22rem 0.55rem', borderRadius: 6 }}>📍 Andén {viaje.anden}</span>}
                                             </div>
                                         </div>
                                         <StatusBadge estado={viaje.estado} empresaColor={empresaColor} />
@@ -611,8 +614,10 @@ const PanelConductor = () => {
                                     {!cancelado && (
                                         <div style={{ borderTop: `1px solid ${border}`, padding: '0.75rem 1.1rem' }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: viajeActivo === viaje.id ? '0.75rem' : 0 }}>
-                                                <span style={{ fontSize: '0.75rem', color: textMuted, fontWeight: 600 }}>
-                                                    {viajeActivo === viaje.id ? `${pasajeros.length} pasajeros` : 'Pasajeros'}
+                                                <span style={{ fontSize: '0.75rem', color: textSub, fontWeight: 600 }}>
+                                                    {viajeActivo === viaje.id
+                                                        ? <><span style={{ color: '#6ee7b7', fontWeight: 800 }}>{pasajeros.filter(p => p.abordado).length}</span> / {pasajeros.length} presentes</>
+                                                        : 'Pasajeros'}
                                                 </span>
                                                 <div style={{ display: 'flex', gap: '0.4rem' }}>
                                                     <button className="action-btn" onClick={() => setViajeActivo(viajeActivo === viaje.id ? null : viaje.id)} style={{ background: 'transparent', border: `1px solid ${border}`, color: textSub, padding: '0.28rem 0.65rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.72rem', fontFamily: "'Outfit', sans-serif" }}>
@@ -644,6 +649,9 @@ const PanelConductor = () => {
                                                                             <div style={{ color: '#e2e8f0', fontSize: '0.82rem', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.nombre}</div>
                                                                             <div style={{ color: textMuted, fontSize: '0.7rem' }}>{p.ci}{p.telefono ? ` · ${p.telefono}` : ''}</div>
                                                                         </div>
+                                                                        <span style={{ fontSize: '0.68rem', fontWeight: 700, padding: '0.2rem 0.55rem', borderRadius: 999, whiteSpace: 'nowrap', background: p.abordado ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.1)', color: p.abordado ? '#6ee7b7' : '#fca5a5', border: `1px solid ${p.abordado ? 'rgba(16,185,129,0.35)' : 'rgba(239,68,68,0.28)'}` }}>
+                                                                            {p.abordado ? '✓ Presente' : '○ Ausente'}
+                                                                        </span>
                                                                     </div>
                                                                 ))
                                                             }
