@@ -3,7 +3,7 @@ import { useAuth } from '../../contextos/AuthContext';
 import { DEPARTAMENTOS } from '../../contextos/DepartamentoContext';
 import {
     getBusesEmpresa, getViajesSucursal, getUsuariosEmpresa,
-    getReservasSucursal, getViajesHistoricosSucursal,
+    getViajesHistoricosSucursal,
     actualizarUsuario, eliminarUsuario, crearUsuario,
 } from '../../servicios/api';
 import { obtenerAnaliticaSucursal } from '../../servicios/analyticsService';
@@ -57,7 +57,6 @@ const AdminDashboard = () => {
     const [buses,      setBuses]      = useState([]);
     const [viajes,     setViajes]     = useState([]);
     const [usuarios,   setUsuarios]   = useState([]);
-    const [reservas,   setReservas]   = useState([]);
     const [ana,        setAna]        = useState(null);
     const [historico,  setHistorico]  = useState([]);
     const [cargando,   setCargando]   = useState(true);
@@ -69,18 +68,16 @@ const AdminDashboard = () => {
     const cargarDatos = useCallback(async () => {
         if (!perfil?.sucursal_id) return;
         setCargando(true);
-        const [b, v, u, r, h, a] = await Promise.all([
+        const [b, v, u, h, a] = await Promise.all([
             getBusesEmpresa(perfil.sucursal_id),
             getViajesSucursal(perfil.sucursal_id),
             getUsuariosEmpresa(perfil.sucursal_id),
-            getReservasSucursal(perfil.sucursal_id),
             getViajesHistoricosSucursal(perfil.sucursal_id, 30),
             obtenerAnaliticaSucursal({ sucursalId: perfil.sucursal_id, periodo: 'mes' }),
         ]);
         setBuses(b);
         setViajes(v);
         setUsuarios(u);
-        setReservas(r);
         setHistorico(h);
         setAna(a);
         setCargando(false);
@@ -104,9 +101,8 @@ const AdminDashboard = () => {
         { label: 'Staff',          valor: usuarios.length,  color: '#10b981',  icon: '👥' },
         { label: 'Viajes hoy',     valor: viajes.length,    color: '#f59e0b',  icon: '🛫' },
         { label: 'En ruta',        valor: enRuta,           color: '#8b5cf6',  icon: '🚀' },
-        { label: 'Reservas',       valor: reservas.length,  color: '#06b6d4',  icon: '🎫' },
         { label: 'Ingresos (30d)', valor: `Bs ${totalIngresos.toLocaleString('es-BO')}`, color: '#22c55e', icon: '💰' },
-        { label: 'Boletos (30d)',  valor: totalBoletos,     color: '#f472b6',  icon: '🏷️' },
+        { label: 'Reservas (30d)', valor: totalBoletos,     color: '#06b6d4',  icon: '🎫' },
     ];
 
     const handleEliminarUsuario = async (u) => {
