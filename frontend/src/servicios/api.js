@@ -500,15 +500,11 @@ export async function getReservaById(reservaId) {
 }
 
 export async function getReservasSucursal(sucursalId) {
-  const inicio = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
-  const { data: vs } = await supabase
-    .from('viajes').select('id').eq('sucursal_id', sucursalId)
-    .gte('fecha_salida', `${inicio}T00:00:00`);
-  if (!vs?.length) return [];
+  // Join !inner por sucursal del viaje — evita un IN con decenas de viaje_id (fallaba en el browser)
   const { data, error } = await supabase
     .from('reservas')
-    .select('id,viaje_id,asientos,monto,estado,requiere_autorizacion,email_cliente,telefono_cliente,metodo_pago,creado_en,usuarios(nombre_completo,ci),viajes(origen,destino,fecha_salida)')
-    .in('viaje_id', vs.map(v => v.id))
+    .select('id,viaje_id,asientos,monto,estado,requiere_autorizacion,email_cliente,telefono_cliente,metodo_pago,creado_en,usuarios(nombre_completo,ci),viajes!inner(origen,destino,fecha_salida,sucursal_id)')
+    .eq('viajes.sucursal_id', sucursalId)
     .order('creado_en', { ascending: false })
     .limit(200);
   if (error) { console.error('getReservasSucursal:', error.message); return []; }

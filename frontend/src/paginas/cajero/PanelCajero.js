@@ -1018,34 +1018,45 @@ const PanelCajero = () => {
                                         <div style={{ color: tema.acento, fontSize: '0.72rem', fontWeight: 700, fontFamily: "'Rajdhani', system-ui, sans-serif", textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.75rem' }}>
                                             Viajes disponibles desde <span style={{ color: tema.color }}>{deptNombre}</span>
                                         </div>
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '0.75rem', marginBottom: '1.25rem' }}>
-                                            {viajes.length === 0 && (
-                                                <div style={{ color: '#475569', fontSize: '0.85rem', padding: '1.5rem', background: '#0d1a2e', borderRadius: '10px', gridColumn: '1/-1' }}>
-                                                    No hay viajes disponibles desde {deptNombre}.
+                                        {viajes.length === 0 && (
+                                            <div style={{ color: '#475569', fontSize: '0.85rem', padding: '1.5rem', background: '#0d1a2e', borderRadius: '10px', marginBottom: '1.25rem' }}>
+                                                No hay viajes disponibles desde {deptNombre}.
+                                            </div>
+                                        )}
+                                        {Object.entries(viajes.reduce((acc, v) => { (acc[v.destino] = acc[v.destino] || []).push(v); return acc; }, {})).map(([destino, lista]) => (
+                                            <div key={destino} style={{ marginBottom: '1.4rem' }}>
+                                                <div style={{ fontSize: '0.8rem', fontWeight: 800, color: tema.color, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.6rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                                    📍 Hacia {destino} <span style={{ color: '#475569', fontWeight: 600 }}>({lista.length})</span>
                                                 </div>
-                                            )}
-                                            {viajes.map(v => {
-                                                const pasado = esPasado(v.fecha_salida);
-                                                const seleccionado = boleto.viajeId === v.id;
-                                                return (
-                                                    <div key={v.id} onClick={() => handleSeleccionarViaje(v)} title={pasado ? 'Viaje ya salió' : ''} style={{
-                                                        background: pasado ? '#0d1320' : seleccionado ? `${tema.color}20` : '#0d1a2e',
-                                                        border: `1px solid ${pasado ? '#1e293b' : seleccionado ? tema.color : '#1e293b'}`,
-                                                        borderRadius: '10px', padding: '0.85rem 1rem',
-                                                        cursor: pasado ? 'not-allowed' : 'pointer',
-                                                        opacity: pasado ? 0.45 : 1, transition: 'all 0.15s',
-                                                    }}>
-                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                                            <div style={{ fontWeight: 600, color: pasado ? '#475569' : '#f1f5f9', fontSize: '0.88rem' }}>{v.origen} → {v.destino}</div>
-                                                            {pasado && <span style={{ fontSize: '0.65rem', color: '#475569', background: '#1e293b', borderRadius: 4, padding: '0.1rem 0.4rem' }}>Salió</span>}
-                                                            {seleccionado && !pasado && <span style={{ fontSize: '0.65rem', background: `${tema.color}30`, color: tema.acento, borderRadius: 4, padding: '0.1rem 0.4rem', fontWeight: 700 }}>✓</span>}
-                                                        </div>
-                                                        <div style={{ color: pasado ? '#334155' : '#64748b', fontSize: '0.75rem', marginTop: '0.25rem' }}>{new Date(v.fecha_salida).toLocaleString('es-BO')}</div>
-                                                        <div style={{ color: pasado ? '#334155' : '#10b981', fontWeight: 700, fontSize: '0.9rem', marginTop: '0.35rem' }}>Bs {v.precio}/asiento</div>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
+                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '0.6rem' }}>
+                                                    {lista.map(v => {
+                                                        const pasado = esPasado(v.fecha_salida);
+                                                        const seleccionado = boleto.viajeId === v.id;
+                                                        const d = new Date(v.fecha_salida);
+                                                        const fechaTxt = d.toLocaleDateString('es-BO', { weekday: 'short', day: 'numeric', month: 'short' });
+                                                        const horaTxt = d.toLocaleTimeString('es-BO', { hour: 'numeric', minute: '2-digit', hour12: true });
+                                                        return (
+                                                            <div key={v.id} onClick={() => handleSeleccionarViaje(v)} title={pasado ? 'Viaje ya salió' : ''} style={{
+                                                                background: pasado ? '#0d1320' : seleccionado ? `${tema.color}20` : '#0d1a2e',
+                                                                border: `1px solid ${pasado ? '#1e293b' : seleccionado ? tema.color : '#1e293b'}`,
+                                                                borderLeft: `3px solid ${pasado ? '#1e293b' : seleccionado ? tema.color : `${tema.color}66`}`,
+                                                                borderRadius: '10px', padding: '0.8rem 0.95rem',
+                                                                cursor: pasado ? 'not-allowed' : 'pointer',
+                                                                opacity: pasado ? 0.45 : 1, transition: 'all 0.15s',
+                                                            }}>
+                                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.4rem' }}>
+                                                                    <span style={{ fontWeight: 800, color: pasado ? '#475569' : '#f1f5f9', fontSize: '0.82rem', textTransform: 'capitalize' }}>📅 {fechaTxt}</span>
+                                                                    {pasado && <span style={{ fontSize: '0.62rem', color: '#475569', background: '#1e293b', borderRadius: 4, padding: '0.1rem 0.4rem' }}>Salió</span>}
+                                                                    {seleccionado && !pasado && <span style={{ fontSize: '0.65rem', background: `${tema.color}30`, color: tema.acento, borderRadius: 4, padding: '0.1rem 0.4rem', fontWeight: 700 }}>✓</span>}
+                                                                </div>
+                                                                <div style={{ color: pasado ? '#334155' : tema.acento, fontWeight: 800, fontSize: '1.05rem', marginTop: '0.2rem' }}>🕐 {horaTxt}</div>
+                                                                <div style={{ color: pasado ? '#334155' : '#10b981', fontWeight: 700, fontSize: '0.85rem', marginTop: '0.3rem' }}>Bs {v.precio}/asiento</div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        ))}
                                         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                                             <button onClick={() => setPasoActivo(2)} style={{
                                                 background: boleto.viajeId ? tema.color : '#1e293b', color: '#fff', border: 'none',
