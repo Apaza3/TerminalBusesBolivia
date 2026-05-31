@@ -128,9 +128,9 @@ const TarjetaReserva = ({ reserva, ahora, tema, onCancelar }) => {
     const [emailEnv,  setEmailEnv]  = useState({});
     const ms = useCountdown(reserva.expiraEn);
 
-    const pendiente  = reserva.estado === 'pendiente_documentos' || reserva.estado === 'pendiente_efectivo';
-    const completado = new Date(reserva.fechaSalida) < ahora && reserva.estado !== 'cancelada';
-    const cancelada  = reserva.estado === 'cancelada';
+    const pendiente  = reserva.estado === 'pendiente';
+    const completado = new Date(reserva.fechaSalida) < ahora && reserva.estado !== 'cancelado';
+    const cancelada  = reserva.estado === 'cancelado';
 
     // Empresa viene directo de Supabase
     const rawNombre = reserva.sucursalNombre || null;
@@ -142,7 +142,7 @@ const TarjetaReserva = ({ reserva, ahora, tema, onCancelar }) => {
 
     const [bls, setBls] = useState([]);
     useEffect(() => {
-        if (cancelada || reserva.estado === 'pendiente_documentos') return;
+        if (cancelada) return;
         getBoletosReserva(reserva.id).then(bs => {
             setBls(bs.map(b => ({
                 ...b,
@@ -165,10 +165,9 @@ const TarjetaReserva = ({ reserva, ahora, tema, onCancelar }) => {
 
     // Estado badge
     const est = (() => {
-        if (cancelada)                                 return { label: 'Cancelada',    bg: '#7f1d1d',        color: '#fca5a5' };
-        if (reserva.estado === 'pendiente_documentos') return { label: 'Pend. cajero', bg: '#4c1d95',        color: '#c4b5fd' };
-        if (reserva.estado === 'pendiente_efectivo')   return { label: 'Pend. pago',   bg: col.dark,         color: col.light };
-        if (new Date(reserva.fechaSalida) > ahora)     return { label: 'Próximo',       bg: col.light + '22', color: col.light };
+        if (cancelada)                              return { label: 'Cancelada',  bg: '#7f1d1d',        color: '#fca5a5' };
+        if (reserva.estado === 'pendiente')         return { label: 'Pendiente',  bg: '#4c1d95',        color: '#c4b5fd' };
+        if (new Date(reserva.fechaSalida) > ahora)  return { label: 'Próximo',    bg: col.light + '22', color: col.light };
         return                                                { label: 'Completado',   bg: col.light + '18', color: col.accent };
     })();
 
@@ -297,15 +296,15 @@ const MisViajes = () => {
         return () => clearInterval(t);
     }, [sesion, perfil, navigate, cargar]);
 
-    const handleCancelar = async (id) => { await updateReservaEstado(id, 'cancelada'); cargar(); };
+    const handleCancelar = async (id) => { await updateReservaEstado(id, 'cancelado'); cargar(); };
 
-    const nPend = reservas.filter(r => r.estado === 'pendiente_documentos' || r.estado === 'pendiente_efectivo').length;
+    const nPend = reservas.filter(r => r.estado === 'pendiente').length;
 
     const filtradas = reservas
         .filter(r => {
-            if (filtro === 'pendientes') return r.estado === 'pendiente_documentos' || r.estado === 'pendiente_efectivo';
-            if (filtro === 'proximos')   return new Date(r.fechaSalida) >= ahora && r.estado !== 'cancelada';
-            if (filtro === 'pasados')    return new Date(r.fechaSalida) < ahora;
+            if (filtro === 'pendientes') return r.estado === 'pendiente';
+            if (filtro === 'proximos')   return new Date(r.fechaSalida) >= ahora && r.estado !== 'cancelado';
+            if (filtro === 'pasados')    return new Date(r.fechaSalida) < ahora && r.estado !== 'cancelado';
             return true;
         })
         .filter(r => {
