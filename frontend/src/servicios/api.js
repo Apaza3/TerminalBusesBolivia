@@ -389,7 +389,7 @@ export async function getViajesConductor(tripulacionId, dias = 1) {
     .lte('fecha_salida', `${limite}T23:59:59`)
     .order('fecha_salida');
   if (error) { console.error('getViajesConductor:', error.message); return []; }
-  return data || [];
+  return (data || []).map(v => ({ ...v, busPlaca: v.buses?.placa || '—' }));
 }
 
 // ── Asientos ──────────────────────────────────────────────

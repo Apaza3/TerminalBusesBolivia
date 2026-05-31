@@ -69,6 +69,12 @@ const ValidarAbordaje = () => {
             return;
         }
 
+        if (viajeSeleccionado && boleto.viajeId !== viajeSeleccionado) {
+            setResultado({ tipo: 'error', mensaje: 'El boleto no pertenece al viaje seleccionado.' });
+            gsap.from('[data-v="result"]', { scale: 0.95, opacity: 0, duration: 0.3, ease: 'back.out(1.7)' });
+            return;
+        }
+
         if (boleto.estado === 'validado') {
             setResultado({ tipo: 'yaAbordado', boleto: { ...boleto, abordado: true } });
             gsap.from('[data-v="result"]', { scale: 0.95, opacity: 0, duration: 0.3, ease: 'back.out(1.7)' });
@@ -131,7 +137,7 @@ const ValidarAbordaje = () => {
                             color: '#f1f5f9', borderRadius: '8px', padding: '0.6rem 0.9rem', fontSize: '0.85rem', outline: 'none',
                         }}>
                             <option value="" style={{ background: '#07111f' }}>Seleccionar viaje...</option>
-                            {viajes.filter(v => v.estado === 'en_ruta' || v.estado === 'programado').map(v => (
+                            {viajes.filter(v => v.estado === 'en_viaje' || v.estado === 'programado' || v.estado === 'autorizado').map(v => (
                                 <option key={v.id} value={v.id} style={{ background: '#07111f' }}>
                                     {v.origen} → {v.destino} · {v.busPlaca}
                                 </option>

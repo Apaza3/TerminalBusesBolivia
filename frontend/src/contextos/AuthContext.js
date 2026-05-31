@@ -11,7 +11,8 @@ async function fetchPerfil(authUserId) {
             sucursal_id,
             sucursales(id, nombre, logo_emoji, color_accent),
             departamento_id,
-            departamentos(id, nombre)
+            departamentos(id, nombre),
+            tripulacion(id)
         `)
         .eq('id', authUserId)
         .single();
@@ -31,6 +32,7 @@ async function fetchPerfil(authUserId) {
         sucursal_color:  data.sucursales?.color_accent || '#2563eb',
         departamento_id: data.departamento_id,
         departamento:    data.departamentos?.nombre || 'La Paz',
+        tripulacion_id:  Array.isArray(data.tripulacion) ? data.tripulacion[0]?.id || null : (data.tripulacion?.id || null),
     };
 }
 
