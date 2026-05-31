@@ -108,18 +108,18 @@ const PanelConductor = () => {
     const [confirmandoCancelar, setConfirmandoCancelar] = useState(null);
     const [horaActual,        setHoraActual]        = useState(new Date());
 
-    const [notifViajeId, setNotifViajeId] = useState('');
+    const [viajeSel,     setViajeSel]     = useState('');   // viaje activo compartido por las 4 vistas
+    const [diaFiltro,    setDiaFiltro]    = useState(null);  // filtro opcional por día (clave fecha)
+    const [selectorAbierto, setSelectorAbierto] = useState(false);
     const [notifTipo,    setNotifTipo]    = useState('retraso');
     const [notifDesc,    setNotifDesc]    = useState('');
     const [notifEnviando,setNotifEnviando]= useState(false);
     const [notifResultado, setNotifResultado] = useState(null);
 
     const [scanResultado,  setScanResultado]  = useState(null);
-    const [scanViajeId,    setScanViajeId]    = useState('');
     const [scannerActivo,  setScannerActivo]  = useState(false);
     const [scanValidando,  setScanValidando]  = useState(false);
 
-    const [listaViajeId,  setListaViajeId]  = useState('');
     const [listaPasajeros,setListaPasajeros]= useState([]);
 
     useEffect(() => {
@@ -178,11 +178,7 @@ const PanelConductor = () => {
         setViajes(sorted);
         setCargando(false);
         const actual = detectarViajeActual(sorted);
-        if (actual) {
-            setNotifViajeId(prev => prev || actual);
-            setScanViajeId(prev  => prev || actual);
-            setListaViajeId(prev => prev || actual);
-        }
+        if (actual) setViajeSel(prev => prev || actual);
     }, [tripulacionId, detectarViajeActual]);
 
     useEffect(() => {
@@ -200,9 +196,9 @@ const PanelConductor = () => {
     }, [viajeActivo]); // eslint-disable-line
 
     useEffect(() => {
-        if (!listaViajeId) { setListaPasajeros([]); return; }
-        getReservasViaje(listaViajeId).then(setListaPasajeros);
-    }, [listaViajeId, tab]);
+        if (!viajeSel) { setListaPasajeros([]); return; }
+        getReservasViaje(viajeSel).then(setListaPasajeros);
+    }, [viajeSel, tab]);
 
     // Header entrance
     useEffect(() => {
@@ -235,7 +231,7 @@ const PanelConductor = () => {
             qrCodigo = qrData.qr_codigo || qrData.id || texto.trim();
         } catch { /* texto plano = código directo */ }
 
-        if (!scanViajeId) {
+        if (!viajeSel) {
             setScanResultado({ tipo: 'error', mensaje: 'Selecciona el viaje antes de escanear.' });
             setScanValidando(false);
             return;
@@ -249,7 +245,7 @@ const PanelConductor = () => {
             const boleto = await getBoletoPorQR(qrToken);
             if (!boleto) {
                 setScanResultado({ tipo: 'error', mensaje: 'Boleto no encontrado.' });
-            } else if (boleto.viajeId !== scanViajeId) {
+            } else if (boleto.viajeId !== viajeSel) {
                 setScanResultado({ tipo: 'error', mensaje: 'El boleto no pertenece a este viaje.' });
             } else if (boleto.estado === 'validado') {
                 setScanResultado({ tipo: 'yaAbordado', mensaje: 'Este pasajero ya abordó', pasajero: boleto.pasajeroNombre, ci: boleto.pasajeroCI, asiento: boleto.asiento });
@@ -257,7 +253,7 @@ const PanelConductor = () => {
                 const ok = await marcarBoletoValidado(boleto.id, perfil?.id || null);
                 if (ok) {
                     setScanResultado({ tipo: 'ok', mensaje: 'Abordaje válido', pasajero: boleto.pasajeroNombre, ci: boleto.pasajeroCI, asiento: boleto.asiento });
-                    getReservasViaje(scanViajeId).then(ps => setPasajerosMap(prev => ({ ...prev, [scanViajeId]: ps })));
+                    getReservasViaje(viajeSel).then(ps => setPasajerosMap(prev => ({ ...prev, [viajeSel]: ps })));
                 } else {
                     setScanResultado({ tipo: 'error', mensaje: 'No se pudo registrar el abordaje.' });
                 }
@@ -267,7 +263,7 @@ const PanelConductor = () => {
         }
 
         setScanValidando(false);
-    }, [scanViajeId, perfil?.id]); // eslint-disable-line
+    }, [viajeSel, perfil?.id]); // eslint-disable-line
 
     // QR scanner — Html5Qrcode (core): solo cámara trasera, control manual
     const stopScan = useCallback(async () => {
@@ -327,7 +323,7 @@ const PanelConductor = () => {
         e.preventDefault();
         setNotifEnviando(true);
         setNotifResultado(null);
-        const viaje = viajes.find(v => v.id === notifViajeId);
+        const viaje = viajes.find(v => v.id === viajeSel);
         if (!viaje) { setNotifResultado({ tipo: 'error', texto: 'Selecciona un viaje.' }); setNotifEnviando(false); return; }
         const busPlaca    = viaje.buses?.placa || '';
         const tipoLabel   = TIPOS_INCIDENTE.find(t => t.value === notifTipo)?.label || notifTipo;
@@ -517,6 +513,72 @@ const PanelConductor = () => {
             <main className="conductor-main-content" style={{ flex: 1, position: 'relative', zIndex: 1, overflowY: 'auto' }}>
                 <div ref={contentRef} style={{ padding: '1.1rem 1rem' }}>
 
+                {/* ── Selector de VIAJE ACTUAL (compartido por las 4 vistas) + filtro de día ── */}
+                {!cargando && tripulacionId && viajes.length > 0 && (() => {
+                    const diaKey = (v) => new Date(v.fecha_salida).toISOString().slice(0, 10);
+                    const dias = [...new Set(viajes.map(diaKey))].sort();
+                    const lista = diaFiltro ? viajes.filter(v => diaKey(v) === diaFiltro) : viajes;
+                    const sel = viajes.find(v => v.id === viajeSel);
+                    const horaTxt = (v) => new Date(v.fecha_salida).toLocaleTimeString('es-BO', { hour: 'numeric', minute: '2-digit', hour12: true });
+                    const chip = (on) => ({ padding: '0.3rem 0.7rem', borderRadius: 999, border: `1px solid ${on ? empresaColor : border}`, background: on ? `${empresaColor}22` : 'transparent', color: on ? empresaColor : textMuted, fontWeight: on ? 700 : 500, fontSize: '0.72rem', cursor: 'pointer', whiteSpace: 'nowrap', textTransform: 'capitalize', fontFamily: "'Outfit', sans-serif" });
+                    return (
+                        <div style={{ marginBottom: '1.2rem' }}>
+                            {dias.length > 1 && (
+                                <div style={{ display: 'flex', gap: '0.35rem', overflowX: 'auto', marginBottom: '0.6rem', paddingBottom: '0.15rem' }}>
+                                    <button onClick={() => setDiaFiltro(null)} style={chip(!diaFiltro)}>Todos</button>
+                                    {dias.map(k => (
+                                        <button key={k} onClick={() => setDiaFiltro(diaFiltro === k ? null : k)} style={chip(diaFiltro === k)}>
+                                            {new Date(k + 'T12:00:00').toLocaleDateString('es-BO', { weekday: 'short', day: 'numeric' })}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                            <div onClick={() => setSelectorAbierto(o => !o)} style={{ cursor: 'pointer', background: surface, border: `1px solid ${empresaColor}55`, borderLeft: `4px solid ${empresaColor}`, borderRadius: 12, padding: '0.85rem 1rem' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' }}>
+                                    <div style={{ minWidth: 0 }}>
+                                        <div style={{ fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.1em', color: empresaColor, textTransform: 'uppercase', marginBottom: '0.2rem' }}>Viaje actual</div>
+                                        {sel ? (
+                                            <>
+                                                <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#f8fafc', letterSpacing: '-0.02em' }}>{sel.origen} <span style={{ color: empresaColor }}>→</span> {sel.destino}</div>
+                                                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: textSub, textTransform: 'uppercase', marginTop: '0.2rem' }}>
+                                                    {new Date(sel.fecha_salida).toLocaleDateString('es-BO', { weekday: 'long', day: 'numeric', month: 'long' })} · {horaTxt(sel)} · 🚍 {sel.buses?.placa || '—'}
+                                                </div>
+                                            </>
+                                        ) : <div style={{ color: textMuted }}>Selecciona un viaje</div>}
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.4rem', flexShrink: 0 }}>
+                                        {sel && <StatusBadge estado={sel.estado} empresaColor={empresaColor} />}
+                                        <span style={{ color: empresaColor, fontSize: '0.74rem', fontWeight: 700 }}>{selectorAbierto ? '▲ cerrar' : '▼ cambiar'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            {selectorAbierto && (
+                                <div style={{ marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                    {lista.map(v => {
+                                        const activo = v.id === viajeSel;
+                                        const fin = v.estado === 'completado' || v.estado === 'cancelado';
+                                        return (
+                                            <div key={v.id} onClick={() => { setViajeSel(v.id); setSelectorAbierto(false); }} style={{
+                                                cursor: 'pointer', background: activo ? `${empresaColor}1f` : surfaceHi,
+                                                border: `1px solid ${activo ? empresaColor : border}`, borderRadius: 10, padding: '0.6rem 0.85rem',
+                                                display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', opacity: fin ? 0.5 : 1,
+                                            }}>
+                                                <div style={{ minWidth: 0 }}>
+                                                    <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#f1f5f9' }}>{v.origen} → {v.destino}</div>
+                                                    <div style={{ fontSize: '0.72rem', color: textMuted, textTransform: 'capitalize' }}>
+                                                        {new Date(v.fecha_salida).toLocaleDateString('es-BO', { weekday: 'short', day: 'numeric', month: 'short' })} · {horaTxt(v)} · {v.buses?.placa || '—'}
+                                                    </div>
+                                                </div>
+                                                <StatusBadge estado={v.estado} empresaColor={empresaColor} />
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    );
+                })()}
+
                 {/* ── Tab: VIAJES ── */}
                 {tab === 'viajes' && (
                     <div>
@@ -697,14 +759,9 @@ const PanelConductor = () => {
                             {/* Viaje */}
                             <div>
                                 <label style={labelStyle}>Viaje afectado</label>
-                                <select value={notifViajeId} onChange={e => setNotifViajeId(e.target.value)} required className="cond-input" style={inputStyle}>
-                                    <option value="">Selecciona un viaje</option>
-                                    {viajes.filter(v => v.estado !== 'completado' && v.estado !== 'cancelado').map(v => (
-                                        <option key={v.id} value={v.id}>
-                                            {v.origen} → {v.destino} · {new Date(v.fecha_salida).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' })}
-                                        </option>
-                                    ))}
-                                </select>
+                                <div style={{ ...inputStyle, display: 'flex', alignItems: 'center', color: viajes.find(x => x.id === viajeSel) ? '#e2e8f0' : textMuted }}>
+                                    {(() => { const v = viajes.find(x => x.id === viajeSel); return v ? `${v.origen} → ${v.destino} · ${new Date(v.fecha_salida).toLocaleTimeString('es-BO', { hour: 'numeric', minute: '2-digit', hour12: true })}` : 'Elegí el viaje en el selector de arriba'; })()}
+                                </div>
                             </div>
 
                             {/* Tipo — pill grid */}
@@ -764,13 +821,13 @@ const PanelConductor = () => {
                             </div>
 
                             <button type="submit" className="action-btn"
-                                disabled={notifEnviando || !notifViajeId || !notifDesc.trim()}
+                                disabled={notifEnviando || !viajeSel || !notifDesc.trim()}
                                 style={{
-                                    background: (notifEnviando || !notifViajeId || !notifDesc.trim()) ? surfaceHi : '#dc2626',
-                                    color:      (notifEnviando || !notifViajeId || !notifDesc.trim()) ? textMuted  : '#fff',
-                                    border:     (notifEnviando || !notifViajeId || !notifDesc.trim()) ? `1px solid ${border}` : 'none',
+                                    background: (notifEnviando || !viajeSel || !notifDesc.trim()) ? surfaceHi : '#dc2626',
+                                    color:      (notifEnviando || !viajeSel || !notifDesc.trim()) ? textMuted  : '#fff',
+                                    border:     (notifEnviando || !viajeSel || !notifDesc.trim()) ? `1px solid ${border}` : 'none',
                                     borderRadius: '9px', padding: '0.88rem',
-                                    fontWeight: 700, fontSize: '0.9rem', cursor: (!notifViajeId || !notifDesc.trim()) ? 'not-allowed' : 'pointer',
+                                    fontWeight: 700, fontSize: '0.9rem', cursor: (!viajeSel || !notifDesc.trim()) ? 'not-allowed' : 'pointer',
                                     fontFamily: "'Outfit', sans-serif",
                                 }}>
                                 {notifEnviando ? 'Enviando...' : 'Enviar notificación'}
@@ -784,12 +841,12 @@ const PanelConductor = () => {
                     <div>
                         <p style={sectionTitle}>Validar abordaje con QR</p>
 
-                        <select value={scanViajeId} onChange={e => setScanViajeId(e.target.value)} className="cond-input" style={{ ...inputStyle, marginBottom: '1rem' }}>
-                            <option value="">Todos los viajes</option>
-                            {viajes.filter(v => v.estado !== 'completado' && v.estado !== 'cancelado').map(v => (
-                                <option key={v.id} value={v.id}>{v.origen} → {v.destino} · {v.buses?.placa}</option>
-                            ))}
-                        </select>
+                        <div style={{ background: `${empresaColor}12`, border: `1px solid ${empresaColor}35`, borderRadius: 10, padding: '0.6rem 0.9rem', marginBottom: '1rem', fontSize: '0.82rem' }}>
+                            <span style={{ color: textMuted }}>Escaneando para: </span>
+                            <span style={{ color: '#f1f5f9', fontWeight: 700 }}>
+                                {(() => { const v = viajes.find(x => x.id === viajeSel); return v ? `${v.origen} → ${v.destino}` : 'sin viaje — elegí arriba'; })()}
+                            </span>
+                        </div>
 
                         {scanValidando && (
                             <div style={{ padding: '1.25rem', textAlign: 'center', background: `${empresaColor}10`, border: `1px solid ${empresaColor}30`, borderRadius: '12px', marginBottom: '1rem' }}>
@@ -886,16 +943,7 @@ const PanelConductor = () => {
                     <div>
                         <p style={sectionTitle}>Lista de pasajeros</p>
 
-                        <select value={listaViajeId} onChange={e => setListaViajeId(e.target.value)} className="cond-input" style={{ ...inputStyle, marginBottom: '1.1rem' }}>
-                            <option value="">Selecciona un viaje</option>
-                            {viajes.map(v => (
-                                <option key={v.id} value={v.id}>
-                                    {v.origen} → {v.destino} · {new Date(v.fecha_salida).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit', hour12: false })} · {v.buses?.placa}
-                                </option>
-                            ))}
-                        </select>
-
-                        {!listaViajeId && (
+                        {!viajeSel && (
                             <div style={{ textAlign: 'center', padding: '3rem 1.5rem', background: surfaceHi, borderRadius: '12px', border: `1px solid ${border}` }}>
                                 <div style={{ fontSize: '1.75rem', marginBottom: '0.65rem', opacity: 0.5 }}>👥</div>
                                 <div style={{ color: textSub, fontWeight: 600, fontSize: '0.88rem' }}>Selecciona un viaje</div>
@@ -903,8 +951,8 @@ const PanelConductor = () => {
                             </div>
                         )}
 
-                        {listaViajeId && (() => {
-                            const v = viajes.find(x => x.id === listaViajeId);
+                        {viajeSel && (() => {
+                            const v = viajes.find(x => x.id === viajeSel);
                             return (
                                 <div>
                                     {/* Viaje info + stats */}
@@ -993,7 +1041,7 @@ const PanelConductor = () => {
                                                 <span style={{ fontSize: '0.72rem', color: textMuted }}>
                                                     Total: <strong style={{ color: textSub }}>{listaPasajeros.length}</strong> pasajero(s)
                                                 </span>
-                                                <button className="action-btn" onClick={() => getReservasViaje(listaViajeId).then(setListaPasajeros)} style={{ background: 'transparent', border: `1px solid ${border}`, color: textMuted, padding: '0.28rem 0.65rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.72rem', fontFamily: "'Outfit', sans-serif" }}>
+                                                <button className="action-btn" onClick={() => getReservasViaje(viajeSel).then(setListaPasajeros)} style={{ background: 'transparent', border: `1px solid ${border}`, color: textMuted, padding: '0.28rem 0.65rem', borderRadius: '6px', cursor: 'pointer', fontSize: '0.72rem', fontFamily: "'Outfit', sans-serif" }}>
                                                     Actualizar
                                                 </button>
                                             </div>
