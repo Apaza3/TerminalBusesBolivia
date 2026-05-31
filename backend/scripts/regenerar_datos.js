@@ -154,7 +154,7 @@ function parseHorarios() {
             const plus1 = !!mr[3];
             const [sh, sm] = salida.split(':').map(Number);
             const durMin = (lh * 60 + lm + (plus1 ? 1440 : 0)) - (sh * 60 + sm);
-            const precioCell = mr[4];
+            const precioCell = mr[5];   // mr[4] = turno; mr[5] = primera columna de precio
             const pm = precioCell.match(/(\d+)/);
             const precio = pm ? parseInt(pm[1], 10) : 0;
             out.push({
