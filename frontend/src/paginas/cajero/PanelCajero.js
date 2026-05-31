@@ -8,7 +8,7 @@ import FragmentoDept from '../../componentes/FragmentoDept';
 import {
     getViajesSucursalProximos, updatePrecioViaje, updatePreciosGlobal,
     getReservasSucursal, getAsientosOcupados, crearReservaSupabase, updateReservaEstado,
-    getBoletosReserva, autorizarReserva, rechazarReserva,
+    getBoletosReserva, autorizarReserva, rechazarReserva, enviarBoletosPorEmail,
 } from '../../servicios/api';
 import { jsPDF } from 'jspdf';
 import TicketCard, { getTemaEmpresa, getLogoEmpresa } from '../../componentes/TicketCard';
@@ -76,6 +76,9 @@ const PanelCajero = () => {
     const [notifs, setNotifs] = useState([]);
     const [aprobados, setAprobados] = useState({}); // { [reservaId]: { boletos, nombreEmpresa, email } }
     const [pdfEnProceso, setPdfEnProceso] = useState(null); // reservaId | null
+    const [accionMsg, setAccionMsg] = useState(null); // { tipo:'ok'|'error'|'info', texto } — feedback flotante
+    const [procesandoRes, setProcesandoRes] = useState(null); // reservaId en proceso
+    const [detallePend, setDetallePend] = useState({}); // { [reservaId]: { boletos, razones:[] } }
 
     // ── Precios dinámicos ──────────────────────────────
     const [viajesPrecios, setViajesPrecios] = useState([]);
@@ -266,9 +269,39 @@ const PanelCajero = () => {
         (r.requiere_autorizacion && !['autorizado', 'cancelado', 'reembolsado'].includes(r.estado))
     );
 
+    // Cargar detalle (boletos → razones) de cada pendiente para mostrar el motivo
+    useEffect(() => {
+        if (tab !== 'pendientes') return;
+        let cancel = false;
+        (async () => {
+            const entries = {};
+            for (const r of pendientesValidacion) {
+                const bs = await getBoletosReserva(r.id);
+                const razones = new Set();
+                bs.forEach(b => {
+                    if (b.esInfante) razones.add('Niño');
+                    if (b.declaraciones?.lleva1000) razones.add('Dinero');
+                    if (b.declaraciones?.llevaAnimales) razones.add('Animales');
+                    if (b.declaraciones?.llevaProductos) razones.add('Comida');
+                });
+                if (r.metodoPago === 'efectivo' || r.metodoPago === 'cajero') razones.add('Pago efectivo');
+                if (r.metodoPago === 'qr') razones.add('Pago QR');
+                entries[r.id] = { boletos: bs, razones: [...razones] };
+            }
+            if (!cancel) setDetallePend(entries);
+        })();
+        return () => { cancel = true; };
+    }, [tab, reservas]); // eslint-disable-line
+
+    const notificar = (tipo, texto) => {
+        setAccionMsg({ tipo, texto });
+        setTimeout(() => setAccionMsg(null), 4000);
+    };
+
     const handleAprobarReserva = async (reservaId) => {
         const reserva = reservas.find(r => r.id === reservaId);
         if (!reserva) return;
+        setProcesandoRes(reservaId);
         // Si la reserva ya tiene boletos (pre-emitidos), solo autorizarlos; si no, emitirlos.
         let bs = await getBoletosReserva(reservaId);
         if (bs.length) {
@@ -285,12 +318,27 @@ const PanelCajero = () => {
                 departamentoId: perfil?.departamento_id,
                 horarioSalida:  reserva.fecha_salida || reserva.fechaSalida,
             });
+            if (r?.error) { setProcesandoRes(null); notificar('error', 'No se pudo emitir boletos: ' + r.error); return; }
             bs = r?.boletos || [];
         }
         const email = reserva.email_cliente || null;
         setAprobados(prev => ({ ...prev, [reservaId]: { boletos: bs, nombreEmpresa: sucursalNombre, email } }));
-        if (email) setTimeout(() => alert(`📧 Boletos enviados a ${email}`), 400);
+
+        // Enviar boletos con QR válidos al correo (Edge Function)
+        let emailMsg = '';
+        if (email) {
+            const env = await enviarBoletosPorEmail({
+                email, nombre: reserva.pasajeroNombre, origen: reserva.origen, destino: reserva.destino,
+                fechaSalida: reserva.fechaSalida, busPlaca: reserva.busPlaca || '',
+                monto: reserva.precio, empresa: sucursalNombre, reservaId, boletos: bs,
+            });
+            emailMsg = env.ok ? ` · 📧 enviado a ${email}` : ` · ⚠ correo no enviado (${env.error})`;
+        } else {
+            emailMsg = ' · sin correo (descarga el PDF)';
+        }
+        notificar('ok', `✓ Reserva autorizada — ${bs.length} boleto(s)${emailMsg}`);
         recargar();
+        setProcesandoRes(null);
     };
 
     const handleDescargarPDFAprobado = async (reservaId) => {
@@ -320,8 +368,11 @@ const PanelCajero = () => {
     };
 
     const handleRechazarReserva = async (reservaId) => {
+        setProcesandoRes(reservaId);
         await rechazarReserva(reservaId);
+        notificar('info', '✕ Reserva rechazada y cancelada.');
         recargar();
+        setProcesandoRes(null);
     };
 
     const handleNuevoBoleto = () => {
@@ -601,6 +652,17 @@ const PanelCajero = () => {
 
                     {/* Main Content */}
                     <main data-anim="main" style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
+                      {/* Feedback flotante de acciones */}
+                      {accionMsg && (
+                        <div style={{
+                            position: 'fixed', top: 18, right: 18, zIndex: 2000, maxWidth: 360,
+                            padding: '0.8rem 1.1rem', borderRadius: 12, fontSize: '0.85rem', fontWeight: 600,
+                            boxShadow: '0 8px 30px rgba(0,0,0,0.45)',
+                            background: accionMsg.tipo === 'ok' ? 'rgba(6,95,70,0.96)' : accionMsg.tipo === 'error' ? 'rgba(127,29,29,0.96)' : 'rgba(30,58,138,0.96)',
+                            color: accionMsg.tipo === 'ok' ? '#6ee7b7' : accionMsg.tipo === 'error' ? '#fca5a5' : '#bfdbfe',
+                            border: `1px solid ${accionMsg.tipo === 'ok' ? '#10b981' : accionMsg.tipo === 'error' ? '#ef4444' : '#3b82f6'}55`,
+                        }}>{accionMsg.texto}</div>
+                      )}
                       <ErrorBoundary key={tab} onReset={() => { if (tab === 'crear-boleto') handleNuevoBoleto(); }}>
 
                         {/* ── Dashboard ── */}
@@ -1362,7 +1424,7 @@ const PanelCajero = () => {
                             <div data-anim="content">
                                 <h2 style={{ ...tituloStyle, marginBottom: '0.35rem' }}>Pendientes de Validación</h2>
                                 <p style={{ color: '#64748b', fontSize: '0.82rem', marginBottom: '1.25rem' }}>
-                                    Reservas con infantes o declaraciones especiales que requieren verificación presencial.
+                                    Reservas que requieren verificación presencial: pago en efectivo, infantes, dinero, animales o comida. Al aprobar se emiten los boletos y se envían con QR válido al correo del cliente.
                                 </p>
                                 {pendientesValidacion.length === 0 ? (
                                     <div style={{ textAlign: 'center', color: '#475569', padding: '3rem', background: '#0d1a2e', borderRadius: '12px', border: '1px solid #1e293b' }}>
@@ -1372,38 +1434,63 @@ const PanelCajero = () => {
                                 ) : (
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                                         {pendientesValidacion.map(r => {
-                                            const pasajeros = Object.values(r.pasajeros || {});
-                                            const tieneInfante = pasajeros.some(p => p.esInfante);
-                                            const tieneDeclaracion = pasajeros.some(p => p.lleva1000 || p.llevaAnimales || p.llevaProductos);
                                             const aprobado = aprobados[r.id];
+                                            const razones = detallePend[r.id]?.razones || [];
+                                            const RAZON_STY = {
+                                                'Niño':         { bg: '#78350f', c: '#fbbf24', icon: '🧒' },
+                                                'Dinero':       { bg: '#14532d', c: '#86efac', icon: '💵' },
+                                                'Animales':     { bg: '#0c4a6e', c: '#7dd3fc', icon: '🐾' },
+                                                'Comida':       { bg: '#581c87', c: '#d8b4fe', icon: '🍔' },
+                                                'Pago efectivo':{ bg: '#713f12', c: '#fde68a', icon: '💵' },
+                                                'Pago QR':      { bg: '#1e3a8a', c: '#bfdbfe', icon: '📱' },
+                                            };
+                                            const dSal = r.fechaSalida ? new Date(r.fechaSalida) : null;
+                                            const fechaTxt = dSal ? dSal.toLocaleDateString('es-BO', { weekday: 'short', day: '2-digit', month: 'short' }) : '—';
+                                            const horaTxt = dSal ? dSal.toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
+                                            const METODO_LBL = { efectivo: '💵 Efectivo', cajero: '💵 Efectivo', qr: '📱 QR', tarjeta: '💳 Tarjeta' };
+                                            const enProc = procesandoRes === r.id;
                                             return (
-                                                <div key={r.id} style={{ background: '#0d1a2e', borderRadius: '14px', border: `1px solid ${aprobado ? '#065f46' : '#4c1d95'}`, padding: '1.25rem' }}>
+                                                <div key={r.id} style={{ background: '#0d1a2e', borderRadius: '14px', border: `1px solid ${aprobado ? '#065f46' : tema.color + '40'}`, borderLeft: `4px solid ${aprobado ? '#10b981' : tema.color}`, padding: '1.25rem', boxShadow: `0 2px 14px ${tema.color}10` }}>
                                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                                                         <div>
-                                                            <div style={{ color: '#f1f5f9', fontWeight: 700, fontSize: '1rem' }}>{r.pasajeroNombre}</div>
+                                                            <div style={{ color: '#f1f5f9', fontWeight: 800, fontSize: '1.02rem' }}>{r.pasajeroNombre}</div>
                                                             <div style={{ color: '#64748b', fontSize: '0.78rem' }}>CI: {r.pasajeroCI} · Tel: {r.pasajeroTelefono || '—'}</div>
                                                         </div>
-                                                        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                                                        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                                                             {aprobado && <span style={{ background: '#065f46', color: '#6ee7b7', padding: '0.2rem 0.55rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700 }}>✓ APROBADO</span>}
-                                                            {tieneInfante && <span style={{ background: '#78350f', color: '#fbbf24', padding: '0.2rem 0.55rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700 }}>INFANTE</span>}
-                                                            {tieneDeclaracion && <span style={{ background: '#7f1d1d', color: '#fca5a5', padding: '0.2rem 0.55rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700 }}>DECLARACIÓN</span>}
+                                                            {razones.map(rz => {
+                                                                const st = RAZON_STY[rz] || { bg: '#374151', c: '#cbd5e1', icon: '•' };
+                                                                return <span key={rz} style={{ background: st.bg, color: st.c, padding: '0.2rem 0.55rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700, whiteSpace: 'nowrap' }}>{st.icon} {rz.toUpperCase()}</span>;
+                                                            })}
                                                         </div>
                                                     </div>
-                                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', marginBottom: '1rem', fontSize: '0.8rem' }}>
+                                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.65rem', marginBottom: '1rem', fontSize: '0.8rem' }}>
                                                         <div>
-                                                            <div style={{ color: '#475569', fontSize: '0.7rem' }}>RUTA</div>
-                                                            <div style={{ color: '#94a3b8', fontWeight: 600 }}>{r.origen} → {r.destino}</div>
+                                                            <div style={{ color: '#475569', fontSize: '0.66rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Ruta</div>
+                                                            <div style={{ color: '#e2e8f0', fontWeight: 600 }}>{r.origen} → {r.destino}</div>
                                                         </div>
                                                         <div>
-                                                            <div style={{ color: '#475569', fontSize: '0.7rem' }}>ASIENTOS</div>
+                                                            <div style={{ color: '#475569', fontSize: '0.66rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Fecha y hora</div>
+                                                            <div style={{ color: tema.acento, fontWeight: 700, textTransform: 'capitalize' }}>{fechaTxt} · {horaTxt}</div>
+                                                        </div>
+                                                        <div>
+                                                            <div style={{ color: '#475569', fontSize: '0.66rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Correo cliente</div>
+                                                            <div style={{ color: r.email_cliente ? '#93c5fd' : '#64748b', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.email_cliente || '— sin correo —'}</div>
+                                                        </div>
+                                                        <div>
+                                                            <div style={{ color: '#475569', fontSize: '0.66rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Método</div>
+                                                            <div style={{ color: '#cbd5e1', fontWeight: 600 }}>{METODO_LBL[r.metodoPago] || r.metodoPago || '—'}</div>
+                                                        </div>
+                                                        <div>
+                                                            <div style={{ color: '#475569', fontSize: '0.66rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Asientos</div>
                                                             <div style={{ color: tema.acento, fontWeight: 700 }}>{r.asientos?.join(', ')}</div>
                                                         </div>
                                                         <div>
-                                                            <div style={{ color: '#475569', fontSize: '0.7rem' }}>MONTO</div>
-                                                            <div style={{ color: '#10b981', fontWeight: 700 }}>Bs {r.precio}</div>
+                                                            <div style={{ color: '#475569', fontSize: '0.66rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Monto</div>
+                                                            <div style={{ color: '#10b981', fontWeight: 800 }}>Bs {r.precio}</div>
                                                         </div>
                                                     </div>
-                                                    <div style={{ marginBottom: '0.75rem', background: 'rgba(124,58,237,0.08)', borderRadius: '8px', padding: '0.6rem', fontSize: '0.75rem', color: '#a78bfa' }}>
+                                                    <div style={{ marginBottom: '0.75rem', fontSize: '0.68rem', color: '#475569', fontFamily: 'monospace' }}>
                                                         ID: {r.id}
                                                         {aprobado?.email && <span style={{ marginLeft: '1rem', color: '#6ee7b7' }}>📧 {aprobado.email}</span>}
                                                     </div>
@@ -1441,19 +1528,21 @@ const PanelCajero = () => {
                                                     <div style={{ display: 'flex', gap: '0.6rem' }}>
                                                         {!aprobado && (
                                                             <>
-                                                                <button onClick={() => handleRechazarReserva(r.id)} style={{
+                                                                <button onClick={() => handleRechazarReserva(r.id)} disabled={enProc} style={{
                                                                     flex: 1, padding: '0.6rem', background: 'rgba(239,68,68,0.12)',
                                                                     border: '1px solid #7f1d1d', color: '#fca5a5',
-                                                                    borderRadius: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '0.82rem',
+                                                                    borderRadius: '8px', cursor: enProc ? 'wait' : 'pointer', fontWeight: 600, fontSize: '0.82rem',
+                                                                    opacity: enProc ? 0.6 : 1,
                                                                 }}>
                                                                     Rechazar
                                                                 </button>
-                                                                <button onClick={() => handleAprobarReserva(r.id)} style={{
+                                                                <button onClick={() => handleAprobarReserva(r.id)} disabled={enProc} style={{
                                                                     flex: 2, padding: '0.6rem', background: 'rgba(16,185,129,0.15)',
                                                                     border: '1px solid #065f46', color: '#6ee7b7',
-                                                                    borderRadius: '8px', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem',
+                                                                    borderRadius: '8px', cursor: enProc ? 'wait' : 'pointer', fontWeight: 700, fontSize: '0.85rem',
+                                                                    opacity: enProc ? 0.6 : 1,
                                                                 }}>
-                                                                    Aprobar y Emitir Boletos
+                                                                    {enProc ? '⏳ Procesando…' : 'Aprobar y Emitir Boletos'}
                                                                 </button>
                                                             </>
                                                         )}

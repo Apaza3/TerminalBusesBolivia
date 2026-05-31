@@ -733,6 +733,30 @@ export async function rechazarReserva(reservaId) {
   return true;
 }
 
+/** Envía boletos con QR válidos al correo del cliente (misma Edge Function que el cliente). */
+export async function enviarBoletosPorEmail({ email, nombre, origen, destino, fechaSalida, busPlaca, monto, empresa, reservaId, boletos }) {
+  if (!email) return { ok: false, error: 'Sin correo del cliente' };
+  try {
+    const QRLib = (await import('qrcode')).default;
+    const base = window.location.origin;
+    const boletosQR = await Promise.all((boletos || []).map(async (b) => {
+      const token = b.qrToken || b.qr_token || b.id;
+      const url = `${base}/boleto?token=${token}`;
+      const qrBase64 = await QRLib.toDataURL(url, { width: 200, margin: 1, color: { dark: '#111111', light: '#ffffff' } });
+      return { ...b, qrToken: token, qrBase64, urlPublica: url };
+    }));
+    const SURL = process.env.REACT_APP_SUPABASE_URL || '';
+    const AKEY = process.env.REACT_APP_SUPABASE_ANON_KEY || '';
+    const resp = await fetch(`${SURL}/functions/v1/send-booking-confirmation`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': AKEY, 'Authorization': `Bearer ${AKEY}` },
+      body: JSON.stringify({ email, nombre, origen, destino, fechaSalida, busPlaca, monto, empresa, reservaId, boletos: boletosQR, pdfBase64: null }),
+    });
+    if (!resp.ok) { const t = await resp.text().catch(() => ''); return { ok: false, error: `HTTP ${resp.status} ${t}` }; }
+    return { ok: true };
+  } catch (e) { return { ok: false, error: e.message }; }
+}
+
 export async function updateViajeEstado(viajeId, estado) {
   const { error } = await supabase.from('viajes').update({ estado }).eq('id', viajeId);
   if (error) { console.error('updateViajeEstado:', error.message); return false; }
