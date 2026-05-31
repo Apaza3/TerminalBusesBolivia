@@ -508,7 +508,7 @@ export async function getReservasSucursal(sucursalId) {
   // Join !inner por sucursal del viaje — evita un IN con decenas de viaje_id (fallaba en el browser)
   const { data, error } = await supabase
     .from('reservas')
-    .select('id,viaje_id,asientos,monto,estado,requiere_autorizacion,email_cliente,telefono_cliente,metodo_pago,creado_en,usuarios(nombre_completo,ci),viajes!inner(origen,destino,fecha_salida,sucursal_id)')
+    .select('id,viaje_id,asientos,monto,estado,requiere_autorizacion,email_cliente,telefono_cliente,metodo_pago,creado_en,usuarios!reservas_usuario_id_fkey(nombre_completo,ci),viajes!inner(origen,destino,fecha_salida,sucursal_id)')
     .eq('viajes.sucursal_id', sucursalId)
     .order('creado_en', { ascending: false })
     .limit(200);
