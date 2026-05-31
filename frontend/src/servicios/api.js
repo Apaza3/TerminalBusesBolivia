@@ -507,7 +507,7 @@ export async function getReservasSucursal(sucursalId) {
   if (!vs?.length) return [];
   const { data, error } = await supabase
     .from('reservas')
-    .select('id,viaje_id,asientos,monto,estado,email_cliente,telefono_cliente,metodo_pago,creado_en,usuarios(nombre_completo,ci),viajes(origen,destino,fecha_salida)')
+    .select('id,viaje_id,asientos,monto,estado,requiere_autorizacion,email_cliente,telefono_cliente,metodo_pago,creado_en,usuarios(nombre_completo,ci),viajes(origen,destino,fecha_salida)')
     .in('viaje_id', vs.map(v => v.id))
     .order('creado_en', { ascending: false })
     .limit(200);
@@ -715,6 +715,20 @@ export async function marcarBoletoValidado(boletoId, conductorUsuarioId) {
     })
     .eq('id', boletoId);
   if (error) { console.error('marcarBoletoValidado:', error.message); return false; }
+  return true;
+}
+
+/** Cajero autoriza una reserva: marca reserva + sus boletos como autorizados. Devuelve boletos. */
+export async function autorizarReserva(reservaId) {
+  await supabase.from('reservas').update({ estado: 'autorizado', boletos_enviados: true }).eq('id', reservaId);
+  await supabase.from('boletos').update({ estado: 'autorizado' }).eq('reserva_id', reservaId).neq('estado', 'cancelado');
+  return getBoletosReserva(reservaId);
+}
+
+/** Cajero rechaza una reserva: cancela reserva + boletos. */
+export async function rechazarReserva(reservaId) {
+  await supabase.from('reservas').update({ estado: 'cancelado' }).eq('id', reservaId);
+  await supabase.from('boletos').update({ estado: 'cancelado' }).eq('reserva_id', reservaId);
   return true;
 }
 

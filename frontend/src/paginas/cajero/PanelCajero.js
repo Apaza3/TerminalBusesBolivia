@@ -8,6 +8,7 @@ import FragmentoDept from '../../componentes/FragmentoDept';
 import {
     getViajesSucursalProximos, updatePrecioViaje, updatePreciosGlobal,
     getReservasSucursal, getAsientosOcupados, crearReservaSupabase, updateReservaEstado,
+    getBoletosReserva, autorizarReserva, rechazarReserva,
 } from '../../servicios/api';
 import { jsPDF } from 'jspdf';
 import TicketCard, { getTemaEmpresa, getLogoEmpresa } from '../../componentes/TicketCard';
@@ -245,24 +246,35 @@ const PanelCajero = () => {
     const handleMarcarLeida = () => {};
     const handleMarcarTodas = () => {};
 
-    const pendientesValidacion = reservas.filter(r => r.estado === 'pendiente_documentos');
+    // Pendientes de validación: requieren autorización del cajero (o aún sin confirmar), no finalizadas
+    const pendientesValidacion = reservas.filter(r =>
+        r.estado === 'pendiente' ||
+        (r.requiere_autorizacion && !['autorizado', 'cancelado', 'reembolsado'].includes(r.estado))
+    );
 
     const handleAprobarReserva = async (reservaId) => {
         const reserva = reservas.find(r => r.id === reservaId);
         if (!reserva) return;
-        await updateReservaEstado(reservaId, 'autorizado');
-        const bs = await crearBoletosBatch({
-            reservaId,
-            viajeId:        reserva.viaje_id || reserva.viajeId,
-            asientos:       reserva.asientos || [],
-            datosPasajeros: {},
-            precioUnitario: reserva.precio || 0,
-            sucursalId:     perfil?.sucursal_id,
-            departamentoId: perfil?.departamento,
-            horarioSalida:  reserva.fecha_salida || reserva.fechaSalida,
-        });
+        // Si la reserva ya tiene boletos (pre-emitidos), solo autorizarlos; si no, emitirlos.
+        let bs = await getBoletosReserva(reservaId);
+        if (bs.length) {
+            bs = await autorizarReserva(reservaId);
+        } else {
+            await updateReservaEstado(reservaId, 'autorizado');
+            const r = await crearBoletosBatch({
+                reservaId,
+                viajeId:        reserva.viaje_id || reserva.viajeId,
+                asientos:       reserva.asientos || [],
+                datosPasajeros: {},
+                precioUnitario: reserva.precio || 0,
+                sucursalId:     perfil?.sucursal_id,
+                departamentoId: perfil?.departamento,
+                horarioSalida:  reserva.fecha_salida || reserva.fechaSalida,
+            });
+            bs = r?.boletos || [];
+        }
         const email = reserva.email_cliente || null;
-        setAprobados(prev => ({ ...prev, [reservaId]: { boletos: bs?.boletos || [], nombreEmpresa: sucursalNombre, email } }));
+        setAprobados(prev => ({ ...prev, [reservaId]: { boletos: bs, nombreEmpresa: sucursalNombre, email } }));
         if (email) setTimeout(() => alert(`📧 Boletos enviados a ${email}`), 400);
         recargar();
     };
@@ -294,7 +306,7 @@ const PanelCajero = () => {
     };
 
     const handleRechazarReserva = async (reservaId) => {
-        await updateReservaEstado(reservaId, 'cancelada');
+        await rechazarReserva(reservaId);
         recargar();
     };
 

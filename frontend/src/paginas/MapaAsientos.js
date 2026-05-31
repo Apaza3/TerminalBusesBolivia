@@ -1387,7 +1387,7 @@ const MapaAsientos = () => {
 
     const handlePendienteDocumentos = async () => {
         setProcesandoPago(true);
-        const params = buildReservaParams('cajero', 'autorizado');
+        const params = buildReservaParams('cajero', 'pendiente');
         const resultado = await crearReservaSupabase({ ...params, requiereAutorizacion: true });
         if (resultado.error) {
             toast.mostrar('Error al registrar reserva.', 'error');
