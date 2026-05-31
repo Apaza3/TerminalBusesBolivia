@@ -6,6 +6,7 @@ import {
     getReservasSucursal, getViajesHistoricosSucursal,
     actualizarUsuario, eliminarUsuario, crearUsuario,
 } from '../../servicios/api';
+import { obtenerAnaliticaSucursal } from '../../servicios/analyticsService';
 
 const DEPT_COLORES = {
   'La Paz':     '#00F0FF', 'Cochabamba': '#7209B7', 'Santa Cruz': '#39FF14',
@@ -57,6 +58,7 @@ const AdminDashboard = () => {
     const [viajes,     setViajes]     = useState([]);
     const [usuarios,   setUsuarios]   = useState([]);
     const [reservas,   setReservas]   = useState([]);
+    const [ana,        setAna]        = useState(null);
     const [historico,  setHistorico]  = useState([]);
     const [cargando,   setCargando]   = useState(true);
     const [filtroHist, setFiltroHist] = useState('todos');
@@ -67,18 +69,20 @@ const AdminDashboard = () => {
     const cargarDatos = useCallback(async () => {
         if (!perfil?.sucursal_id) return;
         setCargando(true);
-        const [b, v, u, r, h] = await Promise.all([
+        const [b, v, u, r, h, a] = await Promise.all([
             getBusesEmpresa(perfil.sucursal_id),
             getViajesSucursal(perfil.sucursal_id),
             getUsuariosEmpresa(perfil.sucursal_id),
             getReservasSucursal(perfil.sucursal_id),
             getViajesHistoricosSucursal(perfil.sucursal_id, 30),
+            obtenerAnaliticaSucursal({ sucursalId: perfil.sucursal_id, periodo: 'mes' }),
         ]);
         setBuses(b);
         setViajes(v);
         setUsuarios(u);
         setReservas(r);
         setHistorico(h);
+        setAna(a);
         setCargando(false);
     }, [perfil?.sucursal_id]);
 
@@ -88,18 +92,21 @@ const AdminDashboard = () => {
         return () => clearInterval(iv);
     }, [cargarDatos]);
 
-    const enRuta        = viajes.filter(v => v.estado === 'en_viaje').length;
-    const totalIngresos = reservas.reduce((acc, r) => acc + (r.precio || 0), 0);
-    const totalBoletos  = reservas.reduce((acc, r) => acc + (r.asientos?.length || 0), 0);
+    // Conteos operativos en vivo
+    const enRuta = buses.filter(b => b.estado === 'en_viaje').length;
+    // KPIs de venta desde el mismo RPC que alimenta el Panel Analítico (tabla boletos, 30d)
+    const kpis = ana?.kpis || {};
+    const totalIngresos = Number(kpis.ingresos) || 0;
+    const totalBoletos  = Number(kpis.boletos)  || 0;
 
     const KPIS = [
-        { label: 'Buses',       valor: buses.length,    color: tema.color,   icon: '🚌' },
-        { label: 'Staff',       valor: usuarios.length,  color: '#10b981',    icon: '👥' },
-        { label: 'Viajes hoy',  valor: viajes.length,    color: '#f59e0b',    icon: '🛫' },
-        { label: 'En ruta',     valor: enRuta,           color: '#8b5cf6',    icon: '🚀' },
-        { label: 'Reservas',    valor: reservas.length,  color: '#06b6d4',    icon: '🎫' },
-        { label: 'Ingresos',    valor: `Bs ${totalIngresos.toFixed(0)}`, color: '#22c55e', icon: '💰' },
-        { label: 'Boletos',     valor: totalBoletos,     color: '#f472b6',    icon: '🏷️' },
+        { label: 'Buses',          valor: buses.length,     color: tema.color, icon: '🚌' },
+        { label: 'Staff',          valor: usuarios.length,  color: '#10b981',  icon: '👥' },
+        { label: 'Viajes hoy',     valor: viajes.length,    color: '#f59e0b',  icon: '🛫' },
+        { label: 'En ruta',        valor: enRuta,           color: '#8b5cf6',  icon: '🚀' },
+        { label: 'Reservas',       valor: reservas.length,  color: '#06b6d4',  icon: '🎫' },
+        { label: 'Ingresos (30d)', valor: `Bs ${totalIngresos.toLocaleString('es-BO')}`, color: '#22c55e', icon: '💰' },
+        { label: 'Boletos (30d)',  valor: totalBoletos,     color: '#f472b6',  icon: '🏷️' },
     ];
 
     const handleEliminarUsuario = async (u) => {
