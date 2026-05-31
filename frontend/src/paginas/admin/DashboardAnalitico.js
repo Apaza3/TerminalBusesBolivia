@@ -12,7 +12,6 @@ const BUSES_MANTENIMIENTO = [];
 const obtenerKPIs = () => ({ ingresosTotales: 0, totalBoletos: 0, totalViajes: 0, rutasActivas: 0, ocupacionPromedio: 0, totalSalidasDiarias: 0 });
 const obtenerAnalisisOcupacion = () => [];
 import ExportReportes from '../../componentes/ExportReportes';
-import AsistenteIA from '../../componentes/AsistenteIA';
 
 const FF = "'Rajdhani', system-ui, sans-serif";
 
@@ -330,8 +329,6 @@ const DashboardAnalitico = () => {
                         </div>
                     </div>
                 )}
-
-                <AsistenteIA />
             </div>
         </div>
     );

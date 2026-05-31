@@ -1,21 +1,34 @@
 // [Académico] Sprint 5 - Hook exportación reportes PDF/Excel/CSV (R30)
 import { useState, useCallback } from 'react';
 
-const getJsPDF = async () => {
-    const { default: jsPDF } = await import('jspdf');
-    await import('jspdf-autotable');
-    return jsPDF;
+const getPdfDeps = async () => {
+    const pdfMod = await import('jspdf');
+    const jsPDF = pdfMod.jsPDF || pdfMod.default;
+    const atMod = await import('jspdf-autotable');           // v5: API funcional autoTable(doc, opts)
+    const autoTable = atMod.default || atMod.autoTable;
+    return { jsPDF, autoTable };
+};
+
+const descargarBlob = (blob, nombre) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = nombre;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
 };
 
 const useReportExport = () => {
     const [exportando, setExportando] = useState(false);
 
-    // [Académico] Sprint 5 - R30: PDF con tabla usando jspdf-autotable
+    // R30: PDF con tabla (jspdf-autotable v5 — API funcional)
     const exportarPDF = useCallback(async (titulo, columnas, filas, nombreArchivo = 'reporte') => {
         setExportando(true);
         try {
-            const JsPDF = await getJsPDF();
-            const doc = new JsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+            const { jsPDF, autoTable } = await getPdfDeps();
+            const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
 
             doc.setFillColor(15, 23, 42);
             doc.rect(0, 0, 297, 210, 'F');
@@ -31,7 +44,7 @@ const useReportExport = () => {
             doc.text(titulo, 14, 26);
             doc.text(`Generado: ${new Date().toLocaleDateString('es-BO', { dateStyle: 'full' })}`, 14, 32);
 
-            doc.autoTable({
+            autoTable(doc, {
                 startY: 40,
                 head: [columnas],
                 body: filas,
@@ -44,38 +57,57 @@ const useReportExport = () => {
             });
 
             doc.save(`${nombreArchivo}_${new Date().toISOString().split('T')[0]}.pdf`);
+        } catch (e) {
+            console.error('exportarPDF:', e);
+            alert('No se pudo generar el PDF: ' + (e?.message || e));
         } finally {
             setExportando(false);
         }
     }, []);
 
-    // [Académico] Sprint 5 - R30: Excel con xlsx
+    // R30: Excel con xlsx
     const exportarExcel = useCallback(async (datos, nombreArchivo = 'reporte') => {
         setExportando(true);
         try {
+            if (!datos?.length) { alert('No hay datos para exportar.'); return; }
             const XLSX = await import('xlsx');
             const ws = XLSX.utils.json_to_sheet(datos);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'Reporte');
-            XLSX.writeFile(wb, `${nombreArchivo}_${new Date().toISOString().split('T')[0]}.xlsx`);
+            const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+            descargarBlob(
+                new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
+                `${nombreArchivo}_${new Date().toISOString().split('T')[0]}.xlsx`,
+            );
+        } catch (e) {
+            console.error('exportarExcel:', e);
+            alert('No se pudo generar el Excel: ' + (e?.message || e));
         } finally {
             setExportando(false);
         }
     }, []);
 
-    // [Académico] Sprint 5 - R30: CSV con papaparse
+    // R30: CSV sin dependencias (serializador propio)
     const exportarCSV = useCallback(async (datos, nombreArchivo = 'reporte') => {
         setExportando(true);
         try {
-            const Papa = await import('papaparse');
-            const csv = Papa.unparse(datos);
-            const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${nombreArchivo}_${new Date().toISOString().split('T')[0]}.csv`;
-            a.click();
-            URL.revokeObjectURL(url);
+            if (!datos?.length) { alert('No hay datos para exportar.'); return; }
+            const cols = Object.keys(datos[0]);
+            const esc = (v) => {
+                const s = v == null ? '' : String(v);
+                return /[",\n;]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+            };
+            const csv = [
+                cols.join(','),
+                ...datos.map(row => cols.map(c => esc(row[c])).join(',')),
+            ].join('\n');
+            descargarBlob(
+                new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' }),
+                `${nombreArchivo}_${new Date().toISOString().split('T')[0]}.csv`,
+            );
+        } catch (e) {
+            console.error('exportarCSV:', e);
+            alert('No se pudo generar el CSV: ' + (e?.message || e));
         } finally {
             setExportando(false);
         }
