@@ -395,13 +395,18 @@ export async function getViajesConductor(tripulacionId, dias = 1) {
 // ── Asientos ──────────────────────────────────────────────
 /** Devuelve asientos ocupados (reservados) + temporalmente bloqueados */
 export async function getAsientosOcupados(viajeId) {
-  // Reservas confirmadas
+  const ahora = new Date().toISOString();
   const { data: resData } = await supabase
     .from('reservas')
-    .select('asientos')
+    .select('asientos,estado,expira_en')
     .eq('viaje_id', viajeId)
     .in('estado', ['pendiente', 'pagado', 'autorizado']);
-  const ocupados = (resData || []).flatMap(r => r.asientos || []);
+  // Libera asientos de reservas pendientes con QR expirado (expira_en pasado).
+  // Las pendientes sin expiración (efectivo/ventanilla) siguen reteniendo el asiento.
+  const vigentes = (resData || []).filter(r =>
+    r.estado !== 'pendiente' || !r.expira_en || r.expira_en > ahora
+  );
+  const ocupados = vigentes.flatMap(r => r.asientos || []);
   return [...new Set(ocupados)];
 }
 

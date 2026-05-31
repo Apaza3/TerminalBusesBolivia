@@ -90,8 +90,6 @@ export default function PanelDisponibilidad({ sucursalId, color = '#3b82f6', sol
                     { label: 'Buses libres',  valor: bDisp,  color: '#10b981', icon: '🟢' },
                     { label: 'Buses en ruta', valor: bViaje, color: '#f59e0b', icon: '🟡' },
                     { label: 'Mantenimiento', valor: bMant,  color: '#ef4444', icon: '🔴' },
-                    { label: 'Choferes libre',valor: tDisp,  color: '#10b981', icon: '👨‍✈️' },
-                    { label: 'Choferes ruta', valor: tViaje, color: '#f59e0b', icon: '🚌' },
                     { label: 'En descanso',   valor: tDesc,  color: '#8b5cf6', icon: '😴' },
                 ].map(k => (
                     <div key={k.label} style={{
