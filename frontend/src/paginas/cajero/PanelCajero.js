@@ -13,6 +13,7 @@ import {
 import { jsPDF } from 'jspdf';
 import TicketCard, { getTemaEmpresa, getLogoEmpresa } from '../../componentes/TicketCard';
 import { obtenerAnaliticaSucursal } from '../../servicios/analyticsService';
+import ErrorBoundary from '../../componentes/ErrorBoundary';
 import gsap from 'gsap';
 
 const ICONOS_EMPRESAS = {
@@ -600,6 +601,7 @@ const PanelCajero = () => {
 
                     {/* Main Content */}
                     <main data-anim="main" style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
+                      <ErrorBoundary key={tab} onReset={() => { if (tab === 'crear-boleto') handleNuevoBoleto(); }}>
 
                         {/* ── Dashboard ── */}
                         {tab === 'dashboard' && (
@@ -1655,6 +1657,7 @@ const PanelCajero = () => {
                                 </div>
                             </div>
                         )}
+                      </ErrorBoundary>
                     </main>
                 </div>
             </div>
