@@ -117,6 +117,7 @@ const AdminDashboard = () => {
             const res = await crearUsuario({
                 email: d.email.trim(), password: d.password, nombre_completo: d.nombre_completo,
                 ci: d.ci, telefono: d.telefono, rol: d.rol,
+                placa: d.rol === 'conductor' ? (d.placa || '').trim() : undefined,
                 sucursal_id: perfil.sucursal_id, departamento_id: perfil.departamento_id,
             });
             if (!res.ok) { alert('No se pudo crear: ' + res.error); setGuardando(false); return; }
@@ -306,7 +307,7 @@ const AdminDashboard = () => {
                             <span>👥 Staff — {perfil?.sucursal_nombre || perfil?.sucursal_nombre}</span>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                                 <span style={{ fontSize: '0.72rem', color: '#475569', fontWeight: 400 }}>{usuarios.length} usuarios</span>
-                                <button onClick={() => setModalUsuario({ modo: 'nuevo', datos: { email: '', password: 'Tbb2024!', nombre_completo: '', ci: '', telefono: '', rol: 'cajero', activo: true } })} style={{ background: tema.color, color: '#000', border: 'none', borderRadius: 7, padding: '0.35rem 0.8rem', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>+ Añadir</button>
+                                <button onClick={() => setModalUsuario({ modo: 'nuevo', datos: { email: '', password: 'Tbb2024!', nombre_completo: '', ci: '', telefono: '', rol: 'cajero', placa: '', activo: true } })} style={{ background: tema.color, color: '#000', border: 'none', borderRadius: 7, padding: '0.35rem 0.8rem', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>+ Añadir</button>
                             </div>
                         </div>
                         {usuarios.length === 0 ? (
@@ -496,6 +497,18 @@ const AdminDashboard = () => {
                             <option value="admin_sucursal">Admin</option>
                         </select>
                     </div>
+                    {modalUsuario.modo === 'nuevo' && modalUsuario.datos.rol === 'conductor' && (
+                        <div style={{ marginBottom: '0.9rem' }}>
+                            <label style={{ display: 'block', fontSize: '0.72rem', color: '#64748b', fontWeight: 600, marginBottom: '0.3rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Placa del bus (asignar)</label>
+                            <input
+                                value={modalUsuario.datos.placa || ''}
+                                onChange={e => setModalUsuario(p => ({ ...p, datos: { ...p.datos, placa: e.target.value.toUpperCase() } }))}
+                                placeholder="Ej: 1234ABC (bus ya registrado)"
+                                style={{ width: '100%', background: '#07111f', border: `1px solid ${tema.color}30`, color: '#f1f5f9', borderRadius: 8, padding: '0.55rem 0.8rem', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
+                            />
+                            <div style={{ fontSize: '0.7rem', color: '#475569', marginTop: '0.25rem' }}>Opcional. El bus debe existir en Flota.</div>
+                        </div>
+                    )}
                     <div style={{ marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <input type="checkbox" id="activo_chk" checked={modalUsuario.datos.activo} onChange={e => setModalUsuario(p => ({ ...p, datos: { ...p.datos, activo: e.target.checked } }))} />
                         <label htmlFor="activo_chk" style={{ fontSize: '0.85rem', color: '#94a3b8', cursor: 'pointer' }}>Activo</label>

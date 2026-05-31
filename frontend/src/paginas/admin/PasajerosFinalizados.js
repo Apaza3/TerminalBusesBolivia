@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contextos/AuthContext';
 import { DEPARTAMENTOS } from '../../contextos/DepartamentoContext';
-// Viajes finalizados: pending Supabase migration
+import { getViajesFinalizadosSucursal } from '../../servicios/api';
 
 const PasajerosFinalizados = () => {
     const { perfil } = useAuth();
@@ -13,8 +13,9 @@ const PasajerosFinalizados = () => {
     const [busqueda, setBusqueda] = useState('');
 
     const cargar = useCallback(() => {
-        setViajes([]);
-    }, [perfil?.sucursal_id]); // eslint-disable-line
+        if (!perfil?.sucursal_id) { setViajes([]); return; }
+        getViajesFinalizadosSucursal(perfil.sucursal_id).then(setViajes);
+    }, [perfil?.sucursal_id]);
 
     useEffect(() => { cargar(); }, [cargar]);
 

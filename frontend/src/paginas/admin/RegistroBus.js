@@ -1,29 +1,21 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contextos/AuthContext';
 import { DEPARTAMENTOS } from '../../contextos/DepartamentoContext';
 import { supabase } from '../../servicios/supabase';
-import gsap from 'gsap';
-import '../../estilos/escritorio/admin.css';
-import '../../estilos/escritorio/mapa-asientos.css';
-import '../../estilos/movil/admin-responsivo.css';
 
 const AMENIDADES_DISPONIBLES = [
-    { id: 'WiFi',               icono: '📶' },
-    { id: 'USB',                icono: '🔌' },
-    { id: 'Aire Acondicionado', icono: '❄️' },
-    { id: 'Bus Cama',           icono: '🛏️' },
-    { id: 'TV',                 icono: '📺' },
-    { id: 'Baño',               icono: '🚿' },
-    { id: 'Calefacción',        icono: '🔥' },
+    { id: 'WiFi', icono: '📶' }, { id: 'USB', icono: '🔌' },
+    { id: 'Aire Acondicionado', icono: '❄️' }, { id: 'TV', icono: '📺' },
+    { id: 'Baño', icono: '🚿' }, { id: 'Calefacción', icono: '🔥' },
 ];
 
 const CATEGORIAS = [
-    { id: 'economico',  label: 'Económico',  icono: '🚌', color: '#94a3b8', bg: 'rgba(148,163,184,0.1)'  },
-    { id: 'semicama',   label: 'Semi-Cama',  icono: '🛋️', color: '#38bdf8', bg: 'rgba(56,189,248,0.1)'   },
-    { id: 'cama',       label: 'Cama',       icono: '🛏️', color: '#a78bfa', bg: 'rgba(167,139,250,0.1)'  },
-    { id: 'vip',        label: 'VIP',        icono: '⭐', color: '#fbbf24', bg: 'rgba(251,191,36,0.1)'   },
-    { id: 'ejecutivo',  label: 'Ejecutivo',  icono: '💎', color: '#34d399', bg: 'rgba(52,211,153,0.1)'   },
+    { id: 'economico', label: 'Económico', icono: '🚌', color: '#94a3b8' },
+    { id: 'semicama', label: 'Semi-Cama', icono: '🛋️', color: '#38bdf8' },
+    { id: 'cama', label: 'Cama', icono: '🛏️', color: '#a78bfa' },
+    { id: 'vip', label: 'VIP', icono: '⭐', color: '#fbbf24' },
+    { id: 'ejecutivo', label: 'Ejecutivo', icono: '💎', color: '#34d399' },
 ];
 
 const estadoDoc = (fechaStr) => {
@@ -34,123 +26,24 @@ const estadoDoc = (fechaStr) => {
     return 'vigente';
 };
 
-const BadgeDoc = ({ fecha, label }) => {
-    const est = estadoDoc(fecha);
-    if (!est) return null;
-    const cfg = {
-        vigente:    { color: '#10b981', bg: 'rgba(16,185,129,0.1)',  icon: '✅', texto: `${label} vigente` },
-        por_vencer: { color: '#f59e0b', bg: 'rgba(245,158,11,0.1)', icon: '⚠️', texto: `${label} vence en <30 días` },
-        vencido:    { color: '#ef4444', bg: 'rgba(239,68,68,0.1)',  icon: '❌', texto: `${label} VENCIDO` },
-    };
-    const c = cfg[est];
-    return (
-        <span style={{
-            display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
-            fontSize: '0.75rem', fontWeight: 600, color: c.color,
-            background: c.bg, padding: '0.2rem 0.65rem', borderRadius: 999,
-        }}>
-            {c.icon} {c.texto}
-        </span>
-    );
-};
+// columnas según categoría (cama/vip/ejecutivo = 2+1)
+const colsDeCategoria = (cat) => (['cama', 'vip', 'ejecutivo'].includes(cat) ? 3 : 4);
 
-const BusPreviewMini = ({ config }) => {
-    const { pisos, columnas, filasPiso1, filasPiso2, tieneBano } = config;
-    const colsDer = columnas === 4 ? 2 : 1;
-    const colsIzq = 2;
-    const totalSeats = colsIzq + colsDer;
-    const gridCols   = columnas === 4
-        ? '36px 36px 12px 36px 36px 18px'
-        : '36px 36px 12px 36px 18px';
-
-    const renderFila = (piso, fila) => {
-        const asientos = [];
-        for (let c = 1; c <= totalSeats; c++) {
-            const letra  = String.fromCharCode(64 + c);
-            const numero = `${fila}${letra}`;
-            const demo   = ['disponible', 'disponible', 'ocupado', 'pendiente'];
-            const estado = demo[(fila + c) % demo.length];
-            asientos.push(
-                <div
-                    key={`p${piso}-f${fila}-c${c}`}
-                    className={`asiento-btn ${estado}`}
-                    style={{ width: 36, height: 36, marginTop: 6, pointerEvents: 'none', fontSize: '0.5rem', cursor: 'default' }}
-                    title={numero}
-                >
-                    <span className="asiento-numero" style={{ opacity: 1, fontSize: '0.45rem' }}>{numero}</span>
-                </div>
-            );
-            if (c === colsIzq) {
-                asientos.push(
-                    <div key={`pasillo-${piso}-${fila}`} className="bus-pasillo-visual" style={{ width: 12, height: 42, margin: '6px 0 0' }} />
-                );
-            }
-        }
-        asientos.push(
-            <div key={`fn-${piso}-${fila}`} className="fila-numero" style={{ fontSize: '0.55rem', color: '#475569' }}>{fila}</div>
-        );
-        return (
-            <div key={`fila-${piso}-${fila}`} style={{ display: 'grid', gridTemplateColumns: gridCols, gap: 4, alignItems: 'center' }}>
-                {asientos}
-            </div>
-        );
-    };
-
-    return (
-        <div className="bus-preview-contenedor">
-            <div className="bus-preview-titulo">Vista previa del bus</div>
-            <div className="bus-cuerpo" style={{ transform: 'scale(0.85)', transformOrigin: 'top center' }}>
-                <div className="bus-frente" style={{ padding: '4px 8px' }}>
-                    <span className="bus-volante" style={{ fontSize: '1rem' }}>🚌</span>
-                    <span className="bus-puerta-etiqueta" style={{ fontSize: '0.55rem' }}>🚪 Puerta</span>
-                </div>
-                <div className="bus-interior">
-                    <div className="bus-piso">
-                        {pisos === 2 && <div className="bus-piso-label">Piso 1</div>}
-                        {Array.from({ length: filasPiso1 }, (_, i) => renderFila(1, i + 1))}
-                        {tieneBano && (
-                            <div className="bus-zona-bano" style={{ fontSize: '0.65rem' }}>🚿 Baño</div>
-                        )}
-                    </div>
-                    {pisos === 2 && filasPiso2 > 0 && (
-                        <>
-                            <hr className="bus-separador-piso" />
-                            <div className="bus-piso">
-                                <div className="bus-piso-label">Piso 2</div>
-                                {Array.from({ length: filasPiso2 }, (_, i) => renderFila(2, i + 1))}
-                            </div>
-                        </>
-                    )}
-                </div>
-                <div className="bus-trasera" />
-            </div>
-            <div style={{ fontSize: '0.68rem', color: '#475569', marginTop: '.4rem' }}>
-                {pisos === 2 ? `2 pisos · ` : `1 piso · `}
-                {columnas === 4 ? '2+2 cols' : '2+1 cols'} · {
-                    (filasPiso1 * totalSeats) + (pisos === 2 ? filasPiso2 * totalSeats : 0)
-                } asientos
-            </div>
-        </div>
-    );
+// deriva filas por piso a partir de capacidad + columnas + pisos
+const derivarAsientos = (capacidad, columnas, pisos) => {
+    const totalFilas = Math.max(1, Math.round((Number(capacidad) || columnas) / columnas));
+    if (pisos === 2) {
+        const filas1 = Math.max(1, Math.ceil(totalFilas * 0.35));
+        const filas2 = Math.max(1, totalFilas - filas1);
+        return { filas1, filas2, capReal: columnas * (filas1 + filas2) };
+    }
+    return { filas1: totalFilas, filas2: 0, capReal: columnas * totalFilas };
 };
 
 const FORM_INICIAL = {
-    sucursal_id:       '',
-    placa:             '',
-    marca:             '',
-    modelo:            '',
-    anio:              new Date().getFullYear(),
-    categoria:         'economico',
-    pisos:             1,
-    columnas:          4,
-    filas_piso_1:      10,
-    filas_piso_2:      8,
-    tiene_bano:        false,
-    amenidades:        [],
-    soat_numero:       '',
-    soat_vence:        '',
-    inspeccion_numero: '',
-    inspeccion_vence:  '',
+    sucursal_id: '', placa: '', marca: '', modelo: '',
+    anio: new Date().getFullYear(), categoria: 'economico', pisos: 1, capacidad: 44,
+    amenidades: [], soat_numero: '', soat_vence: '', inspeccion_numero: '', inspeccion_vence: '',
 };
 
 const RegistroBus = () => {
@@ -158,99 +51,54 @@ const RegistroBus = () => {
     const { perfil } = useAuth();
     const deptNombre = perfil?.departamento || 'La Paz';
     const tema = DEPARTAMENTOS[deptNombre] || DEPARTAMENTOS['La Paz'];
-    const containerRef = useRef(null);
 
-    const [form, setForm]           = useState(FORM_INICIAL);
+    const [form, setForm] = useState(FORM_INICIAL);
     const [placaEstado, setPlacaEstado] = useState(null);
-    const [errores,     setErrores]     = useState({});
-    const [feedback,    setFeedback]    = useState(null);
-    const [guardando,   setGuardando]   = useState(false);
-    const [sucursales,  setSucursales]  = useState([]);
+    const [errores, setErrores] = useState({});
+    const [feedback, setFeedback] = useState(null);
+    const [guardando, setGuardando] = useState(false);
+    const [sucursales, setSucursales] = useState([]);
 
+    // default sucursal = la del admin
     useEffect(() => {
-        const ctx = gsap.context(() => {
-            gsap.from('[data-anim="seccion"]', {
-                y: 28, opacity: 0, duration: 0.5,
-                stagger: 0.1, ease: 'power3.out', delay: 0.1,
-            });
-        }, containerRef);
-        return () => ctx.revert();
+        (async () => {
+            const { data } = await supabase.from('sucursales').select('id,nombre,departamentos(nombre)').order('nombre');
+            setSucursales(data || []);
+        })();
     }, []);
-
     useEffect(() => {
-        const fetchSucursales = async () => {
-            try {
-                const { data } = await supabase
-                    .from('sucursales')
-                    .select('id, nombre')
-                    .order('nombre');
-                if (data) setSucursales(data);
-            } catch (err) {
-                console.error('RegistroBus - fetchSucursales error:', err);
-            }
-        };
-        fetchSucursales();
-    }, []);
+        if (perfil?.sucursal_id) setForm(prev => ({ ...prev, sucursal_id: perfil.sucursal_id }));
+    }, [perfil?.sucursal_id]);
 
     const setField = (campo, valor) => {
         setForm(prev => ({ ...prev, [campo]: valor }));
         setErrores(prev => ({ ...prev, [campo]: null }));
     };
-
-    const toggleAmenidad = (id) => {
-        setForm(prev => ({
-            ...prev,
-            amenidades: prev.amenidades.includes(id)
-                ? prev.amenidades.filter(a => a !== id)
-                : [...prev.amenidades, id],
-        }));
-    };
+    const toggleAmenidad = (id) => setForm(prev => ({
+        ...prev,
+        amenidades: prev.amenidades.includes(id) ? prev.amenidades.filter(a => a !== id) : [...prev.amenidades, id],
+    }));
 
     const verificarPlaca = async () => {
         const placa = form.placa.trim().toUpperCase();
         if (!placa || placa.length < 5) return;
-
         setPlacaEstado('cargando');
         try {
-            const { data, error } = await supabase
-                .from('buses')
-                .select('id')
-                .eq('placa', placa)
-                .maybeSingle();
-
+            const { data, error } = await supabase.from('buses').select('id').eq('placa', placa).maybeSingle();
             if (error) throw error;
             setPlacaEstado(data ? 'duplicado' : 'ok');
-            if (data) {
-                setErrores(prev => ({ ...prev, placa: 'Esta placa ya está registrada.' }));
-            }
-        } catch (err) {
-            console.error('RegistroBus - Error verificando placa:', err);
-            setPlacaEstado(null);
-        }
+            if (data) setErrores(prev => ({ ...prev, placa: 'Esta placa ya está registrada.' }));
+        } catch (err) { console.error(err); setPlacaEstado(null); }
     };
-
-    const previewConfig = useCallback(() => ({
-        pisos:      form.pisos,
-        columnas:   form.columnas,
-        filasPiso1: Math.max(1, Math.min(20, Number(form.filas_piso_1) || 10)),
-        filasPiso2: form.pisos === 2 ? Math.max(1, Math.min(20, Number(form.filas_piso_2) || 8)) : 0,
-        tieneBano:  form.tiene_bano,
-    }), [form]);
 
     const validar = () => {
         const errs = {};
-        if (!form.placa.trim())   errs.placa = 'La placa es obligatoria.';
+        if (!form.placa.trim()) errs.placa = 'La placa es obligatoria.';
         if (placaEstado === 'duplicado') errs.placa = 'Esta placa ya está registrada.';
-        if (!form.filas_piso_1 || form.filas_piso_1 < 1) errs.filas_piso_1 = 'Mínimo 1 fila.';
-        if (form.pisos === 2 && (!form.filas_piso_2 || form.filas_piso_2 < 1)) {
-            errs.filas_piso_2 = 'Mínimo 1 fila en piso 2.';
-        }
-        if (form.soat_vence && estadoDoc(form.soat_vence) === 'vencido') {
-            errs.soat_vence = 'SOAT vencido — el bus no podrá asignarse a itinerarios.';
-        }
-        if (form.inspeccion_vence && estadoDoc(form.inspeccion_vence) === 'vencido') {
-            errs.inspeccion_vence = 'Inspección técnica vencida — el bus no podrá asignarse.';
-        }
+        if (!form.sucursal_id) errs.sucursal_id = 'Selecciona una sucursal.';
+        if (!form.capacidad || form.capacidad < 4) errs.capacidad = 'Capacidad mínima 4.';
+        if (form.soat_vence && estadoDoc(form.soat_vence) === 'vencido') errs.soat_vence = 'SOAT vencido.';
+        if (form.inspeccion_vence && estadoDoc(form.inspeccion_vence) === 'vencido') errs.inspeccion_vence = 'Inspección vencida.';
         setErrores(errs);
         return Object.keys(errs).length === 0;
     };
@@ -258,458 +106,211 @@ const RegistroBus = () => {
     const handleGuardar = async (e) => {
         e.preventDefault();
         if (!validar()) return;
-
         setGuardando(true);
         setFeedback(null);
-
-        const colsDer  = form.columnas === 4 ? 2 : 1;
-        const capPiso1 = form.filas_piso_1 * (2 + colsDer);
-        const capPiso2 = form.pisos === 2 ? form.filas_piso_2 * (2 + colsDer) : 0;
-
+        const columnas = colsDeCategoria(form.categoria);
+        const { filas1, filas2, capReal } = derivarAsientos(form.capacidad, columnas, form.pisos);
         try {
-            const { error } = await supabase
-                .from('buses')
-                .insert([{
-                    sucursal_id:            form.sucursal_id || null,
-                    placa:                  form.placa.trim().toUpperCase(),
-                    marca:                  form.marca.trim() || null,
-                    modelo:                 form.modelo.trim() || null,
-                    anio:                   form.anio ? Number(form.anio) : null,
-                    categoria:              form.categoria,
-                    configuracion_asientos: form.columnas === 4 ? '2+2' : '2+1',
-                    capacidad:              capPiso1 + capPiso2,
-                    pisos:                  form.pisos,
-                    columnas:               form.columnas,
-                    filas_piso_1:           Number(form.filas_piso_1),
-                    filas_piso_2:           form.pisos === 2 ? Number(form.filas_piso_2) : 0,
-                    tiene_bano:             form.tiene_bano,
-                    amenidades:             form.amenidades,
-                    soat_numero:            form.soat_numero.trim() || null,
-                    soat_vence:             form.soat_vence || null,
-                    inspeccion_numero:      form.inspeccion_numero.trim() || null,
-                    inspeccion_vence:       form.inspeccion_vence || null,
-                    estado:                 'disponible',
-                }]);
-
+            const { error } = await supabase.from('buses').insert([{
+                sucursal_id: form.sucursal_id || null,
+                placa: form.placa.trim().toUpperCase(),
+                marca: form.marca.trim() || null,
+                modelo: form.modelo.trim() || null,
+                anio: form.anio ? Number(form.anio) : null,
+                categoria: form.categoria,
+                configuracion_asientos: columnas === 4 ? '2+2' : '2+1',
+                capacidad: capReal,
+                pisos: form.pisos,
+                columnas,
+                filas_piso_1: filas1,
+                filas_piso_2: filas2,
+                tiene_bano: form.amenidades.includes('Baño'),
+                amenidades: form.amenidades,
+                soat_numero: form.soat_numero.trim() || null,
+                soat_vence: form.soat_vence || null,
+                inspeccion_numero: form.inspeccion_numero.trim() || null,
+                inspeccion_vence: form.inspeccion_vence || null,
+                estado: 'disponible',
+                departamento_actual_id: perfil?.departamento_id || null,
+            }]);
             if (error) throw error;
-
-            setFeedback({
-                tipo: 'exito',
-                msg: `✅ Bus ${form.placa.toUpperCase()} registrado — ${capPiso1 + capPiso2} asientos · Categoría ${form.categoria}.`
-            });
-            setForm(FORM_INICIAL);
+            setFeedback({ tipo: 'exito', msg: `✅ Bus ${form.placa.toUpperCase()} registrado — ${capReal} asientos (${form.pisos} piso${form.pisos === 2 ? 's' : ''}).` });
+            setForm({ ...FORM_INICIAL, sucursal_id: perfil?.sucursal_id || '' });
             setPlacaEstado(null);
         } catch (err) {
-            console.error('RegistroBus - Error al guardar:', err);
-            setFeedback({ tipo: 'error', msg: `❌ Error al guardar: ${err.message}` });
-        } finally {
-            setGuardando(false);
-        }
+            console.error(err);
+            setFeedback({ tipo: 'error', msg: `❌ Error: ${err.message}` });
+        } finally { setGuardando(false); }
     };
 
-    const catSel = CATEGORIAS.find(c => c.id === form.categoria);
+    // ── estilos ──
+    const card = { background: '#0d1a2e', border: `1px solid ${tema.color}1f`, borderRadius: 16, padding: '1.5rem', marginBottom: '1.25rem' };
+    const label = { display: 'block', fontSize: '0.7rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '0.4rem' };
+    const input = (err) => ({ width: '100%', background: '#07111f', border: `1px solid ${err ? '#ef4444' : tema.color + '30'}`, color: '#f1f5f9', borderRadius: 9, padding: '0.6rem 0.85rem', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' });
+    const errMsg = { color: '#fca5a5', fontSize: '0.72rem', marginTop: '0.25rem' };
+    const sectionTitle = { fontSize: '0.8rem', fontWeight: 800, color: tema.acento, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.4rem' };
+    const grid2 = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' };
 
     return (
-        <div ref={containerRef} style={{ color: '#f1f5f9', fontFamily: "'Inter', system-ui, sans-serif" }}>
-
-            {/* Título */}
-            <div style={{ maxWidth: 900, margin: '2rem auto 0', padding: '0 1rem 1.5rem' }}>
-                <div style={{
-                    fontSize: 'clamp(1.5rem,3.5vw,2rem)', fontWeight: 900,
-                    background: `linear-gradient(90deg, ${tema.color}, ${tema.colorSecundario})`,
-                    WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-                    fontFamily: "'Rajdhani', system-ui, sans-serif",
-                    textTransform: 'uppercase', lineHeight: 1.1,
-                }}>Registrar Bus</div>
-                <div style={{ fontSize: '0.73rem', color: '#64748b', marginTop: '0.2rem' }}>
-                    Configura el layout, categoría y documentación del vehículo
+        <div style={{ color: '#f1f5f9', fontFamily: "'Inter', system-ui, sans-serif" }}>
+            <form onSubmit={handleGuardar} style={{ maxWidth: 760, margin: '2rem auto', padding: '0 1rem' }}>
+                {/* Título */}
+                <div style={{ marginBottom: '1.5rem' }}>
+                    <div style={{
+                        fontSize: 'clamp(1.5rem,3.5vw,2rem)', fontWeight: 900,
+                        background: `linear-gradient(90deg, ${tema.color}, ${tema.colorSecundario})`,
+                        WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                        fontFamily: "'Rajdhani', system-ui, sans-serif", textTransform: 'uppercase', lineHeight: 1.1,
+                    }}>Registrar Bus</div>
+                    <div style={{ fontSize: '0.73rem', color: '#64748b', marginTop: '0.2rem' }}>
+                        Alta de unidad para {perfil?.sucursal_nombre || deptNombre}
+                    </div>
                 </div>
-            </div>
 
-            <form className="admin-contenido" onSubmit={handleGuardar} noValidate>
                 {feedback && (
-                    <div className={`admin-feedback ${feedback.tipo}`}>{feedback.msg}</div>
+                    <div style={{
+                        padding: '0.85rem 1.1rem', borderRadius: 10, marginBottom: '1.25rem', fontSize: '0.85rem', fontWeight: 600,
+                        background: feedback.tipo === 'exito' ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)',
+                        border: `1px solid ${feedback.tipo === 'exito' ? '#10b98155' : '#ef444455'}`,
+                        color: feedback.tipo === 'exito' ? '#6ee7b7' : '#fca5a5',
+                    }}>{feedback.msg}</div>
                 )}
 
-                {/* ── Identificación ─────────────────────────────────── */}
-                <div className="admin-seccion" data-anim="seccion">
-                    <div className="admin-seccion-titulo">
-                        <span className="seccion-icono">🚌</span> Identificación del Bus
-                    </div>
-                    <div className="admin-seccion-cuerpo">
-                        <div className="campos-grid-2">
-                            <div className="campo-grupo">
-                                <label className="campo-label">Placa <span className="campo-requerido">*</span></label>
-                                <input
-                                    type="text"
-                                    className={`campo-input ${errores.placa ? 'error' : placaEstado === 'ok' ? 'ok' : ''}`}
-                                    value={form.placa}
-                                    onChange={e => { setField('placa', e.target.value.toUpperCase()); setPlacaEstado(null); }}
-                                    onBlur={verificarPlaca}
-                                    placeholder="Ej: ABC-1234"
-                                    id="input-placa"
-                                    maxLength={10}
-                                />
-                                {placaEstado === 'cargando' && (
-                                    <div className="campo-cargando"><div className="spinner-mini" /> Verificando placa...</div>
-                                )}
-                                {placaEstado === 'ok' && <div className="campo-ok-msg">✓ Placa disponible</div>}
-                                {errores.placa && <div className="campo-error-msg">{errores.placa}</div>}
-                            </div>
-
-                            <div className="campo-grupo">
-                                <label className="campo-label">Sucursal (Empresa)</label>
-                                <select
-                                    className="campo-select"
-                                    value={form.sucursal_id}
-                                    onChange={e => setField('sucursal_id', e.target.value)}
-                                    id="select-sucursal"
-                                >
-                                    <option value="">Sin asignar</option>
-                                    {sucursales.map(s => (
-                                        <option key={s.id} value={s.id}>{s.nombre}</option>
-                                    ))}
-                                </select>
-                            </div>
+                {/* Identificación */}
+                <div style={card}>
+                    <div style={sectionTitle}>🚌 Identificación</div>
+                    <div style={grid2}>
+                        <div>
+                            <label style={label}>Placa *</label>
+                            <input style={input(errores.placa)} value={form.placa}
+                                onChange={e => { setField('placa', e.target.value.toUpperCase()); setPlacaEstado(null); }}
+                                onBlur={verificarPlaca} placeholder="1234ABC" />
+                            {placaEstado === 'cargando' && <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.25rem' }}>Verificando…</div>}
+                            {placaEstado === 'ok' && <div style={{ fontSize: '0.72rem', color: '#6ee7b7', marginTop: '0.25rem' }}>✓ Placa disponible</div>}
+                            {errores.placa && <div style={errMsg}>{errores.placa}</div>}
                         </div>
-
-                        <div className="campos-grid-2" style={{ marginTop: '1.25rem' }}>
-                            <div className="campo-grupo">
-                                <label className="campo-label">Marca</label>
-                                <input
-                                    type="text"
-                                    className="campo-input"
-                                    value={form.marca}
-                                    onChange={e => setField('marca', e.target.value)}
-                                    placeholder="Ej: Mercedes-Benz, Volvo, Scania"
-                                />
-                            </div>
-                            <div className="campo-grupo">
-                                <label className="campo-label">Modelo</label>
-                                <input
-                                    type="text"
-                                    className="campo-input"
-                                    value={form.modelo}
-                                    onChange={e => setField('modelo', e.target.value)}
-                                    placeholder="Ej: OH-1621, B12R, Irizar"
-                                />
-                            </div>
+                        <div>
+                            <label style={label}>Sucursal *</label>
+                            <select style={input(errores.sucursal_id)} value={form.sucursal_id} onChange={e => setField('sucursal_id', e.target.value)}>
+                                <option value="">— Selecciona —</option>
+                                {sucursales.map(s => <option key={s.id} value={s.id}>{s.nombre} · {s.departamentos?.nombre || ''}</option>)}
+                            </select>
+                            {errores.sucursal_id && <div style={errMsg}>{errores.sucursal_id}</div>}
                         </div>
-
-                        <div style={{ marginTop: '1.25rem' }}>
-                            <div className="campo-grupo" style={{ maxWidth: 180 }}>
-                                <label className="campo-label">Año de fabricación</label>
-                                <input
-                                    type="number"
-                                    className="campo-input"
-                                    value={form.anio}
-                                    onChange={e => setField('anio', Number(e.target.value))}
-                                    min={1990} max={new Date().getFullYear()}
-                                />
-                            </div>
+                        <div>
+                            <label style={label}>Marca</label>
+                            <input style={input()} value={form.marca} onChange={e => setField('marca', e.target.value)} placeholder="Volvo" />
+                        </div>
+                        <div>
+                            <label style={label}>Modelo</label>
+                            <input style={input()} value={form.modelo} onChange={e => setField('modelo', e.target.value)} placeholder="B420R" />
+                        </div>
+                        <div>
+                            <label style={label}>Año</label>
+                            <input type="number" style={input()} value={form.anio} min={1990} max={new Date().getFullYear() + 1}
+                                onChange={e => setField('anio', e.target.value)} />
                         </div>
                     </div>
                 </div>
 
-                {/* ── Categoría ──────────────────────────────────────── */}
-                <div className="admin-seccion" data-anim="seccion">
-                    <div className="admin-seccion-titulo">
-                        <span className="seccion-icono">🏷️</span> Categoría del Servicio
-                        {catSel && (
-                            <span style={{
-                                marginLeft: 'auto', fontSize: '0.78rem', fontWeight: 600,
-                                color: catSel.color, background: catSel.bg,
-                                padding: '0.2rem 0.75rem', borderRadius: 999,
+                {/* Configuración */}
+                <div style={card}>
+                    <div style={sectionTitle}>🛠️ Configuración</div>
+
+                    {/* Pisos */}
+                    <label style={label}>Pisos</label>
+                    <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.25rem' }}>
+                        {[1, 2].map(p => (
+                            <button type="button" key={p} onClick={() => setField('pisos', p)} style={{
+                                flex: 1, padding: '1rem', borderRadius: 12, cursor: 'pointer', fontWeight: 800, fontSize: '0.95rem',
+                                border: `2px solid ${form.pisos === p ? tema.color : '#1e293b'}`,
+                                background: form.pisos === p ? `${tema.color}1f` : '#07111f',
+                                color: form.pisos === p ? tema.acento : '#64748b', transition: 'all 0.15s',
                             }}>
-                                {catSel.icono} {catSel.label} seleccionado
-                            </span>
-                        )}
+                                <div style={{ fontSize: '1.6rem', marginBottom: '0.2rem' }}>{p === 1 ? '🚌' : '🚍'}</div>
+                                {p === 1 ? '1 Piso' : '2 Pisos'}
+                            </button>
+                        ))}
                     </div>
-                    <div className="admin-seccion-cuerpo">
-                        <div style={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
-                            gap: '0.75rem',
-                        }}>
-                            {CATEGORIAS.map(cat => (
-                                <button
-                                    key={cat.id}
-                                    type="button"
-                                    id={`cat-${cat.id}`}
-                                    onClick={() => setField('categoria', cat.id)}
-                                    style={{
-                                        padding: '0.9rem 0.75rem',
-                                        background: form.categoria === cat.id ? cat.bg : '#0f172a',
-                                        border: `2px solid ${form.categoria === cat.id ? cat.color : '#334155'}`,
-                                        borderRadius: 10, color: form.categoria === cat.id ? cat.color : '#64748b',
-                                        cursor: 'pointer', textAlign: 'center',
-                                        transition: 'all 0.18s ease', fontWeight: 600,
-                                    }}
-                                    onMouseEnter={e => {
-                                        if (form.categoria !== cat.id) {
-                                            e.currentTarget.style.borderColor = cat.color;
-                                            e.currentTarget.style.color = cat.color;
-                                            gsap.to(e.currentTarget, { y: -2, duration: 0.15 });
-                                        }
-                                    }}
-                                    onMouseLeave={e => {
-                                        if (form.categoria !== cat.id) {
-                                            e.currentTarget.style.borderColor = '#334155';
-                                            e.currentTarget.style.color = '#64748b';
-                                            gsap.to(e.currentTarget, { y: 0, duration: 0.15 });
-                                        }
-                                    }}
-                                >
-                                    <div style={{ fontSize: '1.4rem', marginBottom: '0.35rem' }}>{cat.icono}</div>
-                                    <div style={{ fontSize: '0.82rem' }}>{cat.label}</div>
-                                </button>
-                            ))}
-                        </div>
-                        <div className="campo-hint" style={{ marginTop: '0.75rem' }}>
-                            Define el tipo de servicio y el rango de precio sugerido para este bus.
+
+                    {/* Categoría */}
+                    <label style={label}>Categoría</label>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1.25rem' }}>
+                        {CATEGORIAS.map(c => (
+                            <button type="button" key={c.id} onClick={() => setField('categoria', c.id)} style={{
+                                padding: '0.55rem 0.9rem', borderRadius: 10, cursor: 'pointer', fontSize: '0.82rem', fontWeight: 700,
+                                border: `1.5px solid ${form.categoria === c.id ? c.color : '#1e293b'}`,
+                                background: form.categoria === c.id ? `${c.color}1f` : '#07111f',
+                                color: form.categoria === c.id ? c.color : '#64748b',
+                            }}>{c.icono} {c.label}</button>
+                        ))}
+                    </div>
+
+                    {/* Capacidad */}
+                    <div style={{ maxWidth: 220 }}>
+                        <label style={label}>Capacidad (asientos)</label>
+                        <input type="number" style={input(errores.capacidad)} value={form.capacidad} min={4} max={90}
+                            onChange={e => setField('capacidad', Number(e.target.value))} />
+                        {errores.capacidad && <div style={errMsg}>{errores.capacidad}</div>}
+                        <div style={{ fontSize: '0.7rem', color: '#475569', marginTop: '0.3rem' }}>
+                            Distribución {colsDeCategoria(form.categoria) === 4 ? '2+2' : '2+1'} · {form.pisos} piso{form.pisos === 2 ? 's' : ''}
                         </div>
                     </div>
                 </div>
 
-                {/* ── Layout ─────────────────────────────────────────── */}
-                <div className="admin-seccion" data-anim="seccion">
-                    <div className="admin-seccion-titulo">
-                        <span className="seccion-icono">📐</span> Layout del Bus
+                {/* Amenidades */}
+                <div style={card}>
+                    <div style={sectionTitle}>✨ Amenidades</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                        {AMENIDADES_DISPONIBLES.map(a => {
+                            const on = form.amenidades.includes(a.id);
+                            return (
+                                <button type="button" key={a.id} onClick={() => toggleAmenidad(a.id)} style={{
+                                    padding: '0.5rem 0.85rem', borderRadius: 999, cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600,
+                                    border: `1.5px solid ${on ? tema.color : '#1e293b'}`,
+                                    background: on ? `${tema.color}1f` : '#07111f', color: on ? tema.acento : '#64748b',
+                                }}>{a.icono} {a.id}</button>
+                            );
+                        })}
                     </div>
-                    <div className="admin-seccion-cuerpo">
-                        <div className="campo-grupo">
-                            <label className="campo-label">Número de Pisos <span className="campo-requerido">*</span></label>
-                            <div className="toggle-grupo">
-                                {[1, 2].map(n => (
-                                    <button
-                                        key={n}
-                                        type="button"
-                                        className={`toggle-btn ${form.pisos === n ? 'activo' : ''}`}
-                                        onClick={() => setField('pisos', n)}
-                                        id={`btn-pisos-${n}`}
-                                    >
-                                        {n === 1 ? '🚌 1 Piso' : '🚌🚌 2 Pisos'}
-                                    </button>
-                                ))}
-                            </div>
+                </div>
+
+                {/* Documentación */}
+                <div style={card}>
+                    <div style={sectionTitle}>📄 Documentación</div>
+                    <div style={grid2}>
+                        <div>
+                            <label style={label}>SOAT — N°</label>
+                            <input style={input()} value={form.soat_numero} onChange={e => setField('soat_numero', e.target.value)} placeholder="SOAT-2026-..." />
                         </div>
-
-                        <div className="campo-grupo">
-                            <label className="campo-label">Configuración de Columnas <span className="campo-requerido">*</span></label>
-                            <div className="toggle-grupo">
-                                <button
-                                    type="button"
-                                    className={`toggle-btn ${form.columnas === 4 ? 'activo' : ''}`}
-                                    onClick={() => setField('columnas', 4)}
-                                    id="btn-cols-4"
-                                >
-                                    🪑🪑 | 🪑🪑 — 4 cols (2+2)
-                                </button>
-                                <button
-                                    type="button"
-                                    className={`toggle-btn ${form.columnas === 3 ? 'activo' : ''}`}
-                                    onClick={() => setField('columnas', 3)}
-                                    id="btn-cols-3"
-                                >
-                                    🪑🪑 | 🪑 — 3 cols (2+1)
-                                </button>
-                            </div>
+                        <div>
+                            <label style={label}>SOAT — Vence</label>
+                            <input type="date" style={input(errores.soat_vence)} value={form.soat_vence} onChange={e => setField('soat_vence', e.target.value)} />
+                            {errores.soat_vence && <div style={errMsg}>{errores.soat_vence}</div>}
                         </div>
-
-                        <div className={`campos-grid-${form.pisos === 2 ? '2' : '1'}`}>
-                            <div className="campo-grupo">
-                                <label className="campo-label">
-                                    Filas Piso 1 <span className="campo-requerido">*</span>
-                                </label>
-                                <input
-                                    type="number"
-                                    className={`campo-input ${errores.filas_piso_1 ? 'error' : ''}`}
-                                    value={form.filas_piso_1}
-                                    onChange={e => setField('filas_piso_1', Number(e.target.value))}
-                                    min={1} max={20}
-                                    id="input-filas-1"
-                                />
-                                <div className="campo-hint">
-                                    → {form.filas_piso_1 * (form.columnas === 4 ? 4 : 3)} asientos en piso 1
-                                </div>
-                                {errores.filas_piso_1 && <div className="campo-error-msg">{errores.filas_piso_1}</div>}
-                            </div>
-
-                            {form.pisos === 2 && (
-                                <div className="campo-grupo">
-                                    <label className="campo-label">
-                                        Filas Piso 2 <span className="campo-requerido">*</span>
-                                    </label>
-                                    <input
-                                        type="number"
-                                        className={`campo-input ${errores.filas_piso_2 ? 'error' : ''}`}
-                                        value={form.filas_piso_2}
-                                        onChange={e => setField('filas_piso_2', Number(e.target.value))}
-                                        min={1} max={20}
-                                        id="input-filas-2"
-                                    />
-                                    <div className="campo-hint">
-                                        → {form.filas_piso_2 * (form.columnas === 4 ? 4 : 3)} asientos en piso 2
-                                    </div>
-                                    {errores.filas_piso_2 && <div className="campo-error-msg">{errores.filas_piso_2}</div>}
-                                </div>
-                            )}
+                        <div>
+                            <label style={label}>Inspección — N°</label>
+                            <input style={input()} value={form.inspeccion_numero} onChange={e => setField('inspeccion_numero', e.target.value)} placeholder="INS-2026-..." />
                         </div>
-
-                        <div className="campo-grupo">
-                            <label className="campo-label">Baño</label>
-                            <div className="toggle-grupo">
-                                <button
-                                    type="button"
-                                    className={`toggle-btn ${form.tiene_bano ? 'activo' : ''}`}
-                                    onClick={() => setField('tiene_bano', true)}
-                                    id="btn-bano-si"
-                                >
-                                    🚿 Con Baño
-                                </button>
-                                <button
-                                    type="button"
-                                    className={`toggle-btn ${!form.tiene_bano ? 'activo' : ''}`}
-                                    onClick={() => setField('tiene_bano', false)}
-                                    id="btn-bano-no"
-                                >
-                                    Sin Baño
-                                </button>
-                            </div>
+                        <div>
+                            <label style={label}>Inspección — Vence</label>
+                            <input type="date" style={input(errores.inspeccion_vence)} value={form.inspeccion_vence} onChange={e => setField('inspeccion_vence', e.target.value)} />
+                            {errores.inspeccion_vence && <div style={errMsg}>{errores.inspeccion_vence}</div>}
                         </div>
                     </div>
                 </div>
 
-                <BusPreviewMini config={previewConfig()} />
-
-                {/* ── Amenidades ─────────────────────────────────────── */}
-                <div className="admin-seccion" data-anim="seccion">
-                    <div className="admin-seccion-titulo">
-                        <span className="seccion-icono">✨</span> Amenidades
-                    </div>
-                    <div className="admin-seccion-cuerpo">
-                        <div className="amenidades-grid">
-                            {AMENIDADES_DISPONIBLES.map(a => (
-                                <button
-                                    key={a.id}
-                                    type="button"
-                                    className={`amenidad-tag ${form.amenidades.includes(a.id) ? 'activo' : ''}`}
-                                    onClick={() => toggleAmenidad(a.id)}
-                                    id={`amenidad-${a.id.replace(/\s/g, '-')}`}
-                                >
-                                    {a.icono} {a.id}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-
-                {/* ── Documentación Legal ────────────────────────────── */}
-                <div className="admin-seccion" data-anim="seccion">
-                    <div className="admin-seccion-titulo">
-                        <span className="seccion-icono">📋</span> Documentación Legal
-                        <span style={{ marginLeft: 'auto', fontSize: '0.75rem', color: '#64748b', fontWeight: 400 }}>
-                            Buses con docs vencidos no pueden asignarse a itinerarios
-                        </span>
-                    </div>
-                    <div className="admin-seccion-cuerpo">
-                        {/* SOAT */}
-                        <div style={{
-                            background: '#0f172a', borderRadius: 10, border: '1px solid #334155',
-                            padding: '1.25rem', marginBottom: '1rem'
-                        }}>
-                            <div style={{
-                                fontSize: '0.85rem', fontWeight: 600, color: '#38bdf8',
-                                marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem'
-                            }}>
-                                🛡️ SOAT
-                                {form.soat_vence && (
-                                    <BadgeDoc fecha={form.soat_vence} label="SOAT" />
-                                )}
-                            </div>
-                            <div className="campos-grid-2">
-                                <div className="campo-grupo">
-                                    <label className="campo-label">Número de SOAT</label>
-                                    <input
-                                        type="text"
-                                        className="campo-input"
-                                        value={form.soat_numero}
-                                        onChange={e => setField('soat_numero', e.target.value)}
-                                        placeholder="Ej: SOAT-2026-001234"
-                                    />
-                                </div>
-                                <div className="campo-grupo">
-                                    <label className="campo-label">Fecha de vencimiento</label>
-                                    <input
-                                        type="date"
-                                        className={`campo-input ${errores.soat_vence ? 'error' : ''}`}
-                                        value={form.soat_vence}
-                                        onChange={e => setField('soat_vence', e.target.value)}
-                                    />
-                                    {errores.soat_vence && (
-                                        <div className="campo-error-msg">{errores.soat_vence}</div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Inspección Técnica */}
-                        <div style={{
-                            background: '#0f172a', borderRadius: 10, border: '1px solid #334155',
-                            padding: '1.25rem'
-                        }}>
-                            <div style={{
-                                fontSize: '0.85rem', fontWeight: 600, color: '#a78bfa',
-                                marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem'
-                            }}>
-                                🔍 Inspección Técnica
-                                {form.inspeccion_vence && (
-                                    <BadgeDoc fecha={form.inspeccion_vence} label="Inspección" />
-                                )}
-                            </div>
-                            <div className="campos-grid-2">
-                                <div className="campo-grupo">
-                                    <label className="campo-label">Número de inspección</label>
-                                    <input
-                                        type="text"
-                                        className="campo-input"
-                                        value={form.inspeccion_numero}
-                                        onChange={e => setField('inspeccion_numero', e.target.value)}
-                                        placeholder="Ej: RUAT-INSP-2026-5678"
-                                    />
-                                </div>
-                                <div className="campo-grupo">
-                                    <label className="campo-label">Fecha de vencimiento</label>
-                                    <input
-                                        type="date"
-                                        className={`campo-input ${errores.inspeccion_vence ? 'error' : ''}`}
-                                        value={form.inspeccion_vence}
-                                        onChange={e => setField('inspeccion_vence', e.target.value)}
-                                    />
-                                    {errores.inspeccion_vence && (
-                                        <div className="campo-error-msg">{errores.inspeccion_vence}</div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* ── Footer ─────────────────────────────────────────── */}
-                <div className="admin-footer" data-anim="seccion" style={{ borderRadius: '0 0 14px 14px' }}>
-                    <button type="button" className="btn-admin-cancelar" onClick={() => navigate(-1)} disabled={guardando}>
-                        Cancelar
-                    </button>
-                    <button
-                        type="submit"
-                        className="btn-admin-guardar"
-                        disabled={guardando || placaEstado === 'duplicado'}
-                        id="btn-guardar-bus"
-                        onMouseEnter={e => { if (!guardando) gsap.to(e.currentTarget, { scale: 1.03, duration: 0.15 }); }}
-                        onMouseLeave={e => gsap.to(e.currentTarget, { scale: 1, duration: 0.15 })}
-                    >
-                        {guardando ? 'Guardando...' : '💾 Guardar Bus'}
-                    </button>
+                {/* Acciones */}
+                <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                    <button type="button" onClick={() => navigate(-1)} style={{
+                        padding: '0.7rem 1.3rem', borderRadius: 10, border: '1px solid #334155', background: 'transparent',
+                        color: '#94a3b8', cursor: 'pointer', fontWeight: 600, fontSize: '0.88rem',
+                    }}>Cancelar</button>
+                    <button type="submit" disabled={guardando} style={{
+                        padding: '0.7rem 1.6rem', borderRadius: 10, border: 'none', cursor: guardando ? 'not-allowed' : 'pointer',
+                        background: `linear-gradient(90deg, ${tema.color}, ${tema.colorSecundario})`, color: '#06121f',
+                        fontWeight: 800, fontSize: '0.9rem', opacity: guardando ? 0.7 : 1,
+                    }}>{guardando ? 'Guardando…' : '＋ Registrar bus'}</button>
                 </div>
             </form>
         </div>

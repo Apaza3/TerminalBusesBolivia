@@ -134,19 +134,16 @@ export async function getUsuariosEmpresa(sucursalId) {
     .order('rol');
   if (error) { console.error('getUsuariosEmpresa:', error.message); return []; }
 
-  // Bus asignado por conductor: próximo viaje de cada conductor
+  // Bus asignado por conductor: vía tripulacion.bus_id (unidad fija)
   const conductorIds = (data || []).filter(u => u.rol === 'conductor').map(u => u.id);
   const busMap = {};
   if (conductorIds.length > 0) {
-    const hoy = new Date().toISOString();
     const { data: trips } = await supabase
       .from('tripulacion')
-      .select('usuario_id,viajes!conductor_id(fecha_salida,buses(placa))')
-      .in('usuario_id', conductorIds)
-      .gte('viajes.fecha_salida', hoy);
+      .select('usuario_id,buses:bus_id(placa)')
+      .in('usuario_id', conductorIds);
     for (const t of (trips || [])) {
-      const proximos = (t.viajes || []).sort((a, b) => a.fecha_salida.localeCompare(b.fecha_salida));
-      if (proximos[0]?.buses?.placa) busMap[t.usuario_id] = proximos[0].buses.placa;
+      if (t.buses?.placa) busMap[t.usuario_id] = t.buses.placa;
     }
   }
 
@@ -179,6 +176,87 @@ export async function crearUsuario(payload) {
 export async function eliminarUsuario(id) {
   const { error } = await supabase.from('usuarios').update({ activo: false }).eq('id', id);
   return !error;
+}
+
+// ── Manifiesto / Pasajeros / Incidencias (panel admin) ────────────────────────
+
+/** Viajes de la sucursal para el selector de manifiesto (más recientes primero). */
+export async function getViajesParaManifiesto(sucursalId) {
+  if (!sucursalId) return [];
+  const { data, error } = await supabase
+    .from('viajes')
+    .select('id,origen,destino,fecha_salida,buses(placa)')
+    .eq('sucursal_id', sucursalId)
+    .order('fecha_salida', { ascending: false })
+    .limit(150);
+  if (error) { console.error('getViajesParaManifiesto:', error.message); return []; }
+  return (data || []).map(v => ({
+    id: v.id, origen: v.origen, destino: v.destino,
+    fechaSalida: v.fecha_salida, busPlaca: v.buses?.placa || '—',
+  }));
+}
+
+/** Manifiesto (boletos) de un viaje. */
+export async function getManifiestoViaje(viajeId) {
+  if (!viajeId) return [];
+  const { data, error } = await supabase
+    .from('boletos')
+    .select('nombre_pasajero,ci_pasajero,asiento,precio_individual,estado,viajes(origen,destino,fecha_salida)')
+    .eq('viaje_id', viajeId);
+  if (error) { console.error('getManifiestoViaje:', error.message); return []; }
+  return (data || []).map(b => ({
+    pasajeroNombre: b.nombre_pasajero, pasajeroCI: b.ci_pasajero,
+    asientos: b.asiento, precio: Number(b.precio_individual) || 0,
+    origen: b.viajes?.origen, destino: b.viajes?.destino, fechaSalida: b.viajes?.fecha_salida,
+    abordado: b.estado === 'validado',
+  }));
+}
+
+/** Incidencias de los viajes de la sucursal. */
+export async function getIncidenciasSucursal(sucursalId) {
+  if (!sucursalId) return [];
+  const { data, error } = await supabase
+    .from('incidencias')
+    .select('id,tipo,descripcion,severidad,estado,creado_en,viajes!inner(origen,destino,fecha_salida,sucursal_id,buses(placa),tripulacion:conductor_id(nombre))')
+    .eq('viajes.sucursal_id', sucursalId)
+    .order('creado_en', { ascending: false });
+  if (error) { console.error('getIncidenciasSucursal:', error.message); return []; }
+  return (data || []).map(i => {
+    const d = i.creado_en ? new Date(i.creado_en) : null;
+    return {
+      id: i.id, tipo: i.tipo, descripcion: i.descripcion, severidad: i.severidad, estado: i.estado,
+      fecha: d ? d.toLocaleDateString('es-BO') : '—',
+      hora: d ? d.toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' }) : '—',
+      busPlaca: i.viajes?.buses?.placa || '—',
+      origen: i.viajes?.origen, destino: i.viajes?.destino,
+      conductor: i.viajes?.tripulacion?.nombre || '—',
+    };
+  });
+}
+
+/** Viajes finalizados de la sucursal con sus pasajeros. */
+export async function getViajesFinalizadosSucursal(sucursalId) {
+  if (!sucursalId) return [];
+  const { data, error } = await supabase
+    .from('viajes')
+    .select('id,origen,destino,fecha_salida,estado,buses(placa),boletos(nombre_pasajero,ci_pasajero,asiento,estado)')
+    .eq('sucursal_id', sucursalId)
+    .eq('estado', 'completado')
+    .order('fecha_salida', { ascending: false })
+    .limit(60);
+  if (error) { console.error('getViajesFinalizadosSucursal:', error.message); return []; }
+  return (data || []).map(v => {
+    const d = v.fecha_salida ? new Date(v.fecha_salida) : null;
+    const pax = (v.boletos || []).map(b => ({
+      nombre: b.nombre_pasajero, ci: b.ci_pasajero, asiento: b.asiento, abordado: b.estado === 'validado',
+    }));
+    return {
+      viajeId: v.id, busPlaca: v.buses?.placa || '—', origen: v.origen, destino: v.destino,
+      salida: d ? d.toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' }) : '—',
+      fecha: d ? d.toLocaleDateString('es-BO') : '—', hora: '',
+      totalPasajeros: pax.length, pasajeros: pax,
+    };
+  }).filter(v => v.totalPasajeros > 0);   // solo viajes con pasajeros
 }
 
 export async function getViajesSucursal(sucursalId, fecha) {

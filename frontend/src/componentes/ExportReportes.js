@@ -19,8 +19,10 @@ const ExportReportes = ({
     datosExcel = [],
     nombreArchivo = 'reporte_tbb',
     formatos = ['pdf', 'excel', 'csv'],
+    capturaId = null,   // si se pasa, el PDF captura ese nodo (gráficas) + tabla
+    hojas = null,       // si se pasa, Excel = multi-hoja [{nombre, datos}]
 }) => {
-    const { exportando, exportarPDF, exportarExcel, exportarCSV } = useReportExport();
+    const { exportando, exportarPDF, exportarPDFCanvas, exportarExcel, exportarExcelMulti, exportarCSV } = useReportExport();
 
     const BTN_STYLE = (color) => ({
         display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
@@ -39,7 +41,9 @@ const ExportReportes = ({
                 <button
                     style={BTN_STYLE('#ef4444')}
                     disabled={exportando}
-                    onClick={() => exportarPDF(titulo, columnas, filas, nombreArchivo)}
+                    onClick={() => capturaId
+                        ? exportarPDFCanvas(capturaId, titulo, columnas, filas, nombreArchivo)
+                        : exportarPDF(titulo, columnas, filas, nombreArchivo)}
                 >
                     📄 PDF
                 </button>
@@ -48,9 +52,11 @@ const ExportReportes = ({
                 <button
                     style={BTN_STYLE('#10b981')}
                     disabled={exportando}
-                    onClick={() => exportarExcel(datosExcel.length ? datosExcel : filas.map(f =>
-                        Object.fromEntries(columnas.map((c, i) => [c, f[i]]))
-                    ), nombreArchivo)}
+                    onClick={() => hojas
+                        ? exportarExcelMulti(hojas, nombreArchivo)
+                        : exportarExcel(datosExcel.length ? datosExcel : filas.map(f =>
+                            Object.fromEntries(columnas.map((c, i) => [c, f[i]]))
+                        ), nombreArchivo)}
                 >
                     📊 Excel
                 </button>

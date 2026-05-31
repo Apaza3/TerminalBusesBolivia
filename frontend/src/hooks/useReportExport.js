@@ -65,6 +65,54 @@ const useReportExport = () => {
         }
     }, []);
 
+    // PDF con gráficas: captura un nodo del DOM (html2canvas) → imagen paginada + tabla de datos
+    const exportarPDFCanvas = useCallback(async (elementId, titulo, columnas, filas, nombreArchivo = 'reporte') => {
+        setExportando(true);
+        try {
+            const html2canvas = (await import('html2canvas')).default;
+            const { jsPDF, autoTable } = await getPdfDeps();
+            const el = document.getElementById(elementId);
+            const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            const pageW = 210, pageH = 297, margin = 10;
+            // fondo claro (imprimible) — header oscuro
+            doc.setTextColor(15, 23, 42); doc.setFontSize(15); doc.setFont('helvetica', 'bold');
+            doc.text('Terminal Buses Bolivia', margin, 15);
+            doc.setFontSize(10); doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 116, 139);
+            doc.text(titulo, margin, 22);
+            let y = 28;
+
+            // captura por BLOQUE para no cortar gráficas entre páginas
+            const bloques = el ? Array.from(el.querySelectorAll('.pdf-block')) : [];
+            const nodos = bloques.length ? bloques : (el ? [el] : []);
+            const imgW = pageW - margin * 2;
+            for (const nodo of nodos) {
+                const canvas = await html2canvas(nodo, { backgroundColor: '#ffffff', scale: 2, useCORS: true });
+                const imgH = canvas.height * imgW / canvas.width;
+                if (y + imgH > pageH - margin) { doc.addPage(); y = margin; }
+                doc.addImage(canvas.toDataURL('image/png'), 'PNG', margin, y, imgW, imgH);
+                y += imgH + 4;
+            }
+
+            if (filas && filas.length) {
+                doc.addPage();
+                doc.setTextColor(15, 23, 42); doc.setFontSize(12); doc.setFont('helvetica', 'bold');
+                doc.text('Datos', margin, 15);
+                autoTable(doc, {
+                    startY: 20, head: [columnas], body: filas, theme: 'grid',
+                    styles: { fillColor: [255, 255, 255], textColor: [30, 41, 59], fontSize: 9, cellPadding: 3, lineColor: [226, 232, 240], lineWidth: 0.2 },
+                    headStyles: { fillColor: [59, 130, 246], textColor: [255, 255, 255], fontStyle: 'bold' },
+                    alternateRowStyles: { fillColor: [248, 250, 252] },
+                });
+            }
+            doc.save(`${nombreArchivo}_${new Date().toISOString().split('T')[0]}.pdf`);
+        } catch (e) {
+            console.error('exportarPDFCanvas:', e);
+            alert('No se pudo generar el PDF: ' + (e?.message || e));
+        } finally {
+            setExportando(false);
+        }
+    }, []);
+
     // R30: Excel con xlsx
     const exportarExcel = useCallback(async (datos, nombreArchivo = 'reporte') => {
         setExportando(true);
@@ -81,6 +129,31 @@ const useReportExport = () => {
             );
         } catch (e) {
             console.error('exportarExcel:', e);
+            alert('No se pudo generar el Excel: ' + (e?.message || e));
+        } finally {
+            setExportando(false);
+        }
+    }, []);
+
+    // Excel multi-hoja: sheets = [{ nombre, datos:[{}] }]
+    const exportarExcelMulti = useCallback(async (sheets, nombreArchivo = 'reporte') => {
+        setExportando(true);
+        try {
+            const validas = (sheets || []).filter(s => s.datos && s.datos.length);
+            if (!validas.length) { alert('No hay datos para exportar.'); return; }
+            const XLSX = await import('xlsx');
+            const wb = XLSX.utils.book_new();
+            for (const s of validas) {
+                const ws = XLSX.utils.json_to_sheet(s.datos);
+                XLSX.utils.book_append_sheet(wb, ws, s.nombre.slice(0, 31));
+            }
+            const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+            descargarBlob(
+                new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
+                `${nombreArchivo}_${new Date().toISOString().split('T')[0]}.xlsx`,
+            );
+        } catch (e) {
+            console.error('exportarExcelMulti:', e);
             alert('No se pudo generar el Excel: ' + (e?.message || e));
         } finally {
             setExportando(false);
@@ -113,7 +186,7 @@ const useReportExport = () => {
         }
     }, []);
 
-    return { exportando, exportarPDF, exportarExcel, exportarCSV };
+    return { exportando, exportarPDF, exportarPDFCanvas, exportarExcel, exportarExcelMulti, exportarCSV };
 };
 
 export default useReportExport;

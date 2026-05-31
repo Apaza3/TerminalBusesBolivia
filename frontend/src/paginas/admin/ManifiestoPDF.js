@@ -2,8 +2,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../../contextos/AuthContext';
 import { DEPARTAMENTOS } from '../../contextos/DepartamentoContext';
-import { obtenerManifiestoItinerario } from '../../servicios/analyticsService';
-const VIAJES_CONDUCTOR_MOCK = [];
+import { getViajesParaManifiesto, getManifiestoViaje } from '../../servicios/api';
 import ExportReportes from '../../componentes/ExportReportes';
 import gsap from 'gsap';
 
@@ -17,6 +16,7 @@ const ManifiestoPDF = () => {
 
     const [itinerarioId, setItinerarioId] = useState('');
     const [manifiesto, setManifiesto] = useState([]);
+    const [viajes, setViajes] = useState([]);
     const [cargando, setCargando] = useState(false);
 
     useEffect(() => {
@@ -27,16 +27,19 @@ const ManifiestoPDF = () => {
     }, []);
 
     useEffect(() => {
+        if (perfil?.sucursal_id) getViajesParaManifiesto(perfil.sucursal_id).then(setViajes);
+    }, [perfil?.sucursal_id]);
+
+    useEffect(() => {
         if (!itinerarioId) { setManifiesto([]); return; }
         setCargando(true);
-        // [Académico] Sprint 5 - RN-01: obtener manifiesto desde analyticsService
-        obtenerManifiestoItinerario(itinerarioId).then(data => {
+        getManifiestoViaje(itinerarioId).then(data => {
             setManifiesto(data || []);
             setCargando(false);
         });
     }, [itinerarioId]);
 
-    const viaje = VIAJES_CONDUCTOR_MOCK.find(v => v.id === itinerarioId);
+    const viaje = viajes.find(v => v.id === itinerarioId);
 
     const filasExport = manifiesto.map(p => [
         p.pasajeroNombre, p.pasajeroCI,
@@ -102,7 +105,7 @@ const ManifiestoPDF = () => {
                         }}
                     >
                         <option value="">-- Selecciona un viaje --</option>
-                        {VIAJES_CONDUCTOR_MOCK.map(v => (
+                        {viajes.map(v => (
                             <option key={v.id} value={v.id}>
                                 {v.origen} → {v.destino} · {v.busPlaca} · {new Date(v.fechaSalida).toLocaleDateString('es-BO')}
                             </option>

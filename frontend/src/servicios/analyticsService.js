@@ -44,6 +44,16 @@ export const obtenerRendimientoRutas = async ({ sucursalId, empresaNombre } = {}
     } catch { return []; }
 };
 
+// ── Analítica completa por sucursal (1 RPC) ──────────────────────────────────
+export const obtenerAnaliticaSucursal = async ({ sucursalId, periodo = 'mes' } = {}) => {
+    if (!sucursalId) return null;
+    const dias = periodo === 'semana' ? 7 : periodo === 'trimestre' ? 90 : 30;
+    const desde = new Date(Date.now() - dias * 86400000).toISOString();
+    const { data, error } = await supabase.rpc('get_analitica_sucursal', { p_sucursal_id: sucursalId, p_desde: desde });
+    if (error) { console.error('obtenerAnaliticaSucursal:', error.message); return null; }
+    return data;
+};
+
 // ── Ranking de todas las empresas ─────────────────────────────────────────────
 export const obtenerRankingEmpresas = async () => {
     try {
