@@ -23,9 +23,10 @@ export const obtenerKPIsGlobales = async ({ sucursalId, empresaNombre, periodo =
 // ── Rendimiento por ruta ──────────────────────────────────────────────────────
 export const obtenerRendimientoRutas = async ({ sucursalId, empresaNombre } = {}) => {
     try {
-        if (!empresaNombre) return [];
+        if (!sucursalId) return [];
         const desde = new Date(Date.now() - 30 * 86400000).toISOString();
-        const { data, error } = await supabase.rpc('get_rendimiento_rutas', { p_empresa: empresaNombre, p_desde: desde });
+        // Scope por sucursal del admin (origen = su departamento), no por toda la empresa
+        const { data, error } = await supabase.rpc('get_rendimiento_rutas', { p_sucursal_id: sucursalId, p_desde: desde });
         if (error) throw error;
         return (data || []).map(r => ({
             ruta:         r.ruta,
