@@ -772,6 +772,23 @@ const PanelCajero = () => {
                                         { label: 'Sáb', idx: 6 },
                                         { label: 'Dom', idx: 0 },
                                     ];
+                                    // ── Tinte por empresa + departamento (mismo nombre, distinto depto = distinto hue) ──
+                                    const hex2hue = (hex) => {
+                                        const m = (hex || '#3b82f6').replace('#', '');
+                                        if (m.length < 6) return 210;
+                                        const r = parseInt(m.slice(0, 2), 16) / 255, g = parseInt(m.slice(2, 4), 16) / 255, b = parseInt(m.slice(4, 6), 16) / 255;
+                                        const max = Math.max(r, g, b), min = Math.min(r, g, b); let h = 0;
+                                        if (max !== min) { const d = max - min; h = max === r ? ((g - b) / d + (g < b ? 6 : 0)) : max === g ? ((b - r) / d + 2) : ((r - g) / d + 4); h *= 60; }
+                                        return Math.round(h);
+                                    };
+                                    const hashStr = (s) => { let h = 0; for (let i = 0; i < (s || '').length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return Math.abs(h); };
+                                    const baseHue = (hex2hue(tema.color) + (hashStr(deptNombre) % 50) - 25 + 360) % 360;
+                                    const diaHue  = (i) => (baseHue + i * 26) % 360;                       // 7 columnas, hues repartidos
+                                    const horaHue = (h) => (baseHue + 150 + (h % 24) * 7) % 360;           // horas en rango complementario
+                                    const diaBg   = (i, a) => `hsla(${diaHue(i)},66%,58%,${a})`;
+                                    const diaTxt  = (i) => `hsl(${diaHue(i)},70%,74%)`;
+                                    const horaBg  = (h, a) => `hsla(${horaHue(h)},55%,55%,${a})`;
+                                    const horaTxt = (h) => `hsl(${horaHue(h)},60%,74%)`;
                                     const porDiaHora = {};
                                     viajesPrecios.forEach(v => {
                                         const d = new Date(v.fecha_salida);
@@ -805,19 +822,19 @@ const PanelCajero = () => {
                                                 <thead>
                                                     <tr>
                                                         <th style={{ ...thSt, position: 'sticky', left: 0, zIndex: 3, minWidth: 64, borderRight: '2px solid #1e293b' }}>Hora</th>
-                                                        {DIAS_CAL.map(d => (
-                                                            <th key={d.idx} style={{ ...thSt, minWidth: 160 }}>{d.label}</th>
+                                                        {DIAS_CAL.map((d, di) => (
+                                                            <th key={d.idx} style={{ ...thSt, minWidth: 160, color: diaTxt(di), background: diaBg(di, 0.18), borderBottom: `2px solid ${diaBg(di, 0.6)}` }}>{d.label}</th>
                                                         ))}
                                                     </tr>
                                                 </thead>
                                                 <tbody>
                                                     {horas.map((hora, ri) => (
                                                         <tr key={hora} style={{ background: ri % 2 === 0 ? 'rgba(10,15,25,0.45)' : `${tema.color}08` }}>
-                                                            <td style={tdHoraSt}>{hora.toString().padStart(2, '0')}:00</td>
-                                                            {DIAS_CAL.map(dia => {
+                                                            <td style={{ ...tdHoraSt, color: horaTxt(hora), background: horaBg(hora, 0.16), borderRight: `2px solid ${horaBg(hora, 0.5)}` }}>{hora.toString().padStart(2, '0')}:00</td>
+                                                            {DIAS_CAL.map((dia, di) => {
                                                                 const celdaViajes = porDiaHora[`${dia.idx}-${hora}`] || [];
                                                                 return (
-                                                                    <td key={dia.idx} style={tdDiaSt}>
+                                                                    <td key={dia.idx} style={{ ...tdDiaSt, background: diaBg(di, 0.05) }}>
                                                                         {celdaViajes.map(v => {
                                                                             const editado = preciosEditados[v.id];
                                                                             const guardando = guardandoPrecio === v.id;
