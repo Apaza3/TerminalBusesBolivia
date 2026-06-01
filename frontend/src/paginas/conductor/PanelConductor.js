@@ -88,6 +88,8 @@ const PanelConductor = () => {
     const rootRef    = useRef(null);
     const contentRef = useRef(null);
     const scannerRef = useRef(null);
+    const scannerBoxRef = useRef(null);  // contenedor cámara — para auto-scroll
+    const scanResultRef = useRef(null);  // bloque de resultado — para auto-scroll
 
     const sucursalNombre = perfil?.sucursal_nombre || 'Mi Sucursal';
     const deptNombre     = perfil?.departamento || 'La Paz';
@@ -301,6 +303,22 @@ const PanelConductor = () => {
     }, [validarQR]);
 
     const reanudarScanner = () => { setScanResultado(null); startScan(); };
+
+    // Auto-desplazar a la cámara cuando se activa (evita scroll manual)
+    useEffect(() => {
+        if (scannerActivo) {
+            const t = setTimeout(() => scannerBoxRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 250);
+            return () => clearTimeout(t);
+        }
+    }, [scannerActivo]);
+
+    // Auto-desplazar al resultado (con el botón "Escanear siguiente") al validar
+    useEffect(() => {
+        if (scanResultado) {
+            const t = setTimeout(() => scanResultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 120);
+            return () => clearTimeout(t);
+        }
+    }, [scanResultado]);
 
     // Detener cámara al salir del tab o desmontar
     useEffect(() => {
@@ -879,7 +897,7 @@ const PanelConductor = () => {
                             };
                             const c = colores[scanResultado.tipo] || colores.error;
                             return (
-                                <div style={{ padding: '1.1rem', marginBottom: '1rem', borderRadius: '12px', background: c.bg, border: `1px solid ${c.border}` }}>
+                                <div ref={scanResultRef} style={{ padding: '1.1rem', marginBottom: '1rem', borderRadius: '12px', background: c.bg, border: `1px solid ${c.border}` }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: scanResultado.pasajero ? '0.75rem' : 0 }}>
                                         <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>{c.icon}</span>
                                         <span style={{ color: c.text, fontWeight: 700, fontSize: '0.88rem' }}>{scanResultado.mensaje}</span>
@@ -908,7 +926,7 @@ const PanelConductor = () => {
                         })()}
 
                         {/* Scanner container with animated scan line */}
-                        <div style={{ background: surface, borderRadius: '12px', border: `1px solid ${border}`, overflow: 'hidden', marginBottom: '1.25rem' }}>
+                        <div ref={scannerBoxRef} style={{ background: surface, borderRadius: '12px', border: `1px solid ${border}`, overflow: 'hidden', marginBottom: '1.25rem', scrollMarginTop: '70px' }}>
                             <div style={{ padding: '0.7rem 1rem', borderBottom: `1px solid ${border}`, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                 <span style={{ width: 6, height: 6, borderRadius: '50%', background: scannerActivo ? '#10b981' : textMuted, display: 'inline-block', transition: 'background 0.3s' }} />
                                 <span style={{ fontSize: '0.72rem', color: textMuted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
