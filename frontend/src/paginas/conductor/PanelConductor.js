@@ -4,11 +4,11 @@ import { Html5Qrcode } from 'html5-qrcode';
 import { useAuth } from '../../contextos/AuthContext';
 import { DEPARTAMENTOS } from '../../contextos/DepartamentoContext';
 import { getEmpresaTema } from '../../data/empresasTemas';
-import { crearNotificacion, crearIncidente } from '../../data/mockStorage';
 import {
     getTripulacionByUsuario, getViajesConductor,
     getReservasViaje, updateViajeEstado,
     getBoletoPorQR, marcarBoletoValidado,
+    crearNotificacion, crearIncidente, getEmailsViaje, enviarAvisoIncidente,
 } from '../../servicios/api';
 import { supabase } from '../../servicios/supabase';
 import { API_BASE } from '../../config';
@@ -321,20 +321,33 @@ const PanelConductor = () => {
 
     const esTemprano = (viaje) => new Date(viaje.fecha_salida) - new Date() > 60 * 60 * 1000;
 
-    const handleEnviarNotificacion = (e) => {
+    const handleEnviarNotificacion = async (e) => {
         e.preventDefault();
         setNotifEnviando(true);
         setNotifResultado(null);
         const viaje = viajes.find(v => v.id === viajeSel);
         if (!viaje) { setNotifResultado({ tipo: 'error', texto: 'Selecciona un viaje.' }); setNotifEnviando(false); return; }
-        const busPlaca    = viaje.buses?.placa || '';
-        const tipoLabel   = TIPOS_INCIDENTE.find(t => t.value === notifTipo)?.label || notifTipo;
+        const busPlaca  = viaje.buses?.placa || '';
+        const tipoLabel = TIPOS_INCIDENTE.find(t => t.value === notifTipo)?.label || notifTipo;
         const mensajeBase = `[${tipoLabel}] ${viaje.origen} → ${viaje.destino} · Bus ${busPlaca}: ${notifDesc}`;
-        crearIncidente({ viajeId: viaje.id, busPlaca, conductor: perfil?.nombre_completo || perfil?.email, origen: viaje.origen, destino: viaje.destino, salida: viaje.fecha_salida, tipo: notifTipo, descripcion: notifDesc, sucursalId: perfil?.sucursal_id });
-        crearNotificacion({ tipo: notifTipo, para: 'admin',  sucursalId: perfil?.sucursal_id, viajeId: viaje.id, busPlaca, mensaje: mensajeBase });
-        crearNotificacion({ tipo: notifTipo, para: 'cajero', sucursalId: perfil?.sucursal_id, viajeId: viaje.id, busPlaca, mensaje: `Viaje ${viaje.origen} → ${viaje.destino} bus ${busPlaca}: ${notifTipo}` });
+        const empresaNombre = perfil?.sucursal_nombre || viaje.sucursales?.nombre || '';
+
+        // 1) Incidencia permanente (admin la ve en Incidentes)
+        await crearIncidente({ viajeId: viaje.id, tipo: notifTipo, descripcion: notifDesc || tipoLabel, severidad: 'alta', reportadoPor: perfil?.id });
+        // 2) Notificación temporal para el cajero (5h o hasta marcar leída)
+        await crearNotificacion({ sucursalId: perfil?.sucursal_id, viajeId: viaje.id, busPlaca, tipo: notifTipo, mensaje: mensajeBase, severidad: 'alta' });
+        // 3) Aviso con disculpa por correo SOLO a los pasajeros de ESTE viaje (el bus afectado)
+        const emails = await getEmailsViaje(viaje.id);
+        let emailMsg = ' · sin pasajeros con correo en este viaje';
+        if (emails.length) {
+            const env = await enviarAvisoIncidente({
+                emails, empresa: empresaNombre, origen: viaje.origen, destino: viaje.destino,
+                fechaSalida: viaje.fecha_salida, tipo: notifTipo, motivo: notifDesc || tipoLabel,
+            });
+            emailMsg = env.ok ? ` · 📧 ${env.enviados} pasajero(s) avisado(s)` : ` · ⚠ correo: ${env.error}`;
+        }
         setNotifEnviando(false);
-        setNotifResultado({ tipo: 'ok', texto: 'Notificación enviada a admins y cajeros.' });
+        setNotifResultado({ tipo: 'ok', texto: `Reportado a admin y cajero${emailMsg}` });
         setNotifDesc('');
     };
 

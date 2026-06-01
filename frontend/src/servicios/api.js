@@ -757,6 +757,74 @@ export async function enviarBoletosPorEmail({ email, nombre, origen, destino, fe
   } catch (e) { return { ok: false, error: e.message }; }
 }
 
+/** Registra una incidencia del conductor (permanente — la ve el admin en Incidentes). */
+export async function crearIncidente({ viajeId, tipo, descripcion, severidad = 'media', reportadoPor = null }) {
+  const { data, error } = await supabase.from('incidencias')
+    .insert({ viaje_id: viajeId, tipo, descripcion, severidad, estado: 'abierta', reportado_por: reportadoPor })
+    .select('id').single();
+  if (error) { console.error('crearIncidente:', error.message); return { error: error.message }; }
+  return { ok: true, id: data.id };
+}
+
+/** Crea una notificación para el cajero (temporal — expira en horas o al marcarse leída). */
+export async function crearNotificacion({ sucursalId, viajeId, busPlaca, tipo, mensaje, severidad = 'media', horasVigencia = 5 }) {
+  const expira = new Date(Date.now() + horasVigencia * 3600000).toISOString();
+  const { error } = await supabase.from('notificaciones')
+    .insert({ sucursal_id: sucursalId, viaje_id: viajeId, bus_placa: busPlaca, tipo, mensaje, severidad, expira_cajero: expira });
+  if (error) { console.error('crearNotificacion:', error.message); return { error: error.message }; }
+  return { ok: true };
+}
+
+/** Notificaciones vigentes para el cajero (no leídas y no expiradas). */
+export async function getNotificacionesCajero(sucursalId) {
+  if (!sucursalId) return [];
+  const ahora = new Date().toISOString();
+  const { data, error } = await supabase.from('notificaciones')
+    .select('id,viaje_id,bus_placa,tipo,mensaje,severidad,creado_en,expira_cajero')
+    .eq('sucursal_id', sucursalId)
+    .eq('leido_cajero', false)
+    .or(`expira_cajero.is.null,expira_cajero.gt.${ahora}`)
+    .order('creado_en', { ascending: false });
+  if (error) { console.error('getNotificacionesCajero:', error.message); return []; }
+  return data || [];
+}
+
+export async function marcarNotificacionLeida(id) {
+  const { error } = await supabase.from('notificaciones').update({ leido_cajero: true }).eq('id', id);
+  return !error;
+}
+
+/** Correos de los pasajeros de un viaje (para avisos de incidente). */
+export async function getEmailsViaje(viajeId) {
+  if (!viajeId) return [];
+  const [{ data: res }, { data: bol }] = await Promise.all([
+    supabase.from('reservas').select('email_cliente').eq('viaje_id', viajeId).neq('estado', 'cancelado'),
+    supabase.from('boletos').select('email_pasajero').eq('viaje_id', viajeId).neq('estado', 'cancelado'),
+  ]);
+  const emails = [
+    ...(res || []).map(r => r.email_cliente),
+    ...(bol || []).map(b => b.email_pasajero),
+  ].filter(Boolean);
+  return [...new Set(emails)];
+}
+
+/** Envía aviso de incidente/disculpa a los pasajeros del viaje afectado. */
+export async function enviarAvisoIncidente({ emails, empresa, origen, destino, fechaSalida, tipo, motivo }) {
+  if (!emails || !emails.length) return { ok: false, error: 'sin destinatarios', enviados: 0 };
+  try {
+    const SURL = process.env.REACT_APP_SUPABASE_URL || '';
+    const AKEY = process.env.REACT_APP_SUPABASE_ANON_KEY || '';
+    const resp = await fetch(`${SURL}/functions/v1/send-incident-notice`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': AKEY, 'Authorization': `Bearer ${AKEY}` },
+      body: JSON.stringify({ emails, empresa, origen, destino, fechaSalida, tipo, motivo }),
+    });
+    const j = await resp.json().catch(() => ({}));
+    if (!resp.ok || !j.ok) return { ok: false, error: j.error || `HTTP ${resp.status}`, enviados: j.enviados || 0 };
+    return { ok: true, enviados: j.enviados || 0, total: j.total || emails.length };
+  } catch (e) { return { ok: false, error: e.message, enviados: 0 }; }
+}
+
 export async function updateViajeEstado(viajeId, estado) {
   const { error } = await supabase.from('viajes').update({ estado }).eq('id', viajeId);
   if (error) { console.error('updateViajeEstado:', error.message); return false; }

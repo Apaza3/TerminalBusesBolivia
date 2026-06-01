@@ -9,6 +9,7 @@ import {
     getViajesSucursalProximos, updatePrecioViaje, updatePreciosGlobal,
     getReservasSucursal, getAsientosOcupados, crearReservaSupabase, updateReservaEstado,
     getBoletosReserva, autorizarReserva, rechazarReserva, enviarBoletosPorEmail,
+    getNotificacionesCajero, marcarNotificacionLeida,
 } from '../../servicios/api';
 import { jsPDF } from 'jspdf';
 import TicketCard, { getTemaEmpresa, getLogoEmpresa } from '../../componentes/TicketCard';
@@ -116,7 +117,30 @@ const PanelCajero = () => {
         getAsientosOcupados(boleto.viajeId).then(setAsientosOcupados);
     }, [boleto.viajeId]);
 
-    const cargarNotifs = useCallback(() => { setNotifs([]); }, []); // pending Supabase notificaciones table
+    const cargarNotifs = useCallback(async () => {
+        if (!perfil?.sucursal_id) return;
+        const data = await getNotificacionesCajero(perfil.sucursal_id);
+        setNotifs(data.map(n => {
+            const d = n.creado_en ? new Date(n.creado_en) : null;
+            return {
+                id: n.id, mensaje: n.mensaje, tipo: n.tipo, severidad: n.severidad,
+                viajeId: n.viaje_id, busPlaca: n.bus_placa, leido: false,
+                fecha: d ? d.toLocaleDateString('es-BO') : '',
+                hora: d ? d.toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' }) : '',
+            };
+        }));
+    }, [perfil?.sucursal_id]);
+
+    // Cargar notificaciones al abrir la pestaña y refrescar cada 60s
+    useEffect(() => {
+        if (tab !== 'notificaciones') return;
+        cargarNotifs();
+        const iv = setInterval(cargarNotifs, 60000);
+        return () => clearInterval(iv);
+    }, [tab, cargarNotifs]);
+
+    // Badge de no leídas siempre actualizado
+    useEffect(() => { cargarNotifs(); }, [cargarNotifs]);
 
     const cargarPrecios = useCallback(async () => {
         if (!perfil?.sucursal_id) return;
@@ -260,8 +284,15 @@ const PanelCajero = () => {
     };
 
     const noLeidas = notifs.filter(n => !n.leido).length;
-    const handleMarcarLeida = () => {};
-    const handleMarcarTodas = () => {};
+    const handleMarcarLeida = async (id) => {
+        await marcarNotificacionLeida(id);
+        setNotifs(prev => prev.filter(n => n.id !== id));
+    };
+    const handleMarcarTodas = async () => {
+        const ids = notifs.map(n => n.id);
+        await Promise.all(ids.map(id => marcarNotificacionLeida(id)));
+        setNotifs([]);
+    };
 
     // Pendientes de validación: requieren autorización del cajero (o aún sin confirmar), no finalizadas
     const pendientesValidacion = reservas.filter(r =>
