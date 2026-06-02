@@ -212,13 +212,17 @@ export async function getManifiestoViaje(viajeId) {
   }));
 }
 
-/** Incidencias de los viajes de la sucursal. */
-export async function getIncidenciasSucursal(sucursalId) {
-  if (!sucursalId) return [];
+/** Incidencias de TODA la empresa (cualquier departamento). Incluye el departamento del bus. */
+export async function getIncidenciasSucursal(empresaNombre) {
+  if (!empresaNombre) return [];
   const { data, error } = await supabase
     .from('incidencias')
-    .select('id,tipo,descripcion,severidad,estado,creado_en,viajes!inner(origen,destino,fecha_salida,sucursal_id,buses(placa),tripulacion:conductor_id(nombre))')
-    .eq('viajes.sucursal_id', sucursalId)
+    .select(`id,tipo,descripcion,severidad,estado,creado_en,
+      viajes!inner(origen,destino,fecha_salida,
+        sucursales!inner(nombre,departamentos(nombre)),
+        buses(placa,sucursales(departamentos(nombre))),
+        tripulacion:conductor_id(nombre))`)
+    .eq('viajes.sucursales.nombre', empresaNombre)
     .order('creado_en', { ascending: false });
   if (error) { console.error('getIncidenciasSucursal:', error.message); return []; }
   return (data || []).map(i => {
@@ -230,6 +234,8 @@ export async function getIncidenciasSucursal(sucursalId) {
       busPlaca: i.viajes?.buses?.placa || '—',
       origen: i.viajes?.origen, destino: i.viajes?.destino,
       conductor: i.viajes?.tripulacion?.nombre || '—',
+      deptViaje: i.viajes?.sucursales?.departamentos?.nombre || '—',
+      deptBus: i.viajes?.buses?.sucursales?.departamentos?.nombre || '—',
     };
   });
 }
@@ -776,17 +782,17 @@ export async function crearNotificacion({ sucursalId, viajeId, busPlaca, tipo, m
 }
 
 /** Notificaciones vigentes para el cajero (no leídas y no expiradas). */
-export async function getNotificacionesCajero(sucursalId) {
-  if (!sucursalId) return [];
+export async function getNotificacionesCajero(empresaNombre) {
+  if (!empresaNombre) return [];
   const ahora = new Date().toISOString();
   const { data, error } = await supabase.from('notificaciones')
-    .select('id,viaje_id,bus_placa,tipo,mensaje,severidad,creado_en,expira_cajero')
-    .eq('sucursal_id', sucursalId)
+    .select('id,viaje_id,bus_placa,tipo,mensaje,severidad,creado_en,expira_cajero,sucursales!inner(nombre,departamentos(nombre))')
+    .eq('sucursales.nombre', empresaNombre)
     .eq('leido_cajero', false)
     .or(`expira_cajero.is.null,expira_cajero.gt.${ahora}`)
     .order('creado_en', { ascending: false });
   if (error) { console.error('getNotificacionesCajero:', error.message); return []; }
-  return data || [];
+  return (data || []).map(n => ({ ...n, deptViaje: n.sucursales?.departamentos?.nombre || null }));
 }
 
 export async function marcarNotificacionLeida(id) {

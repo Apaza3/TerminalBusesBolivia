@@ -118,18 +118,18 @@ const PanelCajero = () => {
     }, [boleto.viajeId]);
 
     const cargarNotifs = useCallback(async () => {
-        if (!perfil?.sucursal_id) return;
-        const data = await getNotificacionesCajero(perfil.sucursal_id);
+        if (!perfil?.sucursal_nombre) return;
+        const data = await getNotificacionesCajero(perfil.sucursal_nombre);
         setNotifs(data.map(n => {
             const d = n.creado_en ? new Date(n.creado_en) : null;
             return {
                 id: n.id, mensaje: n.mensaje, tipo: n.tipo, severidad: n.severidad,
-                viajeId: n.viaje_id, busPlaca: n.bus_placa, leido: false,
+                viajeId: n.viaje_id, busPlaca: n.bus_placa, deptViaje: n.deptViaje, leido: false,
                 fecha: d ? d.toLocaleDateString('es-BO') : '',
                 hora: d ? d.toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' }) : '',
             };
         }));
-    }, [perfil?.sucursal_id]);
+    }, [perfil?.sucursal_nombre]);
 
     // Cargar notificaciones al abrir la pestaña y refrescar cada 60s
     useEffect(() => {

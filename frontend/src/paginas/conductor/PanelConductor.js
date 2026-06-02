@@ -347,7 +347,8 @@ const PanelConductor = () => {
         if (!viaje) { setNotifResultado({ tipo: 'error', texto: 'Selecciona un viaje.' }); setNotifEnviando(false); return; }
         const busPlaca  = viaje.buses?.placa || '';
         const tipoLabel = TIPOS_INCIDENTE.find(t => t.value === notifTipo)?.label || notifTipo;
-        const mensajeBase = `[${tipoLabel}] ${viaje.origen} → ${viaje.destino} · Bus ${busPlaca}: ${notifDesc}`;
+        const deptBus = perfil?.departamento ? ` · Bus de ${perfil.departamento}` : '';
+        const mensajeBase = `[${tipoLabel}] ${viaje.origen} → ${viaje.destino} · Bus ${busPlaca}${deptBus}: ${notifDesc}`;
         const empresaNombre = perfil?.sucursal_nombre || viaje.sucursales?.nombre || '';
 
         // 1) Incidencia permanente (admin la ve en Incidentes)

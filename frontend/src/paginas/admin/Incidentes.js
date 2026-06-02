@@ -20,9 +20,9 @@ const Incidentes = () => {
     const [busqueda, setBusqueda] = useState('');
 
     const cargar = useCallback(() => {
-        if (!perfil?.sucursal_id) { setIncidentes([]); return; }
-        getIncidenciasSucursal(perfil.sucursal_id).then(setIncidentes);
-    }, [perfil?.sucursal_id]);
+        if (!perfil?.sucursal_nombre) { setIncidentes([]); return; }
+        getIncidenciasSucursal(perfil.sucursal_nombre).then(setIncidentes);
+    }, [perfil?.sucursal_nombre]);
 
     useEffect(() => { cargar(); }, [cargar]);
 
@@ -136,7 +136,7 @@ const Incidentes = () => {
                 <table style={styles.tabla}>
                     <thead>
                         <tr>
-                            {['Fecha', 'Hora', 'Tipo', 'Bus / Placa', 'Ruta', 'Conductor', 'Descripción'].map(h => (
+                            {['Fecha', 'Hora', 'Tipo', 'Bus / Placa', 'Depto. Bus', 'Ruta', 'Conductor', 'Descripción'].map(h => (
                                 <th key={h} style={styles.th}>{h}</th>
                             ))}
                         </tr>
@@ -156,6 +156,9 @@ const Incidentes = () => {
                                 </td>
                                 <td style={{ ...styles.td, fontFamily: 'monospace', fontSize: '0.81rem', color: '#94a3b8' }}>
                                     {inc.busPlaca || '—'}
+                                </td>
+                                <td style={{ ...styles.td, fontSize: '0.78rem', color: tema.acento }}>
+                                    {inc.deptBus || '—'}
                                 </td>
                                 <td style={styles.td}>
                                     {inc.origen && inc.destino
