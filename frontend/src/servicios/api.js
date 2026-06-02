@@ -887,9 +887,9 @@ export async function crearComentario({ sucursalId, usuarioId, nombreUsuario, pu
       categorias:      categorias || [],
       departamento_id: departamentoId || null,
     })
-    .select('id').single();
+    .select('id,puntuacion,comentario,nombre_usuario,categorias,creado_en,usuario_id').single();
   if (error) { console.error('crearComentario:', error.message); return { error: error.message }; }
-  return { id: data.id };
+  return data;
 }
 
 // ── Ventas (cajero) ────────────────────────────────────────

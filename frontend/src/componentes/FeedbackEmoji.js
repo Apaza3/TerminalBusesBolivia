@@ -80,6 +80,7 @@ const FeedbackEmoji = ({ sucursalId, departamento, color = '#3b82f6', starsColor
     const [moodTripulacion,     setMoodTripulacion]    = useState(0);
     const [enviando,            setEnviando]           = useState(false);
     const [enviado,             setEnviado]            = useState(false);
+    const [errorEnvio,          setErrorEnvio]         = useState(null);
     const [reviews,             setReviews]            = useState([]);
     const [mostrarTodos,        setMostrarTodos]       = useState(false);
 
@@ -124,20 +125,24 @@ const FeedbackEmoji = ({ sucursalId, departamento, color = '#3b82f6', starsColor
             categorias:   labelsSeleccionados,
             departamentoId: departamento,
         });
-        if (nuevo) {
-            setReviews(prev => [{
-                id:                  nuevo.id,
-                mood,
-                moodBus:             evaluarIndividual ? moodBus        : mood,
-                moodTripulacion:     evaluarIndividual ? moodTripulacion : mood,
-                labelsSeleccionados,
-                comentario:          nuevo.comentario || '',
-                nombreUsuario:       nuevo.nombre_usuario || 'Viajero',
-                fecha:               nuevo.creado_en,
-                avatarGenerico:      '👤',
-                usuarioId:           nuevo.usuario_id,
-            }, ...prev]);
+        if (!nuevo || nuevo.error) {
+            setEnviando(false);
+            setErrorEnvio(nuevo?.error || 'No se pudo enviar tu opinión. Intenta de nuevo.');
+            setTimeout(() => setErrorEnvio(null), 5000);
+            return;
         }
+        setReviews(prev => [{
+            id:                  nuevo.id,
+            mood,
+            moodBus:             evaluarIndividual ? moodBus        : mood,
+            moodTripulacion:     evaluarIndividual ? moodTripulacion : mood,
+            labelsSeleccionados,
+            comentario:          nuevo.comentario || comentario.trim(),
+            nombreUsuario:       nuevo.nombre_usuario || 'Viajero',
+            fecha:               nuevo.creado_en,
+            avatarGenerico:      '👤',
+            usuarioId:           nuevo.usuario_id,
+        }, ...prev]);
         setMood(0); setMoodBus(0); setMoodTripulacion(0);
         setLabels([]); setComentario('');
         setEvaluarIndividual(false);
@@ -312,6 +317,15 @@ const FeedbackEmoji = ({ sucursalId, departamento, color = '#3b82f6', starsColor
                             fontSize: '0.8rem', textAlign: 'center',
                         }}>
                             ✅ ¡Gracias por tu opinión! Ayudas a otros viajeros.
+                        </div>
+                    )}
+                    {errorEnvio && (
+                        <div style={{
+                            marginTop: '0.6rem', background: 'rgba(239,68,68,0.1)', border: '1px solid #7f1d1d',
+                            color: '#fca5a5', padding: '0.55rem', borderRadius: 8,
+                            fontSize: '0.8rem', textAlign: 'center',
+                        }}>
+                            ⚠ {errorEnvio}
                         </div>
                     )}
                 </div>
