@@ -138,7 +138,9 @@ const RegistroCliente = () => {
             if (ci.length < 5) return 'Ingresa un CI válido (mínimo 5 dígitos).';
             if (ciValido === false) return 'Este CI ya está registrado.';
             if (!fechaNacimiento) return 'Ingresa tu fecha de nacimiento.';
+            if (new Date(fechaNacimiento) > new Date()) return 'La fecha de nacimiento no puede ser futura.';
             if (edadValida === false) return 'Debes ser mayor de 18 años.';
+            if (calcularEdad(fechaNacimiento) > 120) return 'Fecha de nacimiento inválida (edad máxima 120 años).';
         }
         if (p === 2) {
             if (!email.trim()) return 'El email es obligatorio.';
