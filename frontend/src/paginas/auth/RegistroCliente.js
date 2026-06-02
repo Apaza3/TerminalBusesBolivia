@@ -13,6 +13,7 @@ const esMayorDeEdad = (fechaNac) => calcularEdad(fechaNac) >= 18;
 import { useDepartamento } from '../../contextos/DepartamentoContext';
 import NavbarUniversal from '../../componentes/NavbarUniversal';
 import { getDeptFondo } from '../../utils/assets';
+import { supabase } from '../../servicios/supabase';
 import gsap from 'gsap';
 
 const PASOS_MOBILE = [
@@ -111,12 +112,12 @@ const RegistroCliente = () => {
         if (ci.length >= 5) {
             setCiVerificando(true);
             try {
-                const apiBase = process.env.REACT_APP_API_URL || `http://${window.location.hostname}:4000`;
-                const res = await fetch(`${apiBase}/api/auth/verificar-ci/${ci.trim()}`);
-                const data = await res.json();
-                setCiValido(!data.existe); // true = CI libre, false = CI ya registrado
+                const { data, error } = await supabase
+                    .from('usuarios').select('id').eq('ci', ci.trim()).maybeSingle();
+                if (error) setCiValido(null);          // error de lectura → no bloquear
+                else setCiValido(!data);               // sin fila = CI libre
             } catch {
-                setCiValido(null); // En caso de error de red, no bloquear
+                setCiValido(null);
             } finally {
                 setCiVerificando(false);
             }
@@ -161,28 +162,39 @@ const RegistroCliente = () => {
         if (err1 || err2) { mostrarToast('error', err1 || err2); return; }
         setCargando(true);
         try {
-            const apiBase = process.env.REACT_APP_API_URL || `http://${window.location.hostname}:4000`;
-            const res = await fetch(`${apiBase}/api/auth/registro`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    email: email.trim().toLowerCase(),
-                    password,
-                    nombre_completo: nombre.trim(),
-                    ci: ci.trim(),
-                    telefono: telefono.trim() || undefined,
-                }),
+            // Registro vía Supabase Auth. El trigger handle_new_user crea la fila en `usuarios`
+            // (rol cliente) con nombre, ci, telefono y fecha de nacimiento desde el metadata.
+            const { data, error } = await supabase.auth.signUp({
+                email: email.trim().toLowerCase(),
+                password,
+                options: {
+                    data: {
+                        nombre_completo: nombre.trim(),
+                        ci: ci.trim(),
+                        telefono: telefono.trim() || '',
+                        fecha_nacimiento: fechaNacimiento || '',
+                        rol: 'cliente',
+                    },
+                },
             });
-            const data = await res.json();
-            if (res.ok && data.exito) {
-                mostrarToast('exito', '¡Cuenta creada! Redirigiendo al login...');
+            if (error) {
+                const msg = /already registered|already been registered|exists/i.test(error.message)
+                    ? 'Este correo ya está registrado.'
+                    : error.message || 'Error al crear cuenta.';
+                mostrarToast('error', msg);
+            } else if (data?.user) {
                 const url = redirectTo !== '/' ? `/login-cliente?redirect=${encodeURIComponent(redirectTo)}` : '/login-cliente';
-                setTimeout(() => navigate(url), 2000);
+                if (data.session) {
+                    mostrarToast('exito', '¡Cuenta creada! Redirigiendo...');
+                } else {
+                    mostrarToast('exito', '¡Cuenta creada! Revisa tu correo para confirmarla, luego inicia sesión.');
+                }
+                setTimeout(() => navigate(url), 2200);
             } else {
-                mostrarToast('error', data.error || 'Error al crear cuenta.');
+                mostrarToast('error', 'No se pudo crear la cuenta.');
             }
         } catch (e) {
-            mostrarToast('error', 'Error de conexión. Verifica que el servidor esté activo.');
+            mostrarToast('error', e.message || 'Error al crear la cuenta.');
         } finally {
             setCargando(false);
         }
