@@ -4,7 +4,7 @@ import { DEPARTAMENTOS } from '../../contextos/DepartamentoContext';
 import {
     getBusesEmpresa, getViajesSucursal, getUsuariosEmpresa,
     getViajesHistoricosSucursal,
-    actualizarUsuario, eliminarUsuario, crearUsuario,
+    actualizarUsuario, eliminarUsuario, crearUsuario, editarUsuario,
 } from '../../servicios/api';
 import { obtenerAnaliticaSucursal } from '../../servicios/analyticsService';
 
@@ -125,9 +125,12 @@ const AdminDashboard = () => {
             });
             if (!res.ok) { alert('No se pudo crear: ' + res.error); setGuardando(false); return; }
         } else {
-            const { id, nombre_completo, ci, telefono, rol, activo } = d;
-            const ok = await actualizarUsuario(id, { nombre_completo, ci, telefono, rol, activo });
-            if (!ok) { alert('No se pudo guardar los cambios'); setGuardando(false); return; }
+            const { id, email, nombre_completo, ci, telefono, rol, activo, placa } = d;
+            const res = await editarUsuario({
+                id, email: email?.trim(), nombre_completo, ci, telefono, rol, activo,
+                placa: rol === 'conductor' ? (placa || '').trim() : undefined,
+            });
+            if (!res.ok) { alert('No se pudo guardar: ' + res.error); setGuardando(false); return; }
         }
         await cargarDatos();          // recargar desde Supabase (nada local)
         setModalUsuario(null);
@@ -346,7 +349,7 @@ const AdminDashboard = () => {
                                                         </span>
                                                     </td>
                                                     <td style={{ padding: '0.7rem 0.9rem', whiteSpace: 'nowrap' }}>
-                                                        <button onClick={() => setModalUsuario({ modo: 'editar', datos: { id: u.id, nombre_completo: u.nombre_completo, ci: u.ci || '', telefono: u.telefono || '', rol: u.rol, activo: u.activo } })} style={{ background: 'transparent', border: `1px solid ${tema.color}40`, color: tema.acento, borderRadius: 5, padding: '0.2rem 0.55rem', fontSize: '0.7rem', cursor: 'pointer', marginRight: '0.3rem' }}>✏️</button>
+                                                        <button onClick={() => setModalUsuario({ modo: 'editar', datos: { id: u.id, email: u.email || '', nombre_completo: u.nombre_completo, ci: u.ci || '', telefono: u.telefono || '', rol: u.rol, activo: u.activo, placa: (u.busAsignado && u.busAsignado !== '—') ? u.busAsignado : '' } })} style={{ background: 'transparent', border: `1px solid ${tema.color}40`, color: tema.acento, borderRadius: 5, padding: '0.2rem 0.55rem', fontSize: '0.7rem', cursor: 'pointer', marginRight: '0.3rem' }}>✏️</button>
                                                         <button onClick={() => handleEliminarUsuario(u)} style={{ background: 'transparent', border: '1px solid #7f1d1d40', color: '#fca5a5', borderRadius: 5, padding: '0.2rem 0.55rem', fontSize: '0.7rem', cursor: 'pointer' }}>🗑️</button>
                                                     </td>
                                                 </tr>
@@ -477,6 +480,18 @@ const AdminDashboard = () => {
                             />
                         </div>
                     ))}
+                    {modalUsuario.modo === 'editar' && (
+                        <div style={{ marginBottom: '0.9rem' }}>
+                            <label style={{ display: 'block', fontSize: '0.72rem', color: '#64748b', fontWeight: 600, marginBottom: '0.3rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Email (login)</label>
+                            <input
+                                type="email"
+                                value={modalUsuario.datos.email || ''}
+                                onChange={e => setModalUsuario(p => ({ ...p, datos: { ...p.datos, email: e.target.value } }))}
+                                style={{ width: '100%', background: '#07111f', border: `1px solid ${tema.color}30`, color: '#f1f5f9', borderRadius: 8, padding: '0.55rem 0.8rem', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
+                            />
+                            <div style={{ fontSize: '0.7rem', color: '#475569', marginTop: '0.25rem' }}>Cambiar el correo también cambia el login del empleado.</div>
+                        </div>
+                    )}
                     {[
                         { key: 'nombre_completo', label: 'Nombre completo', type: 'text' },
                         { key: 'ci',              label: 'CI',              type: 'text' },
@@ -500,16 +515,16 @@ const AdminDashboard = () => {
                             <option value="admin_sucursal">Admin</option>
                         </select>
                     </div>
-                    {modalUsuario.modo === 'nuevo' && modalUsuario.datos.rol === 'conductor' && (
+                    {modalUsuario.datos.rol === 'conductor' && (
                         <div style={{ marginBottom: '0.9rem' }}>
-                            <label style={{ display: 'block', fontSize: '0.72rem', color: '#64748b', fontWeight: 600, marginBottom: '0.3rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Placa del bus (asignar)</label>
+                            <label style={{ display: 'block', fontSize: '0.72rem', color: '#64748b', fontWeight: 600, marginBottom: '0.3rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Placa del bus (asignar / reasignar)</label>
                             <input
                                 value={modalUsuario.datos.placa || ''}
                                 onChange={e => setModalUsuario(p => ({ ...p, datos: { ...p.datos, placa: e.target.value.toUpperCase() } }))}
                                 placeholder="Ej: 1234ABC (bus ya registrado)"
                                 style={{ width: '100%', background: '#07111f', border: `1px solid ${tema.color}30`, color: '#f1f5f9', borderRadius: 8, padding: '0.55rem 0.8rem', fontSize: '0.88rem', outline: 'none', boxSizing: 'border-box' }}
                             />
-                            <div style={{ fontSize: '0.7rem', color: '#475569', marginTop: '0.25rem' }}>Opcional. El bus debe existir en Flota.</div>
+                            <div style={{ fontSize: '0.7rem', color: '#475569', marginTop: '0.25rem' }}>El bus debe existir en Flota. Al editar, reasigna ese bus a este conductor (unidad bus+chofer).</div>
                         </div>
                     )}
                     <div style={{ marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

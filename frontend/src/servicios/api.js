@@ -160,6 +160,18 @@ export async function actualizarUsuario(id, campos) {
   return !error;
 }
 
+/** Editar staff vía Edge Function (cambia email en auth, datos y reasigna bus a conductor). */
+export async function editarUsuario(payload) {
+  const { data, error } = await supabase.functions.invoke('editar-staff', { body: payload });
+  if (error) {
+    let msg = error.message;
+    try { const ctx = await error.context?.json?.(); if (ctx?.error) msg = ctx.error; } catch { /* noop */ }
+    return { ok: false, error: msg };
+  }
+  if (data?.error) return { ok: false, error: data.error };
+  return { ok: true };
+}
+
 /** Crea un empleado (login + fila usuarios) vía Edge Function `crear-staff` (service role en Supabase). */
 export async function crearUsuario(payload) {
   const { data, error } = await supabase.functions.invoke('crear-staff', { body: payload });
