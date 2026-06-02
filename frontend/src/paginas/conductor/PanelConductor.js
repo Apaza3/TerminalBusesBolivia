@@ -370,7 +370,7 @@ const PanelConductor = () => {
         const sucursalViaje = viaje.sucursales?.id || viaje.sucursal_id || perfil?.sucursal_id;
         await crearNotificacion({ sucursalId: sucursalViaje, viajeId: viaje.id, busPlaca, tipo: notifTipo, mensaje: detalle, severidad: 'alta' });
         // 3) Bloquear el próximo viaje del bus 2h (no disponible por el incidente)
-        if (proximo?.id) await bloquearViajePorIncidente(proximo.id, `${tipoLabel}: ${notifDesc || 'incidente en ruta'}`, 2);
+        if (proximo?.id) await bloquearViajePorIncidente(proximo.id, tipoLabel, 2);
         // 4) Aviso con disculpa por correo a los pasajeros del PRÓXIMO viaje afectado (o el actual si no hay)
         const viajeEmailId = proximo?.id || viaje.id;
         const viajeEmail   = proximo || viaje;
