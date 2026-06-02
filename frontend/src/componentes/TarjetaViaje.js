@@ -293,13 +293,6 @@ const TarjetaViaje = ({ viaje, onSeleccionar }) => {
                         boxShadow: '0 2px 10px rgba(0,0,0,0.5)', textShadow: '0 1px 2px rgba(0,0,0,0.6)',
                         pointerEvents: 'none', whiteSpace: 'nowrap',
                     }}>⚠ No disponible · Incidente</div>
-                    <div title={ds.motivo} style={{
-                        position: 'absolute', bottom: 8, left: 8, right: 8, zIndex: 11,
-                        background: 'rgba(127,29,29,0.85)', color: '#fecaca',
-                        borderRadius: 8, padding: '0.3rem 0.5rem', fontSize: '0.62rem', fontWeight: 700,
-                        textAlign: 'center', backdropFilter: 'blur(4px)', pointerEvents: 'none',
-                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                    }}>{ds.motivo}</div>
                 </>
             )}
 
