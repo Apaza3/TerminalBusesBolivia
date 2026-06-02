@@ -219,7 +219,9 @@ const SucursalDetalle = () => {
         const comentarios = await getComentariosSucursal(id);
         if (comentarios.length > 0) {
             const avg = comentarios.reduce((s, c) => s + (c.puntuacion || 0), 0) / comentarios.length;
-            setRankingLocal(Math.round(avg * 20)); // escala 1-5 → 0-100
+            setRankingLocal(Math.round(avg * 10) / 10); // promedio 0-5 (1 decimal), misma escala que las estrellas
+        } else {
+            setRankingLocal(0);
         }
     };
 
