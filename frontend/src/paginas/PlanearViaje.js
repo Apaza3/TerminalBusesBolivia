@@ -6,6 +6,7 @@ import { useAuth } from '../contextos/AuthContext';
 import MapaBolivia from '../componentes/MapaBolivia';
 import RelojDigital from '../componentes/RelojDigital';
 import PerfilIndicador from '../componentes/PerfilIndicador';
+import TarjetaViaje from '../componentes/TarjetaViaje';
 import { getSucursales, buscarViajes } from '../servicios/api';
 import { getEmpresaLogo } from '../utils/assets';
 
@@ -718,63 +719,33 @@ const PlanearViaje = () => {
                                             <RelojDigital size="small" />
                                         </div>
 
-                                        {salidas.length === 0 ? (
-                                            <div style={{ color: '#475569', padding: '2rem', background: '#0b1628', borderRadius: 12, textAlign: 'center' }}>
-                                                Sin salidas disponibles para esta combinación.
-                                            </div>
-                                        ) : (
-                                            <div className="pv-salidas" style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', maxHeight: '45vh', overflowY: 'auto', paddingRight: '0.25rem' }}>
-                                                {salidas.map(v => {
-                                                    const ac = empresa.colorAccent || tema.color;
-                                                    const pasado = esPasadaHora(v.salida);
-                                                    const d = new Date(v.salida);
-                                                    const hora = d.toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit', hour12: false });
-                                                    const dia = d.toLocaleDateString('es-BO', { day: '2-digit', month: 'short' });
-                                                    return (
-                                                        <div key={v.id}
-                                                            onClick={() => !pasado && navigate(`/reserva/${v.id}`)}
-                                                            style={{
-                                                                display: 'flex', alignItems: 'center', gap: '1rem',
-                                                                background: pasado ? '#07111f' : `linear-gradient(135deg, ${ac}10, #0b1628 60%)`,
-                                                                border: `1px solid ${pasado ? '#1e293b' : ac + '30'}`,
-                                                                borderLeft: `3px solid ${pasado ? '#1e293b' : ac}`,
-                                                                borderRadius: 10, padding: '0.9rem 1.1rem',
-                                                                cursor: pasado ? 'not-allowed' : 'pointer',
-                                                                opacity: pasado ? 0.45 : 1, transition: 'all 0.15s',
-                                                            }}
-                                                            onMouseEnter={e => { if (!pasado) { e.currentTarget.style.background = `linear-gradient(135deg, ${ac}22, #0b1628 70%)`; e.currentTarget.style.borderColor = ac; e.currentTarget.style.transform = 'translateX(2px)'; } }}
-                                                            onMouseLeave={e => { if (!pasado) { e.currentTarget.style.background = `linear-gradient(135deg, ${ac}10, #0b1628 60%)`; e.currentTarget.style.borderColor = `${ac}30`; e.currentTarget.style.transform = 'none'; } }}>
-
-                                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 70 }}>
-                                                                <div style={{ fontFamily: 'monospace', fontSize: '1.4rem', fontWeight: 800, color: pasado ? '#334155' : ac, lineHeight: 1 }}>
-                                                                    {hora}
-                                                                </div>
-                                                                <div style={{ fontSize: '0.62rem', color: pasado ? '#334155' : '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '0.15rem' }}>
-                                                                    {dia}
-                                                                </div>
-                                                            </div>
-                                                            <div style={{ flex: 1 }}>
-                                                                <div style={{ color: pasado ? '#334155' : '#e2e8f0', fontSize: '0.85rem', fontWeight: 600 }}>
-                                                                    {v.origen} → {v.destino}
-                                                                </div>
-                                                                <div style={{ color: '#475569', fontSize: '0.72rem' }}>
-                                                                    🕒 {v.duracion_estimada || 'N/D'}{v.anden ? ` · Andén ${v.anden}` : ''}
-                                                                </div>
-                                                            </div>
-                                                            <div style={{ textAlign: 'right' }}>
-                                                                <div style={{ color: pasado ? '#334155' : '#22c55e', fontWeight: 800, fontSize: '1rem' }}>
-                                                                    Bs {v.precio}
-                                                                </div>
-                                                                {pasado
-                                                                    ? <span style={{ fontSize: '0.65rem', color: '#334155', background: '#1e293b', borderRadius: 4, padding: '0.1rem 0.4rem' }}>Salió</span>
-                                                                    : <span style={{ fontSize: '0.7rem', color: ac, fontWeight: 600 }}>Reservar →</span>
-                                                                }
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        )}
+                                        {(() => {
+                                            const now = Date.now();
+                                            // Solo Disponibles e Incidentes (oculta Partió, Embarcando, en viaje, etc.)
+                                            const visibles = salidas.filter(v => {
+                                                const bloq = v.bloqueado_hasta && new Date(v.bloqueado_hasta).getTime() > now;
+                                                if (bloq) return true;
+                                                if (['en_viaje', 'completado', 'cancelado'].includes(v.estado)) return false;
+                                                const diff = new Date(v.fecha_salida || v.salida).getTime() - now;
+                                                return diff >= 60 * 60 * 1000; // disponible (no embarcando, no partió)
+                                            });
+                                            if (visibles.length === 0) return (
+                                                <div style={{ color: '#475569', padding: '2rem', background: '#0b1628', borderRadius: 12, textAlign: 'center' }}>
+                                                    Sin salidas disponibles para esta combinación.
+                                                </div>
+                                            );
+                                            return (
+                                                <div className="pv-salidas" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem', maxHeight: '60vh', overflowY: 'auto', paddingRight: '0.25rem' }}>
+                                                    {visibles.map(v => (
+                                                        <TarjetaViaje
+                                                            key={v.id}
+                                                            viaje={{ ...v, sucursalNombre: empresa.nombre, sucursalColor: empresa.colorAccent }}
+                                                            onSeleccionar={vv => navigate(`/reserva/${vv.id}`)}
+                                                        />
+                                                    ))}
+                                                </div>
+                                            );
+                                        })()}
                                     </div>
                                 )}
 
