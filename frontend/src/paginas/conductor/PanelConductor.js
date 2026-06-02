@@ -8,7 +8,7 @@ import {
     getTripulacionByUsuario, getViajesConductor,
     getReservasViaje, updateViajeEstado,
     getBoletoPorQR, marcarBoletoValidado,
-    crearNotificacion, crearIncidente, getEmailsViaje, enviarAvisoIncidente,
+    crearNotificacion, crearIncidente, getEmailsViaje, enviarAvisoIncidente, getProximoViajeBus,
 } from '../../servicios/api';
 import { supabase } from '../../servicios/supabase';
 import { API_BASE } from '../../config';
@@ -346,25 +346,38 @@ const PanelConductor = () => {
         const viaje = viajes.find(v => v.id === viajeSel);
         if (!viaje) { setNotifResultado({ tipo: 'error', texto: 'Selecciona un viaje.' }); setNotifEnviando(false); return; }
         const busPlaca  = viaje.buses?.placa || '';
+        const busId     = viaje.buses?.id || viaje.bus_id || null;
         const tipoLabel = TIPOS_INCIDENTE.find(t => t.value === notifTipo)?.label || notifTipo;
-        const deptBus = perfil?.departamento ? ` · Bus de ${perfil.departamento}` : '';
-        const mensajeBase = `[${tipoLabel}] ${viaje.origen} → ${viaje.destino} · Bus ${busPlaca}${deptBus}: ${notifDesc}`;
+        const deptBus   = perfil?.departamento || '—';
         const empresaNombre = perfil?.sucursal_nombre || viaje.sucursales?.nombre || '';
+        const fmt = (iso) => iso ? new Date(iso).toLocaleString('es-BO', { dateStyle: 'short', timeStyle: 'short' }) : '—';
+
+        // Próximo viaje del mismo bus (el que quedará afectado)
+        const proximo = await getProximoViajeBus(busId, viaje.fecha_salida);
+        const proxTxt = proximo
+            ? `Próximo viaje afectado: ${proximo.origen} → ${proximo.destino} (${fmt(proximo.fecha_salida)})`
+            : 'Sin próximo viaje programado para este bus';
+
+        // Mensaje detallado para cajero/admin (contexto para explicar a los clientes)
+        const detalle =
+            `[${tipoLabel}] Viaje actual: ${viaje.origen} → ${viaje.destino} · ${fmt(viaje.fecha_salida)}` +
+            ` · Bus ${busPlaca} (${deptBus}). ${proxTxt}. Detalle: ${notifDesc || '(sin detalle)'}`;
 
         // 1) Incidencia permanente (admin la ve en Incidentes)
-        // Mapear a tipos validos del CHECK de incidencias (accidente/desvio/pasajero_conflictivo/mecanico/retraso/otro)
         const TIPO_INCIDENCIA = { retraso: 'retraso', mecanico: 'mecanico', percance: 'desvio', accidente: 'accidente', otro: 'otro' };
-        await crearIncidente({ viajeId: viaje.id, tipo: TIPO_INCIDENCIA[notifTipo] || 'otro', descripcion: notifDesc || tipoLabel, severidad: 'alta', reportadoPor: perfil?.id });
-        // 2) Notificación temporal para el cajero de la sucursal que OPERA el viaje (misma que ve el admin)
+        await crearIncidente({ viajeId: viaje.id, tipo: TIPO_INCIDENCIA[notifTipo] || 'otro', descripcion: detalle, severidad: 'alta', reportadoPor: perfil?.id });
+        // 2) Notificación temporal para el cajero (sucursal del viaje; visible a toda la empresa)
         const sucursalViaje = viaje.sucursales?.id || viaje.sucursal_id || perfil?.sucursal_id;
-        await crearNotificacion({ sucursalId: sucursalViaje, viajeId: viaje.id, busPlaca, tipo: notifTipo, mensaje: mensajeBase, severidad: 'alta' });
-        // 3) Aviso con disculpa por correo SOLO a los pasajeros de ESTE viaje (el bus afectado)
-        const emails = await getEmailsViaje(viaje.id);
-        let emailMsg = ' · sin pasajeros con correo en este viaje';
+        await crearNotificacion({ sucursalId: sucursalViaje, viajeId: viaje.id, busPlaca, tipo: notifTipo, mensaje: detalle, severidad: 'alta' });
+        // 3) Aviso con disculpa por correo a los pasajeros del PRÓXIMO viaje afectado (o el actual si no hay)
+        const viajeEmailId = proximo?.id || viaje.id;
+        const viajeEmail   = proximo || viaje;
+        const emails = await getEmailsViaje(viajeEmailId);
+        let emailMsg = ' · sin pasajeros con correo en el viaje afectado';
         if (emails.length) {
             const env = await enviarAvisoIncidente({
-                emails, empresa: empresaNombre, origen: viaje.origen, destino: viaje.destino,
-                fechaSalida: viaje.fecha_salida, tipo: notifTipo, motivo: notifDesc || tipoLabel,
+                emails, empresa: empresaNombre, origen: viajeEmail.origen, destino: viajeEmail.destino,
+                fechaSalida: viajeEmail.fecha_salida, tipo: notifTipo, motivo: notifDesc || tipoLabel,
             });
             emailMsg = env.ok ? ` · 📧 ${env.enviados} pasajero(s) avisado(s)` : ` · ⚠ correo: ${env.error}`;
         }

@@ -831,6 +831,20 @@ export async function enviarAvisoIncidente({ emails, empresa, origen, destino, f
   } catch (e) { return { ok: false, error: e.message, enviados: 0 }; }
 }
 
+/** Próximo viaje programado del mismo bus después de una fecha (el que se vería afectado). */
+export async function getProximoViajeBus(busId, despuesDe) {
+  if (!busId || !despuesDe) return null;
+  const { data } = await supabase.from('viajes')
+    .select('id,origen,destino,fecha_salida')
+    .eq('bus_id', busId)
+    .gt('fecha_salida', despuesDe)
+    .in('estado', ['programado', 'autorizado'])
+    .order('fecha_salida', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  return data || null;
+}
+
 export async function updateViajeEstado(viajeId, estado) {
   const { error } = await supabase.from('viajes').update({ estado }).eq('id', viajeId);
   if (error) { console.error('updateViajeEstado:', error.message); return false; }
