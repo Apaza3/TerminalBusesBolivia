@@ -351,7 +351,9 @@ const PanelConductor = () => {
         const empresaNombre = perfil?.sucursal_nombre || viaje.sucursales?.nombre || '';
 
         // 1) Incidencia permanente (admin la ve en Incidentes)
-        await crearIncidente({ viajeId: viaje.id, tipo: notifTipo, descripcion: notifDesc || tipoLabel, severidad: 'alta', reportadoPor: perfil?.id });
+        // Mapear a tipos validos del CHECK de incidencias (accidente/desvio/pasajero_conflictivo/mecanico/retraso/otro)
+        const TIPO_INCIDENCIA = { retraso: 'retraso', mecanico: 'mecanico', percance: 'desvio', accidente: 'accidente', otro: 'otro' };
+        await crearIncidente({ viajeId: viaje.id, tipo: TIPO_INCIDENCIA[notifTipo] || 'otro', descripcion: notifDesc || tipoLabel, severidad: 'alta', reportadoPor: perfil?.id });
         // 2) Notificación temporal para el cajero (5h o hasta marcar leída)
         await crearNotificacion({ sucursalId: perfil?.sucursal_id, viajeId: viaje.id, busPlaca, tipo: notifTipo, mensaje: mensajeBase, severidad: 'alta' });
         // 3) Aviso con disculpa por correo SOLO a los pasajeros de ESTE viaje (el bus afectado)
