@@ -162,36 +162,30 @@ const RegistroCliente = () => {
         if (err1 || err2) { mostrarToast('error', err1 || err2); return; }
         setCargando(true);
         try {
-            // Registro vía Supabase Auth. El trigger handle_new_user crea la fila en `usuarios`
-            // (rol cliente) con nombre, ci, telefono y fecha de nacimiento desde el metadata.
-            const { data, error } = await supabase.auth.signUp({
-                email: email.trim().toLowerCase(),
-                password,
-                options: {
-                    data: {
-                        nombre_completo: nombre.trim(),
-                        ci: ci.trim(),
-                        telefono: telefono.trim() || '',
-                        fecha_nacimiento: fechaNacimiento || '',
-                        rol: 'cliente',
-                    },
-                },
+            // Registro vía Edge Function (service role): crea el usuario YA confirmado,
+            // sin correo de confirmación (evita 'email rate limit exceeded'). El trigger
+            // handle_new_user llena `usuarios` con nombre, ci, telefono, fecha y rol=cliente.
+            const SURL = process.env.REACT_APP_SUPABASE_URL || '';
+            const AKEY = process.env.REACT_APP_SUPABASE_ANON_KEY || '';
+            const resp = await fetch(`${SURL}/functions/v1/registro-cliente`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'apikey': AKEY, 'Authorization': `Bearer ${AKEY}` },
+                body: JSON.stringify({
+                    email: email.trim().toLowerCase(),
+                    password,
+                    nombre_completo: nombre.trim(),
+                    ci: ci.trim(),
+                    telefono: telefono.trim() || '',
+                    fecha_nacimiento: fechaNacimiento || '',
+                }),
             });
-            if (error) {
-                const msg = /already registered|already been registered|exists/i.test(error.message)
-                    ? 'Este correo ya está registrado.'
-                    : error.message || 'Error al crear cuenta.';
-                mostrarToast('error', msg);
-            } else if (data?.user) {
+            const data = await resp.json().catch(() => ({}));
+            if (resp.ok && data.ok) {
+                mostrarToast('exito', '¡Cuenta creada! Redirigiendo al login...');
                 const url = redirectTo !== '/' ? `/login-cliente?redirect=${encodeURIComponent(redirectTo)}` : '/login-cliente';
-                if (data.session) {
-                    mostrarToast('exito', '¡Cuenta creada! Redirigiendo...');
-                } else {
-                    mostrarToast('exito', '¡Cuenta creada! Revisa tu correo para confirmarla, luego inicia sesión.');
-                }
-                setTimeout(() => navigate(url), 2200);
+                setTimeout(() => navigate(url), 2000);
             } else {
-                mostrarToast('error', 'No se pudo crear la cuenta.');
+                mostrarToast('error', data.error || 'No se pudo crear la cuenta.');
             }
         } catch (e) {
             mostrarToast('error', e.message || 'Error al crear la cuenta.');
