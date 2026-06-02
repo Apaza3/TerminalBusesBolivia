@@ -123,7 +123,7 @@ const FeedbackEmoji = ({ sucursalId, departamento, color = '#3b82f6', starsColor
             puntuacion:   mood,
             comentario:   comentario.trim(),
             categorias:   labelsSeleccionados,
-            departamentoId: departamento,
+            departamentoId: null, // el sucursal_id ya scopa empresa+departamento (columna es uuid; el nombre rompia el insert)
         });
         if (!nuevo || nuevo.error) {
             setEnviando(false);
