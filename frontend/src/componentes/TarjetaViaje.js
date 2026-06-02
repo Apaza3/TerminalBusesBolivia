@@ -210,6 +210,9 @@ const calcularDisplayEstado = (viaje) => {
     const now = new Date();
     const salida = new Date(viaje.fecha_salida || viaje.salida);
     const diffMs = salida - now;
+    // Bloqueado por incidente (2h) — tiene prioridad
+    if (viaje.bloqueado_hasta && new Date(viaje.bloqueado_hasta) > now)
+        return { label: 'No disponible', color: '#ef4444', canBook: false, bloqueado: true, motivo: viaje.bloqueo_motivo || 'Incidente en ruta' };
     if (viaje.estado === 'en_viaje')   return { label: 'En Viaje',   color: '#3b82f6', canBook: false };
     if (viaje.estado === 'completado') return { label: 'Completado', color: '#475569', canBook: false };
     if (viaje.estado === 'cancelado')  return { label: 'Cancelado',  color: '#ef4444', canBook: false };
@@ -278,8 +281,33 @@ const TarjetaViaje = ({ viaje, onSeleccionar }) => {
                 {ds.label}
             </div>
 
-            {/* Contenido con opacity reducida para "Partió" */}
-            <div style={{ opacity: ds.label === 'Partió' ? 0.32 : ds.canBook ? 1 : 0.62 }}>
+            {/* Cinta diagonal roja para viajes bloqueados por incidente */}
+            {ds.bloqueado && (
+                <>
+                    <div style={{
+                        position: 'absolute', top: 18, left: -42, zIndex: 12,
+                        transform: 'rotate(-35deg)', transformOrigin: 'center',
+                        background: 'linear-gradient(90deg, #b91c1c, #ef4444, #b91c1c)',
+                        color: '#fff', fontWeight: 900, fontSize: '0.6rem', letterSpacing: '0.12em',
+                        padding: '0.28rem 3rem', textTransform: 'uppercase',
+                        boxShadow: '0 2px 10px rgba(0,0,0,0.5)', textShadow: '0 1px 2px rgba(0,0,0,0.6)',
+                        pointerEvents: 'none', whiteSpace: 'nowrap',
+                    }}>⚠ No disponible · Incidente</div>
+                    <div title={ds.motivo} style={{
+                        position: 'absolute', bottom: 8, left: 8, right: 8, zIndex: 11,
+                        background: 'rgba(127,29,29,0.85)', color: '#fecaca',
+                        borderRadius: 8, padding: '0.3rem 0.5rem', fontSize: '0.62rem', fontWeight: 700,
+                        textAlign: 'center', backdropFilter: 'blur(4px)', pointerEvents: 'none',
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    }}>{ds.motivo}</div>
+                </>
+            )}
+
+            {/* Contenido con opacity/filtro reducido para "Partió" o bloqueado */}
+            <div style={{
+                opacity: ds.bloqueado ? 0.45 : ds.label === 'Partió' ? 0.32 : ds.canBook ? 1 : 0.62,
+                filter: ds.bloqueado ? 'grayscale(100%)' : 'none',
+            }}>
             {/* Destination panel */}
             <div
                 className="tv-panel"

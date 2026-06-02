@@ -200,6 +200,10 @@ const PanelCajero = () => {
 
     const handleSeleccionarViaje = (v) => {
         if (esPasado(v.fecha_salida)) return;
+        if (v.bloqueado_hasta && new Date(v.bloqueado_hasta) > new Date()) {
+            notificar('error', `Viaje no disponible por incidente: ${v.bloqueo_motivo || ''}`);
+            return;
+        }
         setBoleto(prev => ({
             ...prev,
             viajeId: v.id,
@@ -1170,27 +1174,31 @@ const PanelCajero = () => {
                                                 </div>
                                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '0.6rem' }}>
                                                     {lista.map(v => {
-                                                        const pasado = esPasado(v.fecha_salida);
+                                                        const bloqueado = v.bloqueado_hasta && new Date(v.bloqueado_hasta) > new Date();
+                                                        const pasado = esPasado(v.fecha_salida) || bloqueado;
                                                         const seleccionado = boleto.viajeId === v.id;
                                                         const d = new Date(v.fecha_salida);
                                                         const fechaTxt = d.toLocaleDateString('es-BO', { weekday: 'short', day: 'numeric', month: 'short' });
                                                         const horaTxt = d.toLocaleTimeString('es-BO', { hour: 'numeric', minute: '2-digit', hour12: true });
                                                         return (
-                                                            <div key={v.id} onClick={() => handleSeleccionarViaje(v)} title={pasado ? 'Viaje ya salió' : ''} style={{
-                                                                background: pasado ? '#0d1320' : seleccionado ? `${tema.color}20` : '#0d1a2e',
-                                                                border: `1px solid ${pasado ? '#1e293b' : seleccionado ? tema.color : '#1e293b'}`,
-                                                                borderLeft: `3px solid ${pasado ? '#1e293b' : seleccionado ? tema.color : `${tema.color}66`}`,
+                                                            <div key={v.id} onClick={() => !bloqueado && handleSeleccionarViaje(v)} title={bloqueado ? (v.bloqueo_motivo || 'No disponible por incidente') : pasado ? 'Viaje ya salió' : ''} style={{
+                                                                background: bloqueado ? '#1a0f12' : pasado ? '#0d1320' : seleccionado ? `${tema.color}20` : '#0d1a2e',
+                                                                border: `1px solid ${bloqueado ? '#7f1d1d' : pasado ? '#1e293b' : seleccionado ? tema.color : '#1e293b'}`,
+                                                                borderLeft: `3px solid ${bloqueado ? '#ef4444' : pasado ? '#1e293b' : seleccionado ? tema.color : `${tema.color}66`}`,
                                                                 borderRadius: '10px', padding: '0.8rem 0.95rem',
                                                                 cursor: pasado ? 'not-allowed' : 'pointer',
-                                                                opacity: pasado ? 0.45 : 1, transition: 'all 0.15s',
+                                                                opacity: bloqueado ? 0.7 : pasado ? 0.45 : 1, transition: 'all 0.15s',
+                                                                filter: bloqueado ? 'grayscale(60%)' : 'none',
                                                             }}>
                                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.4rem' }}>
                                                                     <span style={{ fontWeight: 800, color: pasado ? '#475569' : '#f1f5f9', fontSize: '0.82rem', textTransform: 'capitalize' }}>📅 {fechaTxt}</span>
-                                                                    {pasado && <span style={{ fontSize: '0.62rem', color: '#475569', background: '#1e293b', borderRadius: 4, padding: '0.1rem 0.4rem' }}>Salió</span>}
+                                                                    {bloqueado ? <span style={{ fontSize: '0.6rem', color: '#fca5a5', background: '#7f1d1d', borderRadius: 4, padding: '0.1rem 0.4rem', fontWeight: 800 }}>⚠ INCIDENTE</span>
+                                                                        : pasado ? <span style={{ fontSize: '0.62rem', color: '#475569', background: '#1e293b', borderRadius: 4, padding: '0.1rem 0.4rem' }}>Salió</span> : null}
                                                                     {seleccionado && !pasado && <span style={{ fontSize: '0.65rem', background: `${tema.color}30`, color: tema.acento, borderRadius: 4, padding: '0.1rem 0.4rem', fontWeight: 700 }}>✓</span>}
                                                                 </div>
                                                                 <div style={{ color: pasado ? '#334155' : tema.acento, fontWeight: 800, fontSize: '1.05rem', marginTop: '0.2rem' }}>🕐 {horaTxt}</div>
                                                                 <div style={{ color: pasado ? '#334155' : '#10b981', fontWeight: 700, fontSize: '0.85rem', marginTop: '0.3rem' }}>Bs {v.precio}/asiento</div>
+                                                                {bloqueado && <div style={{ color: '#fca5a5', fontSize: '0.62rem', marginTop: '0.25rem', fontWeight: 600 }}>{v.bloqueo_motivo}</div>}
                                                             </div>
                                                         );
                                                     })}

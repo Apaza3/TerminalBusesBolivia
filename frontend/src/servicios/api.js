@@ -43,7 +43,7 @@ export async function buscarViajes(origen, destino, fecha) {
   let q = supabase
     .from('viajes')
     .select(`
-      id,origen,destino,fecha_salida,precio,duracion_estimada,estado,anden,sucursal_id,
+      id,origen,destino,fecha_salida,precio,duracion_estimada,estado,anden,sucursal_id,bloqueado_hasta,bloqueo_motivo,
       sucursales(id,nombre,logo_emoji,color_accent,ranking,amenidades,ciudad),
       buses(id,capacidad,pisos,filas_piso_1,filas_piso_2,columnas,tiene_bano,configuracion_asientos,amenidades)
     `)
@@ -283,7 +283,7 @@ export async function getViajesSucursalProximos(sucursalId, dias = 30) {
   const limite = new Date(Date.now() + dias * 86400000).toISOString().split('T')[0];
   const { data, error } = await supabase
     .from('viajes')
-    .select('id,origen,destino,fecha_salida,precio,duracion_estimada,estado,anden,buses(id,placa,capacidad,pisos,tiene_bano,amenidades),tripulacion!conductor_id(nombre,ci)')
+    .select('id,origen,destino,fecha_salida,precio,duracion_estimada,estado,anden,bloqueado_hasta,bloqueo_motivo,buses(id,placa,capacidad,pisos,tiene_bano,amenidades),tripulacion!conductor_id(nombre,ci)')
     .eq('sucursal_id', sucursalId)
     .gte('fecha_salida', `${hoy}T00:00:00`)
     .lte('fecha_salida', `${limite}T23:59:59`)
@@ -843,6 +843,20 @@ export async function getProximoViajeBus(busId, despuesDe) {
     .limit(1)
     .maybeSingle();
   return data || null;
+}
+
+/** Bloquea un viaje por incidente (2h por defecto) vía Edge Function service-role. */
+export async function bloquearViajePorIncidente(viajeId, motivo, horas = 2) {
+  if (!viajeId) return { ok: false };
+  try {
+    const SURL = process.env.REACT_APP_SUPABASE_URL || '';
+    const AKEY = process.env.REACT_APP_SUPABASE_ANON_KEY || '';
+    const r = await fetch(`${SURL}/functions/v1/bloquear-viaje`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': AKEY, 'Authorization': `Bearer ${AKEY}` },
+      body: JSON.stringify({ viajeId, motivo, horas }),
+    });
+    return await r.json();
+  } catch (e) { return { ok: false, error: e.message }; }
 }
 
 export async function updateViajeEstado(viajeId, estado) {
