@@ -235,7 +235,7 @@ const TarjetaReserva = ({ reserva, ahora, tema, onCancelar, isMobile = false }) 
             <div style={{
                 position: 'absolute', inset: 0, pointerEvents: 'none',
                 background: `linear-gradient(135deg, ${empresaColor} 0%, ${empresaAcc} 27%, ${blend} 50%, ${destClaro} 73%, ${destinoColor} 100%)`,
-                opacity: vivo ? 1 : 0.4,
+                opacity: vivo ? 0.68 : 0.32,
             }} />
             {/* Plato oscuro solo a la izquierda (detrás de logo+texto); la mitad derecha queda a todo color */}
             <div style={{
@@ -244,7 +244,7 @@ const TarjetaReserva = ({ reserva, ahora, tema, onCancelar, isMobile = false }) 
             }} />
             {/* Glow de color: empresa (claro) arriba-izq, destino (claro+oscuro) abajo-der — hace el color evidente */}
             <div style={{
-                position: 'absolute', inset: 0, pointerEvents: 'none', opacity: vivo ? 1 : 0.25,
+                position: 'absolute', inset: 0, pointerEvents: 'none', opacity: vivo ? 0.6 : 0.2,
                 background: `
                     radial-gradient(120% 130% at 102% 62%, ${destClaro}66 0%, transparent 46%),
                     radial-gradient(95% 130% at 108% 105%, ${destinoColor}77 0%, transparent 52%),

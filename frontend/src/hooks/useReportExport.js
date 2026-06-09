@@ -1,10 +1,9 @@
-// [Académico] Sprint 5 - Hook exportación reportes PDF/Excel/CSV (R30)
 import { useState, useCallback } from 'react';
 
 const getPdfDeps = async () => {
     const pdfMod = await import('jspdf');
     const jsPDF = pdfMod.jsPDF || pdfMod.default;
-    const atMod = await import('jspdf-autotable');           // v5: API funcional autoTable(doc, opts)
+    const atMod = await import('jspdf-autotable');
     const autoTable = atMod.default || atMod.autoTable;
     return { jsPDF, autoTable };
 };
@@ -23,7 +22,6 @@ const descargarBlob = (blob, nombre) => {
 const useReportExport = () => {
     const [exportando, setExportando] = useState(false);
 
-    // R30: PDF con tabla (jspdf-autotable v5 — API funcional)
     const exportarPDF = useCallback(async (titulo, columnas, filas, nombreArchivo = 'reporte') => {
         setExportando(true);
         try {
@@ -65,7 +63,6 @@ const useReportExport = () => {
         }
     }, []);
 
-    // PDF con gráficas: captura un nodo del DOM (html2canvas) → imagen paginada + tabla de datos
     const exportarPDFCanvas = useCallback(async (elementId, titulo, columnas, filas, nombreArchivo = 'reporte') => {
         setExportando(true);
         try {
@@ -74,14 +71,12 @@ const useReportExport = () => {
             const el = document.getElementById(elementId);
             const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
             const pageW = 210, pageH = 297, margin = 10;
-            // fondo claro (imprimible) — header oscuro
             doc.setTextColor(15, 23, 42); doc.setFontSize(15); doc.setFont('helvetica', 'bold');
             doc.text('Terminal Buses Bolivia', margin, 15);
             doc.setFontSize(10); doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 116, 139);
             doc.text(titulo, margin, 22);
             let y = 28;
 
-            // captura por BLOQUE para no cortar gráficas entre páginas
             const bloques = el ? Array.from(el.querySelectorAll('.pdf-block')) : [];
             const nodos = bloques.length ? bloques : (el ? [el] : []);
             const imgW = pageW - margin * 2;
@@ -113,7 +108,6 @@ const useReportExport = () => {
         }
     }, []);
 
-    // R30: Excel con xlsx
     const exportarExcel = useCallback(async (datos, nombreArchivo = 'reporte') => {
         setExportando(true);
         try {
@@ -135,7 +129,6 @@ const useReportExport = () => {
         }
     }, []);
 
-    // Excel multi-hoja: sheets = [{ nombre, datos:[{}] }]
     const exportarExcelMulti = useCallback(async (sheets, nombreArchivo = 'reporte') => {
         setExportando(true);
         try {
@@ -160,7 +153,6 @@ const useReportExport = () => {
         }
     }, []);
 
-    // R30: CSV sin dependencias (serializador propio)
     const exportarCSV = useCallback(async (datos, nombreArchivo = 'reporte') => {
         setExportando(true);
         try {

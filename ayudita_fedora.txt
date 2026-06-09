@@ -34,3 +34,5 @@ Administración
 //Pestaña 2 (Backend):
 ➡️cd backend
 ➡️npm start
+
+claude --resume db67a035-3049-41b4-bdc0-9bd98068f0ec

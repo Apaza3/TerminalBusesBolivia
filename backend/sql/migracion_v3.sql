@@ -1,11 +1,3 @@
--- ==============================================================================
--- Migración v3.0 — Terminal Buses Bolivia
--- EJECUTAR EN: Supabase Dashboard → SQL Editor
--- NO DESTRUCTIVO: preserva departamentos y sucursales existentes
--- ==============================================================================
-
--- ── Fix: recursión infinita en RLS de usuarios ────────────────────────────────
--- (bug del esquema anterior)
 ALTER TABLE IF EXISTS usuarios DISABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Usuarios pueden ver su propio perfil" ON usuarios;
 DROP POLICY IF EXISTS "Lectura publica de perfiles de usuario" ON usuarios;
@@ -16,7 +8,6 @@ DROP POLICY IF EXISTS "usuarios_actualizar_propio" ON usuarios;
 ALTER TABLE IF EXISTS buses DISABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "buses_lectura_publica" ON buses;
 
--- ── Ajustar tabla usuarios existente (agregar columnas faltantes) ─────────────
 ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS ci TEXT UNIQUE;
 ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS telefono TEXT;
 ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS foto_url TEXT;
@@ -24,12 +15,10 @@ ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS activo BOOLEAN DEFAULT true;
 ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS departamento_id TEXT;
 ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS actualizado_en TIMESTAMPTZ DEFAULT NOW();
 
--- Asegurar constraint de rol incluye 'cajero'
 ALTER TABLE usuarios DROP CONSTRAINT IF EXISTS usuarios_rol_check;
 ALTER TABLE usuarios ADD CONSTRAINT usuarios_rol_check
     CHECK (rol IN ('cliente', 'admin_sucursal', 'conductor', 'cajero'));
 
--- ── Ajustar tabla buses existente ────────────────────────────────────────────
 ALTER TABLE buses ADD COLUMN IF NOT EXISTS marca TEXT;
 ALTER TABLE buses ADD COLUMN IF NOT EXISTS modelo TEXT;
 ALTER TABLE buses ADD COLUMN IF NOT EXISTS anio INT;
@@ -45,7 +34,6 @@ ALTER TABLE buses DROP COLUMN IF EXISTS estado;
 ALTER TABLE buses ADD COLUMN IF NOT EXISTS estado TEXT DEFAULT 'disponible'
     CHECK (estado IN ('disponible', 'en_ruta', 'mantenimiento', 'fuera_servicio'));
 
--- ── Agregar departamento_id a sucursales si no existe ─────────────────────────
 ALTER TABLE sucursales ADD COLUMN IF NOT EXISTS departamento_id TEXT;
 ALTER TABLE sucursales ADD COLUMN IF NOT EXISTS ciudad TEXT;
 ALTER TABLE sucursales ADD COLUMN IF NOT EXISTS direccion TEXT;
@@ -54,7 +42,6 @@ ALTER TABLE sucursales ADD COLUMN IF NOT EXISTS logo_emoji TEXT DEFAULT '🚌';
 ALTER TABLE sucursales ADD COLUMN IF NOT EXISTS activa BOOLEAN DEFAULT true;
 ALTER TABLE sucursales ADD COLUMN IF NOT EXISTS creado_en TIMESTAMPTZ DEFAULT NOW();
 
--- ── Tabla tripulación ──────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS tripulacion (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     usuario_id      UUID REFERENCES usuarios(id) NULL,
@@ -68,7 +55,6 @@ CREATE TABLE IF NOT EXISTS tripulacion (
     creado_en       TIMESTAMPTZ DEFAULT NOW()
 );
 
--- ── Tabla rutas ───────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS rutas (
     id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     nombre               TEXT NOT NULL,
@@ -82,7 +68,6 @@ CREATE TABLE IF NOT EXISTS rutas (
     creado_en            TIMESTAMPTZ DEFAULT NOW()
 );
 
--- ── Tabla paradas_ruta ────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS paradas_ruta (
     id                        UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     ruta_id                   UUID REFERENCES rutas(id) ON DELETE CASCADE,
@@ -95,7 +80,6 @@ CREATE TABLE IF NOT EXISTS paradas_ruta (
     es_parada_intermedia      BOOLEAN DEFAULT true
 );
 
--- ── Tabla itinerarios ─────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS itinerarios (
     id                       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     ruta_id                  UUID REFERENCES rutas(id),
@@ -117,7 +101,6 @@ CREATE TABLE IF NOT EXISTS itinerarios (
     creado_en                TIMESTAMPTZ DEFAULT NOW()
 );
 
--- ── Tabla asientos_viaje ──────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS asientos_viaje (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     itinerario_id   UUID REFERENCES itinerarios(id) ON DELETE CASCADE,
@@ -131,7 +114,6 @@ CREATE TABLE IF NOT EXISTS asientos_viaje (
     UNIQUE(itinerario_id, numero)
 );
 
--- ── Tabla reservas ────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS reservas (
     id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     itinerario_id       UUID REFERENCES itinerarios(id),
@@ -148,7 +130,6 @@ CREATE TABLE IF NOT EXISTS reservas (
     creado_en           TIMESTAMPTZ DEFAULT NOW()
 );
 
--- ── Tabla boletos ─────────────────────────────────────────────────────────────
 CREATE SEQUENCE IF NOT EXISTS numero_boleto_seq START 1000;
 
 CREATE TABLE IF NOT EXISTS boletos (
@@ -169,7 +150,6 @@ CREATE TABLE IF NOT EXISTS boletos (
     creado_en            TIMESTAMPTZ DEFAULT NOW()
 );
 
--- ── Tabla pagos ───────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS pagos (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     reserva_id      UUID REFERENCES reservas(id),
@@ -183,7 +163,6 @@ CREATE TABLE IF NOT EXISTS pagos (
     creado_en       TIMESTAMPTZ DEFAULT NOW()
 );
 
--- ── Tabla encomiendas ─────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS encomiendas (
     id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     itinerario_id         UUID REFERENCES itinerarios(id) NULL,
@@ -205,7 +184,6 @@ CREATE TABLE IF NOT EXISTS encomiendas (
     creado_en             TIMESTAMPTZ DEFAULT NOW()
 );
 
--- ── Tabla reportes_mantenimiento ──────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS reportes_mantenimiento (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     bus_id          UUID REFERENCES buses(id),
@@ -220,7 +198,6 @@ CREATE TABLE IF NOT EXISTS reportes_mantenimiento (
     creado_en       TIMESTAMPTZ DEFAULT NOW()
 );
 
--- ── Tabla incidencias ─────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS incidencias (
     id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     itinerario_id    UUID REFERENCES itinerarios(id),
@@ -235,7 +212,6 @@ CREATE TABLE IF NOT EXISTS incidencias (
     creado_en        TIMESTAMPTZ DEFAULT NOW()
 );
 
--- ── Tabla calificaciones ──────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS calificaciones (
     id                      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     itinerario_id           UUID REFERENCES itinerarios(id),
@@ -248,7 +224,6 @@ CREATE TABLE IF NOT EXISTS calificaciones (
     creado_en               TIMESTAMPTZ DEFAULT NOW()
 );
 
--- ── Función: generar asientos al crear itinerario ─────────────────────────────
 CREATE OR REPLACE FUNCTION generar_asientos_itinerario()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -293,7 +268,6 @@ CREATE TRIGGER trigger_generar_asientos
 AFTER INSERT ON itinerarios
 FOR EACH ROW EXECUTE FUNCTION generar_asientos_itinerario();
 
--- ── Función: actualizar ubicación del bus según estado del itinerario ─────────
 CREATE OR REPLACE FUNCTION actualizar_ubicacion_bus()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -342,7 +316,6 @@ CREATE TRIGGER trigger_actualizar_bus_en_viaje
 BEFORE UPDATE ON itinerarios
 FOR EACH ROW EXECUTE FUNCTION actualizar_ubicacion_bus();
 
--- ── Función: liberar asientos expirados ───────────────────────────────────────
 CREATE OR REPLACE FUNCTION liberar_asientos_expirados()
 RETURNS void AS $$
 BEGIN
@@ -352,7 +325,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- ── Función: número correlativo de boleto ─────────────────────────────────────
 CREATE OR REPLACE FUNCTION asignar_numero_boleto()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -371,13 +343,9 @@ CREATE TRIGGER trigger_numero_boleto
 BEFORE INSERT ON boletos
 FOR EACH ROW EXECUTE FUNCTION asignar_numero_boleto();
 
--- ── RLS simplificado (sin recursión) ─────────────────────────────────────────
-
--- Usuarios: solo con service role desde backend
 ALTER TABLE usuarios ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "usuarios_service_role" ON usuarios USING (true);  -- service role bypass
+CREATE POLICY "usuarios_service_role" ON usuarios USING (true);
 
--- Tablas de acceso público (búsqueda sin login)
 ALTER TABLE rutas ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "rutas_publico" ON rutas FOR SELECT USING (activa = true);
 
@@ -393,11 +361,9 @@ CREATE POLICY "encomiendas_publico" ON encomiendas FOR SELECT USING (true);
 ALTER TABLE calificaciones ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "calificaciones_publico" ON calificaciones FOR SELECT USING (true);
 
--- Buses: lectura pública
 ALTER TABLE buses ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "buses_publico" ON buses FOR SELECT USING (true);
 
--- Reservas y boletos: service role from backend
 ALTER TABLE reservas ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "reservas_service" ON reservas USING (true);
 
@@ -407,7 +373,6 @@ CREATE POLICY "boletos_service" ON boletos USING (true);
 ALTER TABLE pagos ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "pagos_service" ON pagos USING (true);
 
--- ── Índices ───────────────────────────────────────────────────────────────────
 CREATE INDEX IF NOT EXISTS idx_itinerarios_salida ON itinerarios(salida_programada);
 CREATE INDEX IF NOT EXISTS idx_itinerarios_estado ON itinerarios(estado);
 CREATE INDEX IF NOT EXISTS idx_itinerarios_ruta ON itinerarios(ruta_id);
@@ -417,7 +382,6 @@ CREATE INDEX IF NOT EXISTS idx_reservas_ci ON reservas(pasajero_ci);
 CREATE INDEX IF NOT EXISTS idx_boletos_qr ON boletos(qr_codigo);
 CREATE INDEX IF NOT EXISTS idx_encomiendas_codigo ON encomiendas(codigo_seguimiento);
 
--- ── Rutas iniciales de Bolivia ────────────────────────────────────────────────
 INSERT INTO rutas (nombre, departamento_origen, origen, departamento_destino, destino, distancia_km, duracion_estimada)
 VALUES
     ('La Paz → Cochabamba',    'LP', 'La Paz',    'CB', 'Cochabamba', 393,  '5h 30min'),
@@ -430,7 +394,5 @@ VALUES
     ('Oruro → Potosí',         'OR', 'Oruro',     'PO', 'Potosí',     230,  '3h 00min')
 ON CONFLICT DO NOTHING;
 
--- ── Fin de migración ──────────────────────────────────────────────────────────
--- Verificar tablas creadas:
 SELECT table_name FROM information_schema.tables
 WHERE table_schema = 'public' ORDER BY table_name;

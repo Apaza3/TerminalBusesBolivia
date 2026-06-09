@@ -1,4 +1,3 @@
-// [Académico] Sprint 5 - Componente calificación post-viaje (R24)
 import React, { useState } from 'react';
 import { guardarCalificacion, yaCalificado, e2eLog } from '../servicios/analyticsService';
 
@@ -45,7 +44,6 @@ const CalificacionViaje = ({ reserva, sucursalId, onCalificado }) => {
             return;
         }
 
-        // [Académico] Sprint 5 - HU-30: trazar evento calificación en E2E trace
         e2eLog('calificacion_guardada', { boletoId: reserva.id, puntuacion, sucursalId });
         setEnviado(true);
         onCalificado?.();

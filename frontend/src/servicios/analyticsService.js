@@ -1,14 +1,11 @@
-// Analytics service — queries Supabase directly (no Express backend)
 import { supabase } from './supabase';
 
-// ── Helper: IDs de todas las sucursales de la misma empresa ──────────────────
 async function getSucursalesEmpresa(empresaNombre) {
     if (!empresaNombre) return [];
     const { data } = await supabase.from('sucursales').select('id').eq('nombre', empresaNombre);
     return (data || []).map(s => s.id);
 }
 
-// ── KPIs globales de la empresa ───────────────────────────────────────────────
 export const obtenerKPIsGlobales = async ({ sucursalId, empresaNombre, periodo = 'mes' } = {}) => {
     try {
         if (!empresaNombre) return { ingresosTotales: 0, totalBoletos: 0, totalViajes: 0, rutasActivas: 0 };
@@ -20,12 +17,10 @@ export const obtenerKPIsGlobales = async ({ sucursalId, empresaNombre, periodo =
     } catch { return { ingresosTotales: 0, totalBoletos: 0, totalViajes: 0, rutasActivas: 0 }; }
 };
 
-// ── Rendimiento por ruta ──────────────────────────────────────────────────────
 export const obtenerRendimientoRutas = async ({ sucursalId, empresaNombre } = {}) => {
     try {
         if (!sucursalId) return [];
         const desde = new Date(Date.now() - 30 * 86400000).toISOString();
-        // Scope por sucursal del admin (origen = su departamento), no por toda la empresa
         const { data, error } = await supabase.rpc('get_rendimiento_rutas', { p_sucursal_id: sucursalId, p_desde: desde });
         if (error) throw error;
         return (data || []).map(r => ({
@@ -44,7 +39,6 @@ export const obtenerRendimientoRutas = async ({ sucursalId, empresaNombre } = {}
     } catch { return []; }
 };
 
-// ── Analítica completa por sucursal (1 RPC) ──────────────────────────────────
 export const obtenerAnaliticaSucursal = async ({ sucursalId, periodo = 'mes' } = {}) => {
     if (!sucursalId) return null;
     const dias = periodo === 'semana' ? 7 : periodo === 'trimestre' ? 90 : 30;
@@ -54,7 +48,6 @@ export const obtenerAnaliticaSucursal = async ({ sucursalId, periodo = 'mes' } =
     return data;
 };
 
-// ── Ranking de todas las empresas ─────────────────────────────────────────────
 export const obtenerRankingEmpresas = async () => {
     try {
         const [{ data: sucursales }, { data: comentarios }, { data: reservas }] = await Promise.all([
@@ -92,7 +85,6 @@ export const obtenerRankingEmpresas = async () => {
     } catch { return []; }
 };
 
-// ── Tráfico por hora (estático hasta tener tabla eventos) ────────────────────
 const TRAFICO_POR_HORA = [
     { hora: '06:00', pasajeros: 45 }, { hora: '07:00', pasajeros: 72 },
     { hora: '08:00', pasajeros: 98 }, { hora: '09:00', pasajeros: 65 },
@@ -105,7 +97,6 @@ const TRAFICO_POR_HORA = [
 ];
 export const obtenerTraficoPorHora = () => TRAFICO_POR_HORA.map(h => ({ ...h, salidas: Math.round(h.pasajeros / 15) }));
 
-// ── Historial ventas (seed estático — hasta tener tabla ventas) ───────────────
 export const obtenerVentasHistorico = (dias = 30) => {
     const seed = [];
     for (let i = dias; i >= 0; i--) {
@@ -115,7 +106,6 @@ export const obtenerVentasHistorico = (dias = 30) => {
     return seed;
 };
 
-// ── Stubs legados ─────────────────────────────────────────────────────────────
 export const guardarCalificacion = async () => ({ ok: false, error: 'Usa crearComentario desde api.js' });
 export const yaCalificado = () => false;
 export const obtenerManifiestoItinerario = async () => [];

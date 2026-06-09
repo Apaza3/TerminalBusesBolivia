@@ -3,7 +3,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contextos/AuthContext';
 import { crearComentario, getComentariosSucursal } from '../servicios/api';
 
-// ── Inline mood labels (no mockDiscoveryDB) ────────────────────────────────────
 const MOOD_LABELS = {
     1: [{ emoji: '🧹', texto: 'Suciedad' }, { emoji: '💺', texto: 'Asientos rotos' }, { emoji: '⏰', texto: 'Gran retraso' }, { emoji: '😤', texto: 'Mal trato' }, { emoji: '🛣️', texto: 'Manejo peligroso' }, { emoji: '🔒', texto: 'Me sentí inseguro/a' }, { emoji: '🚫', texto: 'No cumplió lo prometido' }],
     2: [{ emoji: '🧹', texto: 'Poca limpieza' }, { emoji: '💺', texto: 'Incomodidad' }, { emoji: '⏰', texto: 'Retraso' }, { emoji: '😒', texto: 'Atención pobre' }, { emoji: '💸', texto: 'Precio elevado' }, { emoji: '🕐', texto: 'Salida tardía' }],
@@ -103,7 +102,7 @@ const FeedbackEmoji = ({ sucursalId, departamento, color = '#3b82f6', starsColor
                 usuarioId:           r.usuario_id,
             })));
         });
-    }, [sucursalId, departamento]); // eslint-disable-line
+    }, [sucursalId, departamento]);
 
     const labels = mood > 0 ? obtenerLabelsPorMood(mood) : [];
 
@@ -123,7 +122,7 @@ const FeedbackEmoji = ({ sucursalId, departamento, color = '#3b82f6', starsColor
             puntuacion:   mood,
             comentario:   comentario.trim(),
             categorias:   labelsSeleccionados,
-            departamentoId: null, // el sucursal_id ya scopa empresa+departamento (columna es uuid; el nombre rompia el insert)
+            departamentoId: null,
         });
         if (!nuevo || nuevo.error) {
             setEnviando(false);
@@ -152,7 +151,6 @@ const FeedbackEmoji = ({ sucursalId, departamento, color = '#3b82f6', starsColor
         setTimeout(() => setEnviado(false), 4000);
     };
 
-    // ── Aggregate stats ──
     const totalReviews = reviews.length;
     const promedio = totalReviews > 0
         ? (reviews.reduce((s, r) => s + ((r.mood + (r.moodBus || r.mood) + (r.moodTripulacion || r.mood)) / 3), 0) / totalReviews)
@@ -163,8 +161,6 @@ const FeedbackEmoji = ({ sucursalId, departamento, color = '#3b82f6', starsColor
 
     return (
         <div style={{ background: bgCard, borderRadius: 16, padding: '1.5rem', border: `1px solid ${borderDefault}`, borderTop: `3px solid ${textPrimary}`, marginTop: '1.5rem', backdropFilter: 'blur(12px)', boxShadow: `0 4px 32px rgba(0,0,0,0.4), 0 -2px 14px ${textPrimary}35` }}>
-
-            {/* ── Header ── */}
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1.25rem', gap: '1rem' }}>
                 <div>
                     <div style={{ fontSize: '1rem', fontWeight: 800, color: textPrimary, textShadow: `0 0 12px ${textPrimary}55` }}>💬 Experiencias de Viajeros</div>
@@ -179,7 +175,6 @@ const FeedbackEmoji = ({ sucursalId, departamento, color = '#3b82f6', starsColor
                 )}
             </div>
 
-            {/* ── Login gate ── */}
             {!esCliente ? (
                 <div style={{
                     background: `${color}06`, border: `1px dashed ${color}40`, borderRadius: 12,
@@ -211,8 +206,6 @@ const FeedbackEmoji = ({ sucursalId, departamento, color = '#3b82f6', starsColor
                 </div>
             ) : (
                 <div style={{ background: `${color}06`, borderRadius: 12, padding: '1.1rem', border: `1px solid ${color}25`, marginBottom: '1.25rem' }}>
-
-                    {/* Mood selector */}
                     <div style={{ marginBottom: '0.75rem' }}>
                         <div style={{ fontSize: '0.75rem', color: '#cbd5e1', marginBottom: '0.6rem', fontWeight: 600 }}>
                             ¿Cómo fue tu viaje con esta empresa?
@@ -229,7 +222,6 @@ const FeedbackEmoji = ({ sucursalId, departamento, color = '#3b82f6', starsColor
                         )}
                     </div>
 
-                    {/* Tags */}
                     {mood > 0 && (
                         <div style={{ marginBottom: '0.85rem' }}>
                             <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginBottom: '0.45rem', fontWeight: 600 }}>
@@ -256,7 +248,6 @@ const FeedbackEmoji = ({ sucursalId, departamento, color = '#3b82f6', starsColor
                         </div>
                     )}
 
-                    {/* Individual evaluation toggle — botón grande centrado */}
                     {mood > 0 && (
                         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.75rem' }}>
                             <button
@@ -276,7 +267,6 @@ const FeedbackEmoji = ({ sucursalId, departamento, color = '#3b82f6', starsColor
                         </div>
                     )}
 
-                    {/* Individual ratings */}
                     {mood > 0 && evaluarIndividual && (
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem', marginBottom: '0.75rem' }}>
                             {[
@@ -294,7 +284,6 @@ const FeedbackEmoji = ({ sucursalId, departamento, color = '#3b82f6', starsColor
                         </div>
                     )}
 
-                    {/* Submit */}
                     {puedeEnviar && (
                         <div style={{ display: 'flex', justifyContent: 'center' }}>
                             <button onClick={handleSubmit} disabled={enviando} style={{
@@ -331,7 +320,6 @@ const FeedbackEmoji = ({ sucursalId, departamento, color = '#3b82f6', starsColor
                 </div>
             )}
 
-            {/* ── Reviews list ── */}
             {totalReviews > 0 ? (
                 <div>
                     <div style={{ fontSize: '0.72rem', color: '#cbd5e1', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '0.75rem' }}>
@@ -345,7 +333,6 @@ const FeedbackEmoji = ({ sucursalId, departamento, color = '#3b82f6', starsColor
                                     background: '#07111f', borderRadius: 12, padding: '0.9rem',
                                     border: `1px solid ${mc}20`,
                                 }}>
-                                    {/* Row 1: avatar + name + time + mood emoji */}
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.45rem' }}>
                                         <div style={{
                                             width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
@@ -364,7 +351,6 @@ const FeedbackEmoji = ({ sucursalId, departamento, color = '#3b82f6', starsColor
                                         </div>
                                     </div>
 
-                                    {/* Row 2: bus + tripulación mini scores (only if evaluated separately) */}
                                     {(r.moodBus !== r.mood || r.moodTripulacion !== r.mood) && (
                                         <div style={{ display: 'flex', gap: '1rem', marginBottom: '0.4rem', paddingLeft: '0.2rem' }}>
                                             <MiniMood label="Bus" valor={r.moodBus} />
@@ -372,7 +358,6 @@ const FeedbackEmoji = ({ sucursalId, departamento, color = '#3b82f6', starsColor
                                         </div>
                                     )}
 
-                                    {/* Row 3: labels */}
                                     {r.labelsSeleccionados?.length > 0 && (
                                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', marginBottom: r.comentario ? '0.4rem' : 0 }}>
                                             {r.labelsSeleccionados.map(l => (
@@ -384,9 +369,8 @@ const FeedbackEmoji = ({ sucursalId, departamento, color = '#3b82f6', starsColor
                                         </div>
                                     )}
 
-                                    {/* Row 4: comment text */}
                                     {r.comentario && (
-                                        <div style={{ fontSize: '0.78rem', color: '#94a3b8', fontStyle: 'italic', marginTop: '0.1rem', paddingLeft: '0.2rem', borderLeft: `2px solid ${mc}30`, paddingLeft: '0.6rem' }}>
+                                        <div style={{ fontSize: '0.78rem', color: '#94a3b8', fontStyle: 'italic', marginTop: '0.1rem', paddingLeft: '0.6rem', borderLeft: `2px solid ${mc}30` }}>
                                             "{r.comentario}"
                                         </div>
                                     )}

@@ -3,14 +3,6 @@ import { QRCodeCanvas } from 'qrcode.react';
 import { jsPDF } from 'jspdf';
 import { generarLinkWhatsApp } from '../utilidades/whatsapp';
 
-/**
- * TicketGenerator — V5: Multi-passenger ticket display.
- * Fix #7: shows N individual ticket cards (one per seat) with prev/next nav.
- * Fix #4: WhatsApp uses Web Share API to share ticket images; text fallback if unavailable.
- * Props:
- *   - reserva: reservation object from mockStorage
- *   - onCerrar: callback to close the ticket view
- */
 const TicketGenerator = ({ reserva, onCerrar }) => {
     const qrRefs = useRef({});
     const [ticketActivo, setTicketActivo] = useState(0);
@@ -18,7 +10,6 @@ const TicketGenerator = ({ reserva, onCerrar }) => {
 
     if (!reserva) return null;
 
-    // Build per-seat ticket list
     const tickets = reserva.asientos.map((asiento, i) => {
         const pasajeroData = reserva.pasajeros?.[asiento] || {};
         return {
@@ -33,7 +24,6 @@ const TicketGenerator = ({ reserva, onCerrar }) => {
     const ticket = tickets[ticketActivo];
     const total = tickets.length;
 
-    // Generate PDF for a single seat
     const descargarPDFTicket = useCallback((idx) => {
         const t = tickets[idx];
         const doc = new jsPDF({ unit: 'mm', format: [100, 200] });
@@ -41,7 +31,6 @@ const TicketGenerator = ({ reserva, onCerrar }) => {
         doc.setFillColor(15, 23, 42);
         doc.rect(0, 0, 100, 200, 'F');
 
-        // Header
         doc.setFillColor(t.esInfante ? 245 : 59, t.esInfante ? 158 : 130, t.esInfante ? 11 : 246);
         doc.rect(0, 0, 100, 22, 'F');
         doc.setTextColor(255, 255, 255);
@@ -108,19 +97,16 @@ const TicketGenerator = ({ reserva, onCerrar }) => {
         tickets.forEach((_, idx) => descargarPDFTicket(idx));
     }, [tickets, descargarPDFTicket]);
 
-    // Fix #4: Share via Web Share API (supports images), fallback to WhatsApp text
     const compartirWhatsApp = useCallback(async () => {
         setCompartiendo(true);
         try {
             const telefono = reserva.pasajeroTelefono || '';
-            // Build message
             const mensaje = tickets.map(t =>
                 `🎫 *Boleto ${t.asiento}*\n👤 ${t.nombre}\n🪪 CI: ${t.ci}\n${t.esInfante ? '🧒 INFANTE\n' : ''}📍 ${reserva.origen} → ${reserva.destino}\n📅 ${new Date(reserva.fechaSalida).toLocaleString('es-BO')}\n🔑 ${t.qrId}`
             ).join('\n\n━━━━━━━━━━━━━\n\n');
             const textoCompleto = `🚌 *TERMINAL BUSES BOLIVIA*\n\n${mensaje}\n\n¡Buen viaje! 🇧🇴`;
 
             if (navigator.canShare && navigator.share) {
-                // Try to export ticket canvases as PNG blobs
                 const archivos = [];
                 for (const t of tickets) {
                     const canvas = qrRefs.current[t.asiento]?.querySelector('canvas');
@@ -137,7 +123,6 @@ const TicketGenerator = ({ reserva, onCerrar }) => {
                     return;
                 }
             }
-            // Fallback: WhatsApp text link
             const link = generarLinkWhatsApp(telefono, textoCompleto);
             window.open(link, '_blank');
         } catch (err) {
@@ -165,7 +150,6 @@ const TicketGenerator = ({ reserva, onCerrar }) => {
                 border: '1px solid #334155', maxHeight: '92vh', overflowY: 'auto',
                 boxShadow: '0 25px 50px -12px rgba(0,0,0,0.7)',
             }}>
-                {/* Header */}
                 <div style={{ textAlign: 'center', marginBottom: '1.25rem' }}>
                     <div style={{ fontSize: '2rem', marginBottom: '0.4rem' }}>✅</div>
                     <h2 style={{ margin: 0, color: '#10b981', fontSize: '1.2rem' }}>¡Reserva Confirmada!</h2>
@@ -174,7 +158,6 @@ const TicketGenerator = ({ reserva, onCerrar }) => {
                     </p>
                 </div>
 
-                {/* Ticket navigation (only when multiple) */}
                 {total > 1 && (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
                         <button
@@ -193,7 +176,6 @@ const TicketGenerator = ({ reserva, onCerrar }) => {
                     </div>
                 )}
 
-                {/* Ticket card */}
                 <div style={{
                     background: '#0f172a', borderRadius: '12px',
                     padding: '1.25rem', border: `1px solid ${ticket.esInfante ? '#f59e0b40' : '#334155'}`,
@@ -240,7 +222,6 @@ const TicketGenerator = ({ reserva, onCerrar }) => {
                             📅 {new Date(reserva.fechaSalida).toLocaleString('es-BO')}
                         </div>
                     </div>
-                    {/* QR per seat */}
                     <div
                         ref={el => { if (el) qrRefs.current[ticket.asiento] = el; }}
                         style={{ textAlign: 'center', background: '#fff', borderRadius: '8px', padding: '0.75rem' }}
@@ -253,7 +234,6 @@ const TicketGenerator = ({ reserva, onCerrar }) => {
                     </div>
                 </div>
 
-                {/* Action buttons */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
                     <button onClick={() => descargarPDFTicket(ticketActivo)} style={{ ...btnBase, background: '#3b82f6', color: 'white' }}>
                         📄 Descargar PDF (asiento {ticket.asiento})

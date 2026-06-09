@@ -5,9 +5,6 @@ const { requireAuth, requireRol } = require('../middleware/auth');
 const router = Router();
 const SOLO_ADMIN = requireRol('admin_sucursal');
 
-// ── Usuarios Staff ────────────────────────────────────────────────────────────
-
-// GET /api/admin/usuarios — listar staff
 router.get('/usuarios', requireAuth, SOLO_ADMIN, async (req, res) => {
     const { rol, activo } = req.query;
     let query = supabaseAdmin
@@ -24,7 +21,6 @@ router.get('/usuarios', requireAuth, SOLO_ADMIN, async (req, res) => {
     res.json(data || []);
 });
 
-// POST /api/admin/usuarios — crear usuario staff
 router.post('/usuarios', requireAuth, SOLO_ADMIN, async (req, res) => {
     const { email, password, nombre_completo, ci, telefono, rol, sucursal_id } = req.body;
     if (!email || !password || !nombre_completo || !rol) {
@@ -55,7 +51,6 @@ router.post('/usuarios', requireAuth, SOLO_ADMIN, async (req, res) => {
     res.status(201).json(data);
 });
 
-// PUT /api/admin/usuarios/:id/suspender — toggle activo
 router.put('/usuarios/:id/suspender', requireAuth, SOLO_ADMIN, async (req, res) => {
     const { activo } = req.body;
 
@@ -75,9 +70,6 @@ router.put('/usuarios/:id/suspender', requireAuth, SOLO_ADMIN, async (req, res) 
     res.json(data);
 });
 
-// ── Sucursales (R21) ─────────────────────────────────────────────────────────
-
-// GET /api/admin/sucursales
 router.get('/sucursales', requireAuth, SOLO_ADMIN, async (req, res) => {
     const { data, error } = await supabaseAdmin
         .from('sucursales')
@@ -88,7 +80,6 @@ router.get('/sucursales', requireAuth, SOLO_ADMIN, async (req, res) => {
     res.json(data || []);
 });
 
-// POST /api/admin/sucursales
 router.post('/sucursales', requireAuth, SOLO_ADMIN, async (req, res) => {
     const { nombre, departamento_id, ciudad, direccion, telefono, email,
             logo_emoji, logo_url, amenidades } = req.body;
@@ -107,7 +98,6 @@ router.post('/sucursales', requireAuth, SOLO_ADMIN, async (req, res) => {
     res.status(201).json(data);
 });
 
-// PUT /api/admin/sucursales/:id
 router.put('/sucursales/:id', requireAuth, SOLO_ADMIN, async (req, res) => {
     const campos = ['nombre', 'ciudad', 'direccion', 'telefono', 'email',
                     'logo_emoji', 'logo_url', 'amenidades', 'activo', 'ranking'];
@@ -125,9 +115,6 @@ router.put('/sucursales/:id', requireAuth, SOLO_ADMIN, async (req, res) => {
     res.json(data);
 });
 
-// ── Calendario de Salidas (plantillas de rutas) ───────────────────────────────
-
-// GET /api/admin/rutas — listar calendarios de salida
 router.get('/rutas', requireAuth, SOLO_ADMIN, async (req, res) => {
     const { data, error } = await supabaseAdmin
         .from('calendario_salidas')
@@ -144,7 +131,6 @@ router.get('/rutas', requireAuth, SOLO_ADMIN, async (req, res) => {
     res.json(data || []);
 });
 
-// POST /api/admin/rutas — crear plantilla de salida
 router.post('/rutas', requireAuth, SOLO_ADMIN, async (req, res) => {
     const { origen_departamento_id, destino_departamento_id, hora_salida,
             dias_semana, precio, duracion_estimada, sucursal_id } = req.body;
@@ -171,9 +157,6 @@ router.post('/rutas', requireAuth, SOLO_ADMIN, async (req, res) => {
     res.status(201).json(data);
 });
 
-// ── Stats / Dashboard ─────────────────────────────────────────────────────────
-
-// GET /api/admin/stats — KPIs generales
 router.get('/stats', requireAuth, SOLO_ADMIN, async (req, res) => {
     const hoy = new Date().toISOString().split('T')[0];
 
@@ -203,9 +186,6 @@ router.get('/stats', requireAuth, SOLO_ADMIN, async (req, res) => {
     });
 });
 
-// ── Disponibilidad de recursos (R28) ─────────────────────────────────────────
-
-// GET /api/admin/disponibilidad — vista de recursos por fecha
 router.get('/disponibilidad', requireAuth, SOLO_ADMIN, async (req, res) => {
     const { fecha_inicio, fecha_fin } = req.query;
     if (!fecha_inicio || !fecha_fin) {
@@ -228,9 +208,6 @@ router.get('/disponibilidad', requireAuth, SOLO_ADMIN, async (req, res) => {
     res.json(data || []);
 });
 
-// ── Departamentos ─────────────────────────────────────────────────────────────
-
-// GET /api/admin/departamentos
 router.get('/departamentos', requireAuth, async (req, res) => {
     const { data, error } = await supabaseAdmin
         .from('departamentos')

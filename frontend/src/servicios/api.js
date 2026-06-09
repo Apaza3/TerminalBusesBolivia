@@ -32,6 +32,8 @@ export async function getSucursal(id) {
   };
 }
 
+// R10 - BUSCAR VIAJES: filtra la tabla 'viajes' por origen, destino y (si se pasa) la fecha
+// del dia, anclada a hora Bolivia UTC-4. Devuelve las salidas que lista el planificador (paso 5).
 export async function buscarViajes(origen, destino, fecha) {
   if (!origen || !destino) return [];
   let q = supabase
@@ -406,6 +408,8 @@ export async function getAsientosOcupados(viajeId) {
   return [...new Set(ocupados)];
 }
 
+// R9 - ASIENTOS BLOQUEADOS POR OTROS: devuelve los asientos con bloqueo vigente
+// (bloqueado_hasta > ahora) que NO son del usuario actual; el mapa los pinta como "Bloqueado".
 export async function getAsientosBloqueados(viajeId, excludeUserId = null) {
   const ahora = new Date().toISOString();
   let q = supabase
@@ -419,6 +423,8 @@ export async function getAsientosBloqueados(viajeId, excludeUserId = null) {
   return (data || []).map(a => a.numero_asiento);
 }
 
+// R9 - BLOQUEAR ASIENTOS: marca los asientos elegidos como 'pendiente' por 10 minutos
+// (bloqueado_hasta) a nombre del usuario; el upsert evita duplicados por (viaje, asiento).
 export async function bloquearAsientos(viajeId, asientos, usuarioId) {
   if (!asientos?.length) return;
   const expiry = new Date(Date.now() + 10 * 60 * 1000).toISOString();
@@ -436,6 +442,7 @@ export async function bloquearAsientos(viajeId, asientos, usuarioId) {
   if (error) console.error('bloquearAsientos:', error.message);
 }
 
+// R9 - LIBERAR ASIENTOS: borra el bloqueo de esos asientos (al salir sin pagar o al expirar).
 export async function liberarAsientos(viajeId, asientos, usuarioId) {
   if (!asientos?.length) return;
   let q = supabase.from('asientos_viaje').delete()
@@ -446,6 +453,8 @@ export async function liberarAsientos(viajeId, asientos, usuarioId) {
   await q;
 }
 
+// R11 - CREAR RESERVA: inserta la reserva con su metodo de pago y monto. En QR queda 'pendiente'
+// con expira_en (10 min) hasta confirmar el pago; en efectivo/pagado segun corresponda.
 export async function crearReservaSupabase({
   viajeId, usuarioId, asientos, monto,
   emailCliente, telefonoCliente, metodoPago,
@@ -513,6 +522,8 @@ export async function getReservasSucursal(sucursalId) {
   }));
 }
 
+// R27 - HISTORIAL: trae todas las reservas del usuario con su viaje, empresa y bus,
+// ordenadas por fecha de creacion; alimenta la pantalla Mis Viajes y sus filtros.
 export async function getReservasByUsuario(usuarioId) {
   const { data, error } = await supabase
     .from('reservas')
@@ -543,6 +554,8 @@ export async function getReservasByUsuario(usuarioId) {
   }));
 }
 
+// R13 - CREAR BOLETOS EN LOTE: genera un boleto por cada asiento (uno o varios) con sus datos,
+// esInfante y declaraciones de equipaje (lleva1000/animales/productos), en una sola insercion.
 export async function crearBoletosBatch({
   reservaId, viajeId, asientos, datosPasajeros,
   precioUnitario, sucursalId = null, departamentoId = null, horarioSalida = null,

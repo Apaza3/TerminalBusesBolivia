@@ -1,17 +1,6 @@
-// [Académico] Sprint 5 - Botones exportación PDF/Excel/CSV (R30)
 import React from 'react';
 import useReportExport from '../hooks/useReportExport';
 
-/**
- * ExportReportes — botones de exportación reutilizables.
- * Props:
- *   titulo: string — encabezado del reporte
- *   columnas: string[] — cabeceras de tabla para PDF
- *   filas: any[][] — filas de tabla para PDF
- *   datosExcel: object[] — array de objetos para Excel/CSV
- *   nombreArchivo: string — nombre base sin extensión
- *   formatos: ('pdf'|'excel'|'csv')[] — qué botones mostrar (default: todos)
- */
 const ExportReportes = ({
     titulo = 'Reporte',
     columnas = [],
@@ -19,8 +8,8 @@ const ExportReportes = ({
     datosExcel = [],
     nombreArchivo = 'reporte_tbb',
     formatos = ['pdf', 'excel', 'csv'],
-    capturaId = null,   // si se pasa, el PDF captura ese nodo (gráficas) + tabla
-    hojas = null,       // si se pasa, Excel = multi-hoja [{nombre, datos}]
+    capturaId = null,
+    hojas = null,
 }) => {
     const { exportando, exportarPDF, exportarPDFCanvas, exportarExcel, exportarExcelMulti, exportarCSV } = useReportExport();
 
