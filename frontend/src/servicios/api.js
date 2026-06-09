@@ -1,12 +1,7 @@
-/**
- * api.js — Supabase queries, datos normalizados al shape que usa el frontend.
- * Columnas reales verificadas contra schema Supabase (mayo 2025).
- */
 import { supabase } from './supabase';
 
 const normDept = (nombre) => nombre || '';
 
-// ── Sucursales ────────────────────────────────────────────
 export async function getSucursales() {
   const { data, error } = await supabase
     .from('sucursales')
@@ -37,7 +32,6 @@ export async function getSucursal(id) {
   };
 }
 
-// ── Viajes ────────────────────────────────────────────────
 export async function buscarViajes(origen, destino, fecha) {
   if (!origen || !destino) return [];
   let q = supabase
@@ -52,7 +46,7 @@ export async function buscarViajes(origen, destino, fecha) {
     .in('estado', ['programado', 'autorizado', 'en_viaje'])
     .order('fecha_salida');
   if (fecha) {
-    q = q.gte('fecha_salida', `${fecha}T00:00:00`).lte('fecha_salida', `${fecha}T23:59:59`);
+    q = q.gte('fecha_salida', `${fecha}T00:00:00-04:00`).lte('fecha_salida', `${fecha}T23:59:59-04:00`);
   } else {
     const hoy    = new Date().toISOString().split('T')[0];
     const limite = new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0];
@@ -94,7 +88,6 @@ export async function getBusesSucursal(sucursalId) {
   return data || [];
 }
 
-/** Todos los buses de la empresa (todos los departamentos) con info de departamento */
 export async function getBusesEmpresa(sucursalId) {
   const { data: suc } = await supabase.from('sucursales').select('nombre').eq('id', sucursalId).single();
   if (!suc) return getBusesSucursal(sucursalId);
@@ -120,7 +113,6 @@ export async function getUsuariosSucursal(sucursalId) {
   return (data || []).map(u => ({ ...u, departamento: u.departamentos?.nombre || '' }));
 }
 
-/** Todos los empleados de la misma empresa (por nombre de sucursal) */
 export async function getUsuariosEmpresa(sucursalId) {
   const { data: suc } = await supabase.from('sucursales').select('nombre').eq('id', sucursalId).single();
   if (!suc) return getUsuariosSucursal(sucursalId);
@@ -134,7 +126,6 @@ export async function getUsuariosEmpresa(sucursalId) {
     .order('rol');
   if (error) { console.error('getUsuariosEmpresa:', error.message); return []; }
 
-  // Bus asignado por conductor: vía tripulacion.bus_id (unidad fija)
   const conductorIds = (data || []).filter(u => u.rol === 'conductor').map(u => u.id);
   const busMap = {};
   if (conductorIds.length > 0) {
@@ -160,7 +151,6 @@ export async function actualizarUsuario(id, campos) {
   return !error;
 }
 
-/** Editar staff vía Edge Function (cambia email en auth, datos y reasigna bus a conductor). */
 export async function editarUsuario(payload) {
   const { data, error } = await supabase.functions.invoke('editar-staff', { body: payload });
   if (error) {
@@ -172,11 +162,9 @@ export async function editarUsuario(payload) {
   return { ok: true };
 }
 
-/** Crea un empleado (login + fila usuarios) vía Edge Function `crear-staff` (service role en Supabase). */
 export async function crearUsuario(payload) {
   const { data, error } = await supabase.functions.invoke('crear-staff', { body: payload });
   if (error) {
-    // intentar leer el mensaje del cuerpo de la respuesta
     let msg = error.message;
     try { const ctx = await error.context?.json?.(); if (ctx?.error) msg = ctx.error; } catch { /* noop */ }
     return { ok: false, error: msg };
@@ -190,9 +178,6 @@ export async function eliminarUsuario(id) {
   return !error;
 }
 
-// ── Manifiesto / Pasajeros / Incidencias (panel admin) ────────────────────────
-
-/** Viajes de la sucursal para el selector de manifiesto (más recientes primero). */
 export async function getViajesParaManifiesto(sucursalId) {
   if (!sucursalId) return [];
   const { data, error } = await supabase
@@ -208,7 +193,6 @@ export async function getViajesParaManifiesto(sucursalId) {
   }));
 }
 
-/** Manifiesto (boletos) de un viaje. */
 export async function getManifiestoViaje(viajeId) {
   if (!viajeId) return [];
   const { data, error } = await supabase
@@ -224,7 +208,6 @@ export async function getManifiestoViaje(viajeId) {
   }));
 }
 
-/** Incidencias de TODA la empresa (cualquier departamento). Incluye el departamento del bus. */
 export async function getIncidenciasSucursal(empresaNombre) {
   if (!empresaNombre) return [];
   const { data, error } = await supabase
@@ -252,7 +235,6 @@ export async function getIncidenciasSucursal(empresaNombre) {
   });
 }
 
-/** Viajes finalizados de la sucursal con sus pasajeros. */
 export async function getViajesFinalizadosSucursal(sucursalId) {
   if (!sucursalId) return [];
   const { data, error } = await supabase
@@ -274,7 +256,7 @@ export async function getViajesFinalizadosSucursal(sucursalId) {
       fecha: d ? d.toLocaleDateString('es-BO') : '—', hora: '',
       totalPasajeros: pax.length, pasajeros: pax,
     };
-  }).filter(v => v.totalPasajeros > 0);   // solo viajes con pasajeros
+  }).filter(v => v.totalPasajeros > 0);
 }
 
 export async function getViajesSucursal(sucursalId, fecha) {
@@ -410,8 +392,6 @@ export async function getViajesConductor(tripulacionId, dias = 1) {
   return (data || []).map(v => ({ ...v, busPlaca: v.buses?.placa || '—' }));
 }
 
-// ── Asientos ──────────────────────────────────────────────
-/** Devuelve asientos ocupados (reservados) + temporalmente bloqueados */
 export async function getAsientosOcupados(viajeId) {
   const ahora = new Date().toISOString();
   const { data: resData } = await supabase
@@ -419,8 +399,6 @@ export async function getAsientosOcupados(viajeId) {
     .select('asientos,estado,expira_en')
     .eq('viaje_id', viajeId)
     .in('estado', ['pendiente', 'pagado', 'autorizado']);
-  // Libera asientos de reservas pendientes con QR expirado (expira_en pasado).
-  // Las pendientes sin expiración (efectivo/ventanilla) siguen reteniendo el asiento.
   const vigentes = (resData || []).filter(r =>
     r.estado !== 'pendiente' || !r.expira_en || r.expira_en > ahora
   );
@@ -428,7 +406,6 @@ export async function getAsientosOcupados(viajeId) {
   return [...new Set(ocupados)];
 }
 
-/** Devuelve asientos temporalmente bloqueados por OTROS usuarios */
 export async function getAsientosBloqueados(viajeId, excludeUserId = null) {
   const ahora = new Date().toISOString();
   let q = supabase
@@ -442,7 +419,6 @@ export async function getAsientosBloqueados(viajeId, excludeUserId = null) {
   return (data || []).map(a => a.numero_asiento);
 }
 
-/** Bloquear asientos temporalmente (10 min) */
 export async function bloquearAsientos(viajeId, asientos, usuarioId) {
   if (!asientos?.length) return;
   const expiry = new Date(Date.now() + 10 * 60 * 1000).toISOString();
@@ -460,7 +436,6 @@ export async function bloquearAsientos(viajeId, asientos, usuarioId) {
   if (error) console.error('bloquearAsientos:', error.message);
 }
 
-/** Liberar asientos del usuario (al salir sin completar reserva) */
 export async function liberarAsientos(viajeId, asientos, usuarioId) {
   if (!asientos?.length) return;
   let q = supabase.from('asientos_viaje').delete()
@@ -471,11 +446,6 @@ export async function liberarAsientos(viajeId, asientos, usuarioId) {
   await q;
 }
 
-// ── Reservas ──────────────────────────────────────────────
-/**
- * Crea reserva en Supabase.
- * estado: 'pendiente' (esperando pago) | 'pagado' (pago confirmado) | 'autorizado' (cajero)
- */
 export async function crearReservaSupabase({
   viajeId, usuarioId, asientos, monto,
   emailCliente, telefonoCliente, metodoPago,
@@ -523,7 +493,6 @@ export async function getReservaById(reservaId) {
 }
 
 export async function getReservasSucursal(sucursalId) {
-  // Join !inner por sucursal del viaje — evita un IN con decenas de viaje_id (fallaba en el browser)
   const { data, error } = await supabase
     .from('reservas')
     .select('id,viaje_id,asientos,monto,estado,requiere_autorizacion,email_cliente,telefono_cliente,metodo_pago,creado_en,usuarios!reservas_usuario_id_fkey(nombre_completo,ci),viajes!inner(origen,destino,fecha_salida,sucursal_id)')
@@ -574,11 +543,6 @@ export async function getReservasByUsuario(usuarioId) {
   }));
 }
 
-// ── Boletos ──────────────────────────────────────────────
-/**
- * Crea boletos para todos los asientos de una reserva.
- * Columnas reales: nombre_pasajero, ci_pasajero, precio_individual, qr_token (auto), estado
- */
 export async function crearBoletosBatch({
   reservaId, viajeId, asientos, datosPasajeros,
   precioUnitario, sucursalId = null, departamentoId = null, horarioSalida = null,
@@ -613,7 +577,6 @@ export async function crearBoletosBatch({
   return { boletos: data || [], ok: true };
 }
 
-/** Boletos de una reserva específica */
 export async function getBoletosReserva(reservaId) {
   const { data, error } = await supabase
     .from('boletos')
@@ -635,7 +598,6 @@ export async function getBoletosReserva(reservaId) {
   }));
 }
 
-/** Todos los boletos de un viaje (manifiesto del conductor) */
 export async function getBoletosViaje(viajeId) {
   const { data, error } = await supabase
     .from('boletos')
@@ -658,7 +620,6 @@ export async function getBoletosViaje(viajeId) {
   }));
 }
 
-/** Buscar boleto por qr_token (página pública de boleto) */
 export async function getBoletoPorQR(qrToken) {
   const { data, error } = await supabase
     .from('boletos')
@@ -697,7 +658,6 @@ export async function getBoletoPorQR(qrToken) {
   };
 }
 
-/** Pasajeros de un viaje con estado de abordaje */
 export async function getReservasViaje(viajeId) {
   const { data, error } = await supabase
     .from('boletos')
@@ -723,7 +683,6 @@ export async function getReservasViaje(viajeId) {
   }));
 }
 
-/** Marcar boleto como abordado (escaneado por conductor) */
 export async function marcarBoletoValidado(boletoId, conductorUsuarioId) {
   const { error } = await supabase
     .from('boletos')
@@ -737,21 +696,18 @@ export async function marcarBoletoValidado(boletoId, conductorUsuarioId) {
   return true;
 }
 
-/** Cajero autoriza una reserva: marca reserva + sus boletos como autorizados. Devuelve boletos. */
 export async function autorizarReserva(reservaId) {
   await supabase.from('reservas').update({ estado: 'autorizado', boletos_enviados: true }).eq('id', reservaId);
   await supabase.from('boletos').update({ estado: 'autorizado' }).eq('reserva_id', reservaId).neq('estado', 'cancelado');
   return getBoletosReserva(reservaId);
 }
 
-/** Cajero rechaza una reserva: cancela reserva + boletos. */
 export async function rechazarReserva(reservaId) {
   await supabase.from('reservas').update({ estado: 'cancelado' }).eq('id', reservaId);
   await supabase.from('boletos').update({ estado: 'cancelado' }).eq('reserva_id', reservaId);
   return true;
 }
 
-/** Envía boletos con QR válidos al correo del cliente (misma Edge Function que el cliente). */
 export async function enviarBoletosPorEmail({ email, nombre, origen, destino, fechaSalida, busPlaca, monto, empresa, reservaId, boletos }) {
   if (!email) return { ok: false, error: 'Sin correo del cliente' };
   try {
@@ -775,7 +731,6 @@ export async function enviarBoletosPorEmail({ email, nombre, origen, destino, fe
   } catch (e) { return { ok: false, error: e.message }; }
 }
 
-/** Registra una incidencia del conductor (permanente — la ve el admin en Incidentes). */
 export async function crearIncidente({ viajeId, tipo, descripcion, severidad = 'media', reportadoPor = null }) {
   const { data, error } = await supabase.from('incidencias')
     .insert({ viaje_id: viajeId, tipo, descripcion, severidad, estado: 'abierta', reportado_por: reportadoPor })
@@ -784,7 +739,6 @@ export async function crearIncidente({ viajeId, tipo, descripcion, severidad = '
   return { ok: true, id: data.id };
 }
 
-/** Crea una notificación para el cajero (temporal — expira en horas o al marcarse leída). */
 export async function crearNotificacion({ sucursalId, viajeId, busPlaca, tipo, mensaje, severidad = 'media', horasVigencia = 5 }) {
   const expira = new Date(Date.now() + horasVigencia * 3600000).toISOString();
   const { error } = await supabase.from('notificaciones')
@@ -793,7 +747,6 @@ export async function crearNotificacion({ sucursalId, viajeId, busPlaca, tipo, m
   return { ok: true };
 }
 
-/** Notificaciones vigentes para el cajero (no leídas y no expiradas). */
 export async function getNotificacionesCajero(empresaNombre) {
   if (!empresaNombre) return [];
   const ahora = new Date().toISOString();
@@ -812,7 +765,6 @@ export async function marcarNotificacionLeida(id) {
   return !error;
 }
 
-/** Correos de los pasajeros de un viaje (para avisos de incidente). */
 export async function getEmailsViaje(viajeId) {
   if (!viajeId) return [];
   const [{ data: res }, { data: bol }] = await Promise.all([
@@ -826,7 +778,6 @@ export async function getEmailsViaje(viajeId) {
   return [...new Set(emails)];
 }
 
-/** Envía aviso de incidente/disculpa a los pasajeros del viaje afectado. */
 export async function enviarAvisoIncidente({ emails, empresa, origen, destino, fechaSalida, tipo, motivo }) {
   if (!emails || !emails.length) return { ok: false, error: 'sin destinatarios', enviados: 0 };
   try {
@@ -843,7 +794,6 @@ export async function enviarAvisoIncidente({ emails, empresa, origen, destino, f
   } catch (e) { return { ok: false, error: e.message, enviados: 0 }; }
 }
 
-/** Próximo viaje programado del mismo bus después de una fecha (el que se vería afectado). */
 export async function getProximoViajeBus(busId, despuesDe) {
   if (!busId || !despuesDe) return null;
   const { data } = await supabase.from('viajes')
@@ -857,7 +807,6 @@ export async function getProximoViajeBus(busId, despuesDe) {
   return data || null;
 }
 
-/** Bloquea un viaje por incidente (2h por defecto) vía Edge Function service-role. */
 export async function bloquearViajePorIncidente(viajeId, motivo, horas = 2) {
   if (!viajeId) return { ok: false };
   try {
@@ -909,7 +858,6 @@ export async function getViajesPorCiudad(ciudad, dias = 30) {
   return data || [];
 }
 
-// ── Comentarios / Feedback ────────────────────────────────
 export async function getComentariosSucursal(sucursalId) {
   const { data, error } = await supabase
     .from('comentarios')
@@ -938,7 +886,6 @@ export async function crearComentario({ sucursalId, usuarioId, nombreUsuario, pu
   return data;
 }
 
-// ── Ventas (cajero) ────────────────────────────────────────
 export async function registrarVenta({ reservaId, sucursalId, departamentoId, monto, cantidadBoletos, ruta, metodoPago, cajeroId }) {
   const { error } = await supabase.from('ventas').insert({
     reserva_id:        reservaId    || null,
