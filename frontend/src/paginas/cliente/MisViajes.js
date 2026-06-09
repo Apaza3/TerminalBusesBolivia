@@ -1,39 +1,24 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contextos/AuthContext';
-import { useDepartamento } from '../../contextos/DepartamentoContext';
+import { useDepartamento, ciudadADepartamento, DEPARTAMENTOS } from '../../contextos/DepartamentoContext';
 import { getReservasByUsuario, updateReservaEstado, getBoletosReserva } from '../../servicios/api';
 import { QRCodeSVG } from 'qrcode.react';
-import TicketCard, { getTemaEmpresa, getLogoEmpresa } from '../../componentes/TicketCard';
+import gsap from 'gsap';
+import TicketCard, { getTemaEmpresa, getLogoEmpresa, blendHex, lighten } from '../../componentes/TicketCard';
 
 const FONT = "'Inter', 'Rajdhani', system-ui, sans-serif";
 
 
-// ── Paleta por empresa ────────────────────────────────────────────────────
-const EMPRESA_PALETAS = [
-    { dark: "#131C16", light: "#4CD964", accent: "#FFD700", border: "rgba(76,217,100,0.45)"   }, // Andino
-    { dark: "#1C1414", light: "#E53935", accent: "#FFFFFF", border: "rgba(211,47,47,0.45)"    }, // Atlas
-    { dark: "#101423", light: "#4FC3F7", accent: "#FFD700", border: "rgba(79,195,247,0.45)"   }, // Bolívar
-    { dark: "#1C1515", light: "#EF5350", accent: "#F8F9FA", border: "rgba(227,30,36,0.45)"    }, // Copacabana
-    { dark: "#1A1513", light: "#FF6B00", accent: "#FFD700", border: "rgba(255,107,0,0.45)"    }, // Cosmos
-    { dark: "#1A1915", light: "#D4AF37", accent: "#FFFFFF", border: "rgba(212,175,55,0.45)"   }, // El Dorado
-    { dark: "#131621", light: "#5C8AE6", accent: "#D4AF37", border: "rgba(46,92,184,0.45)"    }, // Emperador
-    { dark: "#141A15", light: "#66BB6A", accent: "#F5F5DC", border: "rgba(76,175,80,0.45)"    }, // Illimani
-    { dark: "#111111", light: "#D4AF37", accent: "#FF8C00", border: "rgba(212,175,55,0.45)"   }, // Imperial
-    { dark: "#11141D", light: "#4A90D9", accent: "#FFFFFF", border: "rgba(0,86,179,0.45)"     }, // Naser
-];
-
-const EMPRESA_KEYS = ["andino","atlas","bolívar","copacabana","cosmos","el dorado","emperador","illimani","imperial","naser"];
-
-const hashStr = (s) => (s || '').split('').reduce((a, c) => (a * 31 + c.charCodeAt(0)) & 0xffff, 0);
-
-const getColoresCard = (nombreEmpresa, reservaId) => {
-    // Try exact + fuzzy keyword match
-    const n = (nombreEmpresa || '').toLowerCase();
-    const idx = EMPRESA_KEYS.findIndex(k => n.includes(k));
-    if (idx >= 0) return EMPRESA_PALETAS[idx];
-    // Deterministic fallback based on reservaId
-    return EMPRESA_PALETAS[hashStr(reservaId) % EMPRESA_PALETAS.length];
+// ── Fecha/hora en grande para escaneo rápido ──────────────────────────────
+const fmtFechaGrande = (f) => {
+    if (!f) return { fecha: '—', hora: '' };
+    const d = new Date(f);
+    if (isNaN(d)) return { fecha: '—', hora: '' };
+    return {
+        fecha: d.toLocaleDateString('es-BO', { weekday: 'short', day: '2-digit', month: 'short' }),
+        hora:  d.toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' }),
+    };
 };
 
 // ── Skins boletos ─────────────────────────────────────────────────────────
@@ -103,17 +88,18 @@ const BoletoCard = ({ b, col, onEmail, emailEnviado }) => {
 };
 
 // ── TarjetaReserva ────────────────────────────────────────────────────────
-const TicketMini = ({ boleto, nombreEmpresa, onExpand }) => {
+const TicketMini = ({ boleto, nombreEmpresa, onExpand, vivo = true }) => {
     const te      = getTemaEmpresa(nombreEmpresa);
     const logoSrc = getLogoEmpresa(nombreEmpresa);
     const W = 600, H = 260, SCALE = 0.36;
     return (
         <div
             onClick={onExpand}
-            title="Ver boleto completo"
-            style={{ width: W * SCALE, height: H * SCALE, overflow: 'hidden', borderRadius: 24 * SCALE, cursor: 'pointer', flexShrink: 0, position: 'relative', boxShadow: '0 2px 12px rgba(0,0,0,0.35)', transition: 'transform 0.15s', }}
-            onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.04)'; }}
-            onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
+            title={vivo ? 'Ver boleto completo' : 'Boleto ya utilizado'}
+            style={{ width: W * SCALE, height: H * SCALE, overflow: 'hidden', borderRadius: 24 * SCALE, cursor: 'pointer', flexShrink: 0, position: 'relative', boxShadow: '0 2px 12px rgba(0,0,0,0.35)', transition: 'transform 0.15s, filter 0.2s',
+                filter: vivo ? 'none' : 'grayscale(1) brightness(0.72) contrast(0.9)', opacity: vivo ? 1 : 0.78 }}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.04)'; if (!vivo) e.currentTarget.style.filter = 'grayscale(0.7) brightness(0.85)'; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; if (!vivo) e.currentTarget.style.filter = 'grayscale(1) brightness(0.72) contrast(0.9)'; }}
         >
             <div style={{ width: W, height: H, transform: `scale(${SCALE})`, transformOrigin: 'top left', pointerEvents: 'none' }}>
                 <TicketCard boleto={boleto} te={te} logoSrc={logoSrc} empresaNombre={nombreEmpresa} isMobile={true} />
@@ -122,11 +108,32 @@ const TicketMini = ({ boleto, nombreEmpresa, onExpand }) => {
     );
 };
 
-const TarjetaReserva = ({ reserva, ahora, tema, onCancelar }) => {
+// Cuadro logo empresa — llena su contenedor (borde a borde). SVG real o emoji de respaldo.
+const LogoEmpresa = ({ logoSrc, color, vivo = true }) => (
+    <div style={{
+        width: '100%', height: '100%',
+        background: vivo ? 'linear-gradient(150deg, #ffffff, #dbe2ec)' : 'linear-gradient(150deg, #e2e6ec, #aab3c0)',
+        borderRight: `3px solid ${vivo ? color : '#64748b'}`,
+        boxShadow: `inset 0 0 0 1px rgba(255,255,255,0.5)`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+        filter: vivo ? 'none' : 'grayscale(1)',
+    }}>
+        {logoSrc
+            ? <img src={logoSrc} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 2 }} />
+            : <span style={{ fontSize: '2.4rem' }}>🚌</span>}
+    </div>
+);
+
+const TarjetaReserva = ({ reserva, ahora, tema, onCancelar, isMobile = false }) => {
     const navigate = useNavigate();
     const [expandido, setExpandido] = useState(false);
-    const [emailEnv,  setEmailEnv]  = useState({});
     const ms = useCountdown(reserva.expiraEn);
+    const detalleRef = useRef(null);
+
+    // Escala responsiva — más chico en móvil para que entre sin desbordar
+    const sz = isMobile
+        ? { hpad: '0.8rem 0.85rem', emp: '0.52rem', route: '1.05rem', hora: '1.15rem', fecha: '0.62rem', logoW: 84, gridCols: '1fr 1fr', val: '0.76rem', lbl: '0.5rem', gap: '0.55rem' }
+        : { hpad: '1.05rem 1.25rem', emp: '0.62rem', route: '1.35rem', hora: '1.5rem',  fecha: '0.78rem', logoW: 128, gridCols: '1fr 1fr 1fr', val: '0.82rem', lbl: '0.55rem', gap: '0.7rem' };
 
     const pendiente  = reserva.estado === 'pendiente';
     const completado = new Date(reserva.fechaSalida) < ahora && reserva.estado !== 'cancelado';
@@ -135,10 +142,34 @@ const TarjetaReserva = ({ reserva, ahora, tema, onCancelar }) => {
     // Empresa viene directo de Supabase
     const rawNombre = reserva.sucursalNombre || null;
     const nombreEmpresa = (rawNombre && rawNombre !== 'Empresa') ? rawNombre : null;
-    const deptEmpresa   = null;
 
-    // Colores de empresa — siempre definidos (fallback hash)
-    const col = getColoresCard(nombreEmpresa, reserva.id);
+    const vivo = !completado && !cancelada; // viaje/boleto aún válido (próximo o pendiente)
+
+    // 2 colores por empresa (c1 oscuro, c2 claro) y por departamento destino (primary claro, secondary).
+    const te         = getTemaEmpresa(nombreEmpresa);
+    const empDark    = te?.c1 || '#2563eb';
+    const empLight   = te?.c2 || '#93c5fd';
+    const destTh     = DEPARTAMENTOS[ciudadADepartamento(reserva.destino)];
+    const destLight  = destTh?.primary   || lighten(empDark, 0.4);
+    const destDark   = destTh?.secondary || empDark;
+
+    // Paleta efectiva — gris si el viaje ya pasó o fue cancelado
+    const empresaColor = vivo ? empDark   : '#3f4854';  // oscuro empresa
+    const empresaAcc   = vivo ? empLight  : '#9aa3b1';  // claro empresa
+    const destClaro    = vivo ? destLight : '#aab3c0';  // claro destino
+    const destinoColor = vivo ? destDark  : '#4b5563';  // oscuro destino
+    const blend        = blendHex(empresaAcc, destClaro, 0.5);
+    const logoSrc      = getLogoEmpresa(nombreEmpresa);
+
+    // Degradés de texto (siempre con los colores claros reales, aunque la tarjeta esté gris)
+    const destLight2 = destTh ? lighten(destTh.secondary, 0.18) : lighten(destDark, 0.18);
+    const empLight2  = lighten(te?.c3 || empDark, 0.25);
+    const gradEmpresa = `linear-gradient(95deg, ${empLight} 0%, ${destLight} 100%)`;
+    const gradRuta    = `linear-gradient(100deg, ${empLight} 0%, ${empLight2} 26%, ${destLight} 62%, ${destLight2} 100%)`;
+    const gradHora    = `linear-gradient(105deg, ${destLight} 0%, ${destLight2} 100%)`;
+    const gradText = (grad) => ({ background: grad, WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent', color: 'transparent' });
+
+    const { fecha, hora } = fmtFechaGrande(reserva.fechaSalida);
 
     const [bls, setBls] = useState([]);
     useEffect(() => {
@@ -158,118 +189,168 @@ const TarjetaReserva = ({ reserva, ahora, tema, onCancelar }) => {
         });
     }, [reserva.id]); // eslint-disable-line
 
-    const handleEmail = (b) => {
-        setEmailEnv(p => ({ ...p, [b.id]: true }));
-        setTimeout(() => setEmailEnv(p => ({ ...p, [b.id]: false })), 3000);
-    };
+    // Animación de "construcción" al expandir — cada pieza se arma una por una, suave
+    useEffect(() => {
+        if (!expandido || !detalleRef.current) return;
+        const ctx = gsap.context(() => {
+            gsap.fromTo('[data-build]',
+                { y: 12, opacity: 0, scale: 0.97 },
+                { y: 0, opacity: 1, scale: 1, duration: 0.55, stagger: 0.08, ease: 'power2.out' }
+            );
+        }, detalleRef);
+        return () => ctx.revert();
+    }, [expandido]);
+
+    const stop = (fn) => (e) => { e.stopPropagation(); fn(); };
 
     // Estado badge
     const est = (() => {
-        if (cancelada)                              return { label: 'Cancelada',  bg: '#7f1d1d',        color: '#fca5a5' };
-        if (reserva.estado === 'pendiente')         return { label: 'Pendiente',  bg: '#4c1d95',        color: '#c4b5fd' };
-        if (new Date(reserva.fechaSalida) > ahora)  return { label: 'Próximo',    bg: col.light + '22', color: col.light };
-        return                                                { label: 'Completado',   bg: col.light + '18', color: col.accent };
+        if (cancelada)                             return { label: 'Cancelada',  bg: '#7f1d1d',           color: '#fca5a5' };
+        if (pendiente)                             return { label: 'Pendiente',  bg: '#4c1d95',           color: '#c4b5fd' };
+        if (new Date(reserva.fechaSalida) > ahora) return { label: 'Próximo',    bg: empresaColor + '30', color: empresaAcc };
+        return                                            { label: 'Completado', bg: 'rgba(100,116,139,0.22)', color: '#cbd5e1' };
     })();
 
+    const detalles = [
+        { label: 'Asientos',   valor: reserva.asientos?.join(', ') || '—' },
+        { label: 'Bus',        valor: reserva.busPlaca || '—' },
+        { label: 'Monto',      valor: `Bs ${reserva.precio || 0}`, hl: true },
+        { label: 'Método',     valor: reserva.metodoPago || 'efectivo' },
+        { label: 'ID Reserva', valor: (reserva.id || '').slice(0, 12) + '…' },
+        { label: 'Salida',     valor: reserva.fechaSalida ? new Date(reserva.fechaSalida).toLocaleString('es-BO') : '—' },
+    ];
+
     return (
-        <div style={{
-            borderRadius: 16,
-            border: `1.5px solid ${cancelada ? '#7f1d1d' : col.border}`,
-            overflow: 'hidden',
-            boxShadow: `0 4px 32px ${col.light}18, 0 0 0 1px ${col.light}08`,
-            background: col.dark,
-        }}>
-            {/* ── Header empresa + ruta ── */}
+        <div
+            onClick={() => setExpandido(v => !v)}
+            style={{
+                position: 'relative', borderRadius: 18, overflow: 'hidden', cursor: 'pointer',
+                border: `1px solid ${cancelada ? '#7f1d1d' : blend + '66'}`,
+                background: '#070d16',
+                boxShadow: expandido ? `0 14px 44px ${blend}30` : `0 6px 26px ${empresaColor}1c`,
+                transition: 'box-shadow 0.25s ease',
+            }}
+        >
+            {/* Capa diagonal bicolor: empresa (arriba-izq) → destino (abajo-der), con tonos claros */}
             <div style={{
-                padding: '0.75rem 1.2rem',
-                background: `linear-gradient(90deg, ${col.light}18 0%, ${col.light}08 100%)`,
-                borderBottom: `1px solid ${col.border}`,
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem',
-            }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.18rem' }}>
-                    {/* nombre empresa */}
-                    <div style={{ fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.22em', textTransform: 'uppercase', fontFamily: FONT, color: col.accent, opacity: 0.85 }}>
-                        {nombreEmpresa || 'Terminal Buses Bolivia'}{deptEmpresa ? ` · ${deptEmpresa}` : ''}
-                    </div>
-                    {/* ruta */}
-                    <div style={{ fontWeight: 900, fontSize: '1.05rem', letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: FONT, color: col.light, textShadow: `0 0 20px ${col.light}60` }}>
-                        {reserva.origen} <span style={{ color: col.accent, opacity: 0.7 }}>→</span> {reserva.destino}
-                    </div>
-                </div>
+                position: 'absolute', inset: 0, pointerEvents: 'none',
+                background: `linear-gradient(135deg, ${empresaColor} 0%, ${empresaAcc} 27%, ${blend} 50%, ${destClaro} 73%, ${destinoColor} 100%)`,
+                opacity: vivo ? 1 : 0.4,
+            }} />
+            {/* Plato oscuro solo a la izquierda (detrás de logo+texto); la mitad derecha queda a todo color */}
+            <div style={{
+                position: 'absolute', inset: 0, pointerEvents: 'none',
+                background: 'linear-gradient(100deg, rgba(3,7,13,0.78) 0%, rgba(3,7,13,0.55) 28%, rgba(3,7,13,0.22) 48%, rgba(3,7,13,0) 66%)',
+            }} />
+            {/* Glow de color: empresa (claro) arriba-izq, destino (claro+oscuro) abajo-der — hace el color evidente */}
+            <div style={{
+                position: 'absolute', inset: 0, pointerEvents: 'none', opacity: vivo ? 1 : 0.25,
+                background: `
+                    radial-gradient(120% 130% at 102% 62%, ${destClaro}66 0%, transparent 46%),
+                    radial-gradient(95% 130% at 108% 105%, ${destinoColor}77 0%, transparent 52%),
+                    radial-gradient(85% 130% at -5% 0%, ${empresaAcc}40 0%, transparent 44%)
+                `,
+            }} />
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-                    {pendiente && reserva.expiraEn && (
-                        <span style={{ background: ms < 120000 ? '#7f1d1d' : col.light + '20', color: ms < 120000 ? '#fca5a5' : col.light, border: `1px solid ${ms < 120000 ? '#991b1b' : col.border}`, padding: '0.2rem 0.6rem', borderRadius: 999, fontSize: '0.62rem', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: FONT }}>
-                            ⏱ {fmtMs(ms)}
+            <div style={{ position: 'relative', zIndex: 1 }}>
+                {/* ── Cabecera (siempre visible / estado colapsado) ── */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: expandido ? (isMobile ? '0.7rem' : '1rem') : '0', padding: sz.hpad }}>
+                    {/* Cuadro logo — cuadrado, pegado al borde izquierdo, llena sin bordes blancos. Siempre a color. */}
+                    <div style={{
+                        width: expandido ? sz.logoW : 0, height: expandido ? sz.logoW : 0,
+                        opacity: expandido ? 1 : 0,
+                        marginLeft: `calc(-1 * ${sz.hpad.split(' ')[1]})`,
+                        transform: expandido ? 'translateX(0)' : 'translateX(-24px)',
+                        transition: 'width 0.42s ease, opacity 0.36s ease, transform 0.42s ease',
+                        overflow: 'hidden', flexShrink: 0, alignSelf: 'center',
+                        borderRadius: '0 12px 12px 0',
+                    }}>
+                        <LogoEmpresa logoSrc={logoSrc} color={empDark} vivo={true} />
+                    </div>
+
+                    {/* Empresa + ruta — degradé de colores claros, centrado */}
+                    <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', gap: '0.3rem' }}>
+                        <div style={{ fontSize: sz.emp, fontWeight: 800, letterSpacing: '0.2em', textTransform: 'uppercase', fontFamily: FONT, maxWidth: '100%', ...gradText(gradEmpresa) }}>
+                            {nombreEmpresa || 'Terminal Buses Bolivia'}
+                        </div>
+                        <div style={{ fontWeight: 900, fontSize: sz.route, lineHeight: 1.15, letterSpacing: '0.01em', textTransform: 'uppercase', fontFamily: FONT, maxWidth: '100%', ...gradText(gradRuta) }}>
+                            {isMobile ? (
+                                <>{reserva.origen}<br /><span style={{ opacity: 0.85 }}>→ </span>{reserva.destino}</>
+                            ) : (
+                                <>{reserva.origen}<span style={{ margin: '0 0.3em', opacity: 0.85 }}>→</span>{reserva.destino}</>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Estado + hora/fecha + countdown + chevron */}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.4rem', flexShrink: 0 }}>
+                        <span style={{ background: est.bg, color: est.color, padding: '0.22rem 0.7rem', borderRadius: 999, fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: FONT, border: `1px solid ${est.color}40` }}>
+                            {est.label}
                         </span>
-                    )}
-                    <span style={{ background: est.bg, color: est.color, padding: '0.22rem 0.75rem', borderRadius: 999, fontSize: '0.62rem', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: FONT, border: `1px solid ${est.color}30` }}>
-                        {est.label}
-                    </span>
-                </div>
-            </div>
-
-            {/* ── Grid detalles ── */}
-            <div style={{ padding: '0.9rem 1.2rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem', background: `${col.light}05` }}>
-                {[
-                    { label: 'Salida',     valor: reserva.fechaSalida ? new Date(reserva.fechaSalida).toLocaleString('es-BO') : '—', hl: true },
-                    { label: 'Asientos',   valor: reserva.asientos?.join(', ') || '—' },
-                    { label: 'Bus',        valor: reserva.busPlaca || '—' },
-                    { label: 'Monto',      valor: `Bs ${reserva.precio || 0}`, hl: true },
-                    { label: 'Método',     valor: reserva.metodoPago || 'efectivo' },
-                    { label: 'ID Reserva', valor: (reserva.id || '').slice(0, 12) + '...' },
-                ].map(item => (
-                    <div key={item.label}>
-                        <div style={{ fontSize: '0.57rem', fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: col.accent + '70', fontFamily: FONT, marginBottom: '0.12rem' }}>{item.label}</div>
-                        <div style={{ fontSize: '0.84rem', fontWeight: 700, fontFamily: FONT, textTransform: 'uppercase', letterSpacing: '0.04em', color: item.hl ? col.light : col.accent, textShadow: item.hl ? `0 0 12px ${col.light}40` : 'none' }}>{item.valor}</div>
+                        <span style={{ fontSize: sz.hora, fontWeight: 900, fontFamily: FONT, lineHeight: 1, ...gradText(gradHora) }}>{hora}</span>
+                        <span style={{ fontSize: sz.fecha, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: FONT, color: empLight, textShadow: '0 1px 6px rgba(0,0,0,0.85)' }}>{fecha}</span>
+                        {pendiente && reserva.expiraEn && (
+                            <span style={{ background: ms < 120000 ? '#7f1d1d' : empresaColor + '33', color: ms < 120000 ? '#fca5a5' : empresaAcc, border: `1px solid ${ms < 120000 ? '#991b1b' : empresaColor + '55'}`, padding: '0.16rem 0.55rem', borderRadius: 999, fontSize: '0.58rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: FONT }}>
+                                ⏱ {fmtMs(ms)}
+                            </span>
+                        )}
+                        <span style={{ color: '#94a3b8', fontSize: '0.8rem', transform: expandido ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s ease' }}>▼</span>
                     </div>
-                ))}
-            </div>
-
-            {/* ── Acciones ── */}
-            <div style={{ padding: '0.65rem 1.2rem', borderTop: `1px solid ${col.light}12`, display: 'flex', gap: '0.4rem', flexWrap: 'wrap', background: `${col.light}06` }}>
-                {pendiente && (
-                    <button onClick={() => navigate(`/reserva/${reserva.viajeId}`)}
-                        style={{ background: `${col.light}22`, border: `1px solid ${col.border}`, color: col.light, borderRadius: 8, padding: '0.38rem 0.85rem', cursor: 'pointer', fontSize: '0.67rem', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: FONT, boxShadow: `0 0 10px ${col.light}20` }}>
-                        🎫 Completar pago
-                    </button>
-                )}
-                {pendiente && (
-                    <button onClick={() => onCancelar(reserva.id)}
-                        style={{ background: '#7f1d1d30', border: '1px solid #991b1b60', color: '#fca5a5', borderRadius: 8, padding: '0.38rem 0.85rem', cursor: 'pointer', fontSize: '0.67rem', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: FONT }}>
-                        ✕ Cancelar
-                    </button>
-                )}
-                {bls.length > 0 && !completado && (
-                    <button onClick={() => setExpandido(v => !v)}
-                        style={{ background: expandido ? col.light + '20' : 'transparent', border: `1px solid ${col.light}35`, color: col.light, borderRadius: 8, padding: '0.38rem 0.85rem', cursor: 'pointer', fontSize: '0.67rem', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: FONT }}>
-                        {expandido ? '▲ Ocultar' : `▼ Boletos (${bls.length})`}
-                    </button>
-                )}
-            </div>
-
-            {/* ── Boletos expandidos ── */}
-            {expandido && !completado && bls.length > 0 && (
-                <div style={{ padding: '0 1.2rem 1.2rem', display: 'flex', flexWrap: 'wrap', gap: '1rem', background: col.dark, justifyContent: 'center' }}>
-                    {bls.map(b => (
-                        <TicketMini key={b.id} boleto={b} nombreEmpresa={nombreEmpresa} onExpand={() => window.open('/boleto?token=' + (b.qrToken || b.id), '_blank')} />
-                    ))}
                 </div>
-            )}
 
-            {/* ── Calificar ── */}
-            {completado && !cancelada && (
-                <div style={{ padding: '0 1.2rem 0.9rem' }}>
-                    <button
-                        onClick={() => navigate(`/sucursal/${reserva.sucursalId || suc?.id}`, { state: { departamento: deptEmpresa } })}
-                        style={{ width: '100%', padding: '0.55rem', background: `${col.light}18`, border: `1px solid ${col.border}`, color: col.light, borderRadius: 10, cursor: 'pointer', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: FONT, transition: 'all 0.15s', textShadow: `0 0 10px ${col.light}50` }}
-                        onMouseEnter={e => { e.currentTarget.style.background = col.light + '28'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = col.light + '18'; e.currentTarget.style.transform = 'none'; }}
-                    >
-                        ⭐ Califica este viaje · {nombreEmpresa || 'Terminal Buses'}
-                    </button>
+                {/* ── Detalle (se abre/cierra suave con grid-rows) ── */}
+                <div style={{ display: 'grid', gridTemplateRows: expandido ? '1fr' : '0fr', transition: 'grid-template-rows 0.45s cubic-bezier(0.4,0,0.2,1)' }}>
+                  <div style={{ overflow: 'hidden', minHeight: 0, opacity: expandido ? 1 : 0, transition: 'opacity 0.35s ease' }}>
+                    <div ref={detalleRef} style={{ padding: isMobile ? '0 0.85rem 0.95rem' : '0 1.25rem 1.1rem' }}>
+                        {/* Grid datos — cada celda se arma una por una */}
+                        <div style={{ display: 'grid', gridTemplateColumns: sz.gridCols, gap: sz.gap, padding: '0.9rem 0', borderTop: `1px solid ${blend}40`, borderBottom: `1px solid ${blend}26`, marginBottom: '0.85rem' }}>
+                            {detalles.map(item => (
+                                <div data-build key={item.label}>
+                                    <div style={{ fontSize: sz.lbl, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#7c93ad', fontFamily: FONT, marginBottom: '0.15rem' }}>{item.label}</div>
+                                    <div style={{ fontSize: sz.val, fontWeight: 800, fontFamily: FONT, color: '#e8edf3', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.valor}</div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Acciones — cada botón se arma uno por uno */}
+                        {pendiente && !completado && (
+                            <button data-build onClick={stop(() => navigate(`/reserva/${reserva.viajeId}`))}
+                                style={{ background: `${empresaColor}33`, border: `1px solid ${empresaColor}66`, color: empresaAcc, borderRadius: 9, padding: '0.42rem 0.9rem', cursor: 'pointer', fontSize: '0.66rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: FONT, marginRight: '0.45rem' }}>
+                                🎫 Completar pago
+                            </button>
+                        )}
+                        {pendiente && !completado && (
+                            <button data-build onClick={stop(() => onCancelar(reserva.id))}
+                                style={{ background: '#7f1d1d30', border: '1px solid #991b1b60', color: '#fca5a5', borderRadius: 9, padding: '0.42rem 0.9rem', cursor: 'pointer', fontSize: '0.66rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: FONT }}>
+                                ✕ Cancelar
+                            </button>
+                        )}
+                        {completado && !cancelada && (
+                            <button data-build onClick={stop(() => navigate(`/sucursal/${reserva.sucursalId || ''}`))}
+                                style={{ background: 'rgba(100,116,139,0.18)', border: '1px solid rgba(148,163,184,0.4)', color: '#cbd5e1', borderRadius: 9, padding: '0.42rem 0.9rem', cursor: 'pointer', fontSize: '0.66rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: FONT }}>
+                                ⭐ Calificar viaje
+                            </button>
+                        )}
+
+                        {/* Boletos — vivos a color, pasados/cancelados en gris */}
+                        {bls.length > 0 && (
+                            <>
+                                <div data-build style={{ fontSize: '0.58rem', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#7c93ad', fontFamily: FONT, margin: '1rem 0 0.55rem' }}>
+                                    Boletos ({bls.length}){!vivo && ' · utilizados'}
+                                </div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.85rem' }}>
+                                    {bls.map(b => (
+                                        <div data-build key={b.id}>
+                                            <TicketMini boleto={b} nombreEmpresa={nombreEmpresa} vivo={vivo} onExpand={() => window.open('/boleto?token=' + (b.qrToken || b.id), '_blank')} />
+                                        </div>
+                                    ))}
+                                </div>
+                            </>
+                        )}
+                    </div>
+                  </div>
                 </div>
-            )}
+            </div>
         </div>
     );
 };
@@ -277,12 +358,19 @@ const TarjetaReserva = ({ reserva, ahora, tema, onCancelar }) => {
 // ── Página ────────────────────────────────────────────────────────────────
 const MisViajes = () => {
     const navigate = useNavigate();
-    const { perfil, sesion } = useAuth();
+    const { perfil, sesion, cargandoAuth } = useAuth();
     const { tema, departamento } = useDepartamento();
     const [reservas, setReservas] = useState([]);
     const [filtro,   setFiltro]   = useState('todos');
     const [busqueda, setBusqueda] = useState('');
+    const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth <= 640);
     const ahora = new Date();
+
+    useEffect(() => {
+        const h = () => setIsMobile(window.innerWidth <= 640);
+        window.addEventListener('resize', h);
+        return () => window.removeEventListener('resize', h);
+    }, []);
 
     const cargar = useCallback(async () => {
         const data = perfil?.id ? await getReservasByUsuario(perfil.id) : [];
@@ -290,11 +378,12 @@ const MisViajes = () => {
     }, [perfil]);
 
     useEffect(() => {
+        if (cargandoAuth) return; // espera a que la sesión termine de cargar (evita rebote a login al recargar)
         if (!sesion || perfil?.rol !== 'cliente') { navigate('/login-cliente?redirect=/mis-viajes'); return; }
         cargar();
         const t = setInterval(cargar, 15000);
         return () => clearInterval(t);
-    }, [sesion, perfil, navigate, cargar]);
+    }, [cargandoAuth, sesion, perfil, navigate, cargar]);
 
     const handleCancelar = async (id) => { await updateReservaEstado(id, 'cancelado'); cargar(); };
 
@@ -325,7 +414,7 @@ const MisViajes = () => {
                 `
             }} />
 
-            <div style={{ position: 'relative', zIndex: 1, maxWidth: 820, margin: '0 auto', padding: '2rem 1rem 3.5rem' }}>
+            <div style={{ position: 'relative', zIndex: 1, maxWidth: 820, margin: '0 auto', padding: isMobile ? '1.4rem 0.85rem 3rem' : '2rem 1rem 3.5rem' }}>
 
                 {/* Header */}
                 <div style={{ marginBottom: '2rem' }}>
@@ -383,7 +472,7 @@ const MisViajes = () => {
                 ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
                         {filtradas.map(r => (
-                            <TarjetaReserva key={r.id} reserva={r} ahora={ahora} tema={tema} onCancelar={handleCancelar} />
+                            <TarjetaReserva key={r.id} reserva={r} ahora={ahora} tema={tema} onCancelar={handleCancelar} isMobile={isMobile} />
                         ))}
                     </div>
                 )}

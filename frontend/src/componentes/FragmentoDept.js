@@ -71,6 +71,13 @@ const DEPT_COLORS = {
     'Pando':      '#06D6A0',
 };
 
+// Color representativo por departamento o ciudad capital (mismos alias que DEPT_KEY_MAP).
+export const getColorDepto = (nombre) => {
+    if (!nombre) return null;
+    const key = DEPT_KEY_MAP[nombre] || nombre;
+    return DEPT_COLORS[key] || null;
+};
+
 export default function FragmentoDept({ deptNombre, color, size = 44 }) {
     const pathKey = DEPT_KEY_MAP[deptNombre];
     const data = PATHS[pathKey];
