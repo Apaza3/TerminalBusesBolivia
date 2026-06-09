@@ -678,6 +678,38 @@ export async function getViajesPorCiudad(ciudad, dias = 30) {
   return data || [];
 }
 
+// ── Itinerarios (R16 — Visualización) ─────────────────────
+/**
+ * Obtiene todos los itinerarios de una sucursal en un rango de fechas.
+ * Incluye bus, estado, andén, precio y duración para la visualización admin.
+ */
+export async function getItinerariosSucursal(sucursalId, { fechaDesde, fechaHasta } = {}) {
+  const desde = fechaDesde || new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
+  const hasta = fechaHasta || new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0];
+  const { data, error } = await supabase
+    .from('viajes')
+    .select(`
+      id,origen,destino,fecha_salida,precio,duracion_estimada,estado,anden,
+      buses(id,placa,capacidad,categoria,marca,modelo),
+      conductor:tripulacion!conductor_id(nombre_completo,ci)
+    `)
+    .eq('sucursal_id', sucursalId)
+    .gte('fecha_salida', `${desde}T00:00:00`)
+    .lte('fecha_salida', `${hasta}T23:59:59`)
+    .order('fecha_salida', { ascending: true })
+    .limit(300);
+  if (error) { console.error('getItinerariosSucursal:', error.message); return []; }
+  return (data || []).map(v => ({
+    ...v,
+    busPlaca:     v.buses?.placa    || '—',
+    busCapacidad: v.buses?.capacidad || 0,
+    busCategoria: v.buses?.categoria || '—',
+    busMarca:     [v.buses?.marca, v.buses?.modelo].filter(Boolean).join(' ') || '—',
+    conductorNombre: v.conductor?.nombre_completo || '—',
+    conductorCI:     v.conductor?.ci || '—',
+  }));
+}
+
 // ── Comentarios / Feedback ────────────────────────────────
 export async function getComentariosSucursal(sucursalId) {
   const { data, error } = await supabase

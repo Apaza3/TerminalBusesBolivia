@@ -182,9 +182,16 @@ const RegistroBus = () => {
             try {
                 const { data } = await supabase
                     .from('sucursales')
-                    .select('id, nombre')
+                    .select('id, nombre, ciudad, departamentos(nombre)')
                     .order('nombre');
-                if (data) setSucursales(data);
+                if (data) setSucursales(data.map(s => ({
+                    ...s,
+                    displayName: s.ciudad
+                        ? `${s.nombre} — ${s.ciudad}`
+                        : s.departamentos?.nombre
+                            ? `${s.nombre} — ${s.departamentos.nombre}`
+                            : s.nombre,
+                })));
             } catch (err) {
                 console.error('RegistroBus - fetchSucursales error:', err);
             }
@@ -367,7 +374,7 @@ const RegistroBus = () => {
                                 >
                                     <option value="">Sin asignar</option>
                                     {sucursales.map(s => (
-                                        <option key={s.id} value={s.id}>{s.nombre}</option>
+                                        <option key={s.id} value={s.id}>{s.displayName}</option>
                                     ))}
                                 </select>
                             </div>

@@ -28,6 +28,7 @@ import DashboardAnalitico from './paginas/admin/DashboardAnalitico';
 import RegistroBus from './paginas/admin/RegistroBus';
 import RegistroTripulacion from './paginas/admin/RegistroTripulacion';
 import RendimientoRutas from './paginas/admin/RendimientoRutas';
+import VisualizacionItinerarios from './paginas/admin/VisualizacionItinerarios';
 import RankingEmpresas from './paginas/admin/RankingEmpresas';
 import ManifiestoPDF from './paginas/admin/ManifiestoPDF';
 import Incidentes from './paginas/admin/Incidentes';
@@ -96,6 +97,7 @@ function AppContent() {
                     <Route index element={<Navigate to="dashboard" replace />} />
                     <Route path="dashboard"          element={<AdminDashboard />} />
                     <Route path="analitica"          element={<DashboardAnalitico />} />
+                    <Route path="itinerarios"        element={<VisualizacionItinerarios />} />
                     <Route path="rendimiento-rutas"  element={<RendimientoRutas />} />
                     <Route path="ranking-empresas"   element={<RankingEmpresas />} />
                     <Route path="manifiesto"         element={<ManifiestoPDF />} />
