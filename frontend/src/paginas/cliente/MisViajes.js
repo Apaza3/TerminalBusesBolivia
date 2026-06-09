@@ -167,7 +167,7 @@ const TarjetaReserva = ({ reserva, ahora, tema, onCancelar, isMobile = false }) 
     const gradEmpresa = `linear-gradient(95deg, ${empLight} 0%, ${destLight} 100%)`;
     const gradRuta    = `linear-gradient(100deg, ${empLight} 0%, ${empLight2} 26%, ${destLight} 62%, ${destLight2} 100%)`;
     const gradHora    = `linear-gradient(105deg, ${destLight} 0%, ${destLight2} 100%)`;
-    const gradText = (grad) => ({ background: grad, WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent', color: 'transparent' });
+    const gradText = (grad) => ({ background: grad, WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent', color: 'transparent', WebkitTextStroke: '0.7px rgba(0,0,0,0.75)', paintOrder: 'stroke fill' });
 
     const { fecha, hora } = fmtFechaGrande(reserva.fechaSalida);
 
@@ -288,7 +288,7 @@ const TarjetaReserva = ({ reserva, ahora, tema, onCancelar, isMobile = false }) 
                             {est.label}
                         </span>
                         <span style={{ fontSize: sz.hora, fontWeight: 900, fontFamily: FONT, lineHeight: 1, ...gradText(gradHora) }}>{hora}</span>
-                        <span style={{ fontSize: sz.fecha, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: FONT, color: empLight, textShadow: '0 1px 6px rgba(0,0,0,0.85)' }}>{fecha}</span>
+                        <span style={{ fontSize: sz.fecha, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: FONT, color: empLight, WebkitTextStroke: '0.6px rgba(0,0,0,0.7)', paintOrder: 'stroke fill', textShadow: '0 1px 6px rgba(0,0,0,0.85)' }}>{fecha}</span>
                         {pendiente && reserva.expiraEn && (
                             <span style={{ background: ms < 120000 ? '#7f1d1d' : empresaColor + '33', color: ms < 120000 ? '#fca5a5' : empresaAcc, border: `1px solid ${ms < 120000 ? '#991b1b' : empresaColor + '55'}`, padding: '0.16rem 0.55rem', borderRadius: 999, fontSize: '0.58rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: FONT }}>
                                 ⏱ {fmtMs(ms)}
