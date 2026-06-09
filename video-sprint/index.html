@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="es" data-resolution="landscape">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * { margin:0; padding:0; box-sizing:border-box; }
+      html,body { width:1920px; height:1080px; overflow:hidden; background:#05080f; font-family:"Inter",system-ui,sans-serif; }
+      .beat { position:absolute; inset:0; opacity:0; }
+      #beatA { opacity:1; }
+      .bg { position:absolute; inset:0; background:
+        radial-gradient(ellipse 55% 75% at 12% 8%, rgba(56,240,255,0.10) 0%, transparent 55%),
+        radial-gradient(ellipse 60% 80% at 88% 30%, rgba(167,139,250,0.13) 0%, transparent 55%),
+        radial-gradient(ellipse 65% 85% at 70% 95%, rgba(52,211,153,0.10) 0%, transparent 55%),
+        linear-gradient(160deg, #070d18 0%, #05080f 100%); }
+      .grid-ov { position:absolute; inset:0; opacity:0.05; background-image:linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px); background-size:64px 64px; }
+      /* title */
+      .badge { position:absolute; left:50%; top:280px; transform:translateX(-50%); width:172px; height:172px; border-radius:50%; background:#fff; border:4px solid #38f0ff; display:flex; align-items:center; justify-content:center; overflow:hidden; box-shadow:0 0 55px rgba(56,240,255,0.45); }
+      .badge img { width:78%; height:78%; object-fit:contain; }
+      .t-title { position:absolute; left:0; right:0; top:490px; text-align:center; font-size:92px; font-weight:900; letter-spacing:0.06em; background:linear-gradient(95deg,#eaf6ff 0%,#38f0ff 45%,#a78bfa 100%); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+      .t-sub { position:absolute; left:0; right:0; top:620px; text-align:center; font-size:34px; font-weight:700; color:#9fd9ee; letter-spacing:0.04em; }
+      .t-stu { position:absolute; left:0; right:0; top:690px; text-align:center; font-size:26px; font-weight:600; color:#7c8ba0; letter-spacing:0.16em; text-transform:uppercase; }
+      /* requisitos */
+      .r-h { position:absolute; left:0; right:0; top:120px; text-align:center; font-size:54px; font-weight:900; background:linear-gradient(95deg,#eaf6ff,#a78bfa); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+      .chips { position:absolute; left:50%; top:255px; transform:translateX(-50%); width:1420px; display:grid; grid-template-columns:1fr 1fr; gap:26px 40px; }
+      .chip { display:flex; align-items:center; gap:18px; background:rgba(13,20,33,0.72); border:1px solid var(--c); border-radius:14px; padding:20px 26px; box-shadow:0 8px 24px rgba(0,0,0,0.35); }
+      .chip .rn { font-size:30px; font-weight:900; color:var(--c); min-width:82px; }
+      .chip .rt { font-size:27px; font-weight:600; color:#e2ebf4; }
+      /* screenshot scenes */
+      .stage { position:absolute; inset:0; will-change:transform; }
+      .stage img { position:absolute; inset:0; width:1920px; height:1080px; display:block; object-fit:cover; }
+      .mobwrap { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; }
+      .mobwrap img { height:1000px; width:auto; border-radius:36px; box-shadow:0 24px 70px rgba(0,0,0,0.6), 0 0 0 8px #0c1626; }
+      .rlabel { position:absolute; left:60px; bottom:56px; z-index:40; background:rgba(5,10,20,0.82); border:1px solid var(--a); color:#eef6ff; font-size:30px; font-weight:800; padding:16px 30px; border-radius:14px; box-shadow:0 8px 24px rgba(0,0,0,0.4); }
+      .rlabel b { color:var(--a); }
+      .cursor { position:absolute; left:0; top:0; z-index:30; transform:translate(-50%,-50%); }
+      .cursor svg { filter:drop-shadow(0 3px 6px rgba(0,0,0,0.6)); }
+      .ripple { position:absolute; left:0; top:0; width:20px; height:20px; border-radius:50%; border:3px solid #38f0ff; transform:translate(-50%,-50%) scale(0); opacity:0; z-index:25; }
+      .scrim { position:absolute; inset:0; background:linear-gradient(90deg, rgba(3,7,13,0.28) 0%, transparent 36%); pointer-events:none; }
+      .brand-tag { position:absolute; right:60px; top:48px; z-index:40; color:#7fd9ff; font-size:22px; font-weight:800; letter-spacing:0.25em; opacity:0.8; }
+      /* cierre */
+      .c-h { position:absolute; left:0; right:0; top:230px; text-align:center; font-size:64px; font-weight:900; background:linear-gradient(95deg,#eaf6ff,#38f0ff,#a78bfa); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+      .c-tags { position:absolute; left:50%; top:430px; transform:translateX(-50%); display:flex; flex-wrap:wrap; gap:18px; width:1300px; justify-content:center; }
+      .c-tag { background:rgba(13,20,33,0.8); border:1px solid var(--c); color:#e6eef6; font-size:26px; font-weight:700; padding:14px 26px; border-radius:999px; }
+      .c-tag b { color:var(--c); }
+      .c-foot { position:absolute; left:0; right:0; top:760px; text-align:center; font-size:30px; font-weight:700; color:#9fd9ee; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="400" data-width="1920" data-height="1080">
+
+      <!-- AUDIO -->
+      <audio id="au1"  data-start="0"      data-duration="26.30" data-track-index="3" src="assets/audio/e1.m4a"></audio>
+      <audio id="au11" data-start="26.6"   data-duration="19.03" data-track-index="3" src="assets/audio/e1.1.m4a"></audio>
+      <audio id="au2"  data-start="45.9"   data-duration="27.09" data-track-index="3" src="assets/audio/e2.m4a"></audio>
+      <audio id="au31" data-start="73.3"   data-duration="18.05" data-track-index="3" src="assets/audio/e3.1.m4a"></audio>
+      <audio id="au32" data-start="91.6"   data-duration="7.02"  data-track-index="3" src="assets/audio/e3.2.m4a"></audio>
+      <audio id="au33" data-start="98.9"   data-duration="17.00" data-track-index="3" src="assets/audio/e3.3.m4a"></audio>
+      <audio id="au41" data-start="116.2"  data-duration="16.34" data-track-index="3" src="assets/audio/e4.1.m4a"></audio>
+      <audio id="au42" data-start="132.8"  data-duration="28.33" data-track-index="3" src="assets/audio/e4.2.m4a"></audio>
+      <audio id="au5"  data-start="161.4"  data-duration="41.41" data-track-index="3" src="assets/audio/e5.m4a"></audio>
+      <audio id="au6"  data-start="203.1"  data-duration="28.14" data-track-index="3" src="assets/audio/e6.m4a"></audio>
+      <audio id="au71" data-start="231.5"  data-duration="25.02" data-track-index="3" src="assets/audio/e7.1.m4a"></audio>
+      <audio id="au72" data-start="256.8"  data-duration="12.50" data-track-index="3" src="assets/audio/e7.2.m4a"></audio>
+      <audio id="au8"  data-start="269.6"  data-duration="36.44" data-track-index="3" src="assets/audio/e8.m4a"></audio>
+      <audio id="au9"  data-start="306.3"  data-duration="29.38" data-track-index="3" src="assets/audio/e9.m4a"></audio>
+      <audio id="au10" data-start="336.0"  data-duration="27.33" data-track-index="3" src="assets/audio/e10.m4a"></audio>
+      <audio id="au11b" data-start="363.6"  data-duration="36.16" data-track-index="3" src="assets/audio/e11.m4a"></audio>
+
+      <!-- e1 TITULO -->
+      <div class="beat" id="beatA">
+        <div class="bg"></div><div class="grid-ov"></div>
+        <div class="badge" id="badge"><img src="assets/logo.svg" alt=""/></div>
+        <div class="t-title" id="ttitle">TERMINAL HUB</div>
+        <div class="t-sub" id="tsub">Sprint &middot; M&oacute;dulo de Gesti&oacute;n Comercial y Reservas</div>
+        <div class="t-stu" id="tstu">Estudiante &middot; Aar&oacute;n Apaza</div>
+        <div class="brand-tag">TERMINAL HUB</div>
+      </div>
+
+      <!-- e1.1 REQUISITOS -->
+      <div class="beat" id="beatB">
+        <div class="bg"></div><div class="grid-ov"></div>
+        <div class="r-h">Requerimientos del Sprint</div>
+        <div class="chips">
+          <div class="chip" data-chip style="--c:#38f0ff"><span class="rn">R8</span><span class="rt">Mapa interactivo de asientos</span></div>
+          <div class="chip" data-chip style="--c:#38f0ff"><span class="rn">R9</span><span class="rt">Bloqueo temporal de asientos</span></div>
+          <div class="chip" data-chip style="--c:#a78bfa"><span class="rn">R10</span><span class="rt">Filtrar b&uacute;squeda de viajes</span></div>
+          <div class="chip" data-chip style="--c:#a78bfa"><span class="rn">R11</span><span class="rt">Varios m&eacute;todos de pago</span></div>
+          <div class="chip" data-chip style="--c:#34d399"><span class="rn">R12</span><span class="rt">Boleto con c&oacute;digo QR</span></div>
+          <div class="chip" data-chip style="--c:#34d399"><span class="rn">R13</span><span class="rt">Registro de uno o varios boletos</span></div>
+          <div class="chip" data-chip style="--c:#fbbf24"><span class="rn">R25</span><span class="rt">Descarga del boleto en PDF</span></div>
+          <div class="chip" data-chip style="--c:#fbbf24"><span class="rn">R27</span><span class="rt">Historial de viajes</span></div>
+        </div>
+        <div class="brand-tag">TERMINAL HUB</div>
+      </div>
+
+      <!-- e2 LOGIN -->
+      <div class="beat" id="beatC">
+        <div class="stage" id="stageL" style="transform-origin:57% 52%;">
+          <img id="imgEmpty" src="assets/login_empty.png" alt=""/>
+          <img id="imgCI"    src="assets/login_ci.png"    alt="" style="opacity:0"/>
+          <img id="imgFull"  src="assets/login_full.png"  alt="" style="opacity:0"/>
+        </div>
+        <div class="scrim"></div>
+        <div class="ripple" id="ripL"></div>
+        <div class="cursor" id="curL"><svg viewBox="0 0 24 24" width="36" height="36"><path d="M4 2 L20 12 L13 13 L17 21 L14 22 L10 14 L4 18 Z" fill="#fff" stroke="#0a0f1a" stroke-width="1.2"/></svg></div>
+        <div class="rlabel" style="--a:#38f0ff"><b>Acceso</b> &middot; Autenticaci&oacute;n de cliente</div>
+        <div class="brand-tag">TERMINAL HUB</div>
+      </div>
+
+      <!-- e3.1 home --> <div class="beat sc" id="b31"><div class="stage" id="s31" style="transform-origin:50% 58%;"><img src="assets/home.png"/></div><div class="rlabel" style="--a:#a78bfa"><b>R10</b> &middot; Exploraci&oacute;n por departamento</div><div class="brand-tag">TERMINAL HUB</div></div>
+      <!-- e3.2 empresas --> <div class="beat sc" id="b32"><div class="stage" id="s32" style="transform-origin:50% 36%;"><img src="assets/empresas.png"/></div><div class="rlabel" style="--a:#a78bfa"><b>R10</b> &middot; Empresas disponibles</div><div class="brand-tag">TERMINAL HUB</div></div>
+      <!-- e3.3 sucursal --> <div class="beat sc" id="b33"><div class="stage" id="s33" style="transform-origin:50% 55%;"><img src="assets/sucursal.png"/></div><div class="rlabel" style="--a:#a78bfa"><b>R10</b> &middot; Viajes por empresa</div><div class="brand-tag">TERMINAL HUB</div></div>
+      <!-- e4.1 planificador --> <div class="beat sc" id="b41"><div class="stage" id="s41" style="transform-origin:68% 30%;"><img src="assets/plan_origen.png"/></div><div class="rlabel" style="--a:#a78bfa"><b>R10</b> &middot; Planificador de viajes</div><div class="brand-tag">TERMINAL HUB</div></div>
+      <!-- e4.2 resultados --> <div class="beat sc" id="b42"><div class="stage" id="s42" style="transform-origin:42% 55%;"><img src="assets/plan_result.png"/></div><div class="rlabel" style="--a:#a78bfa"><b>R10</b> &middot; Salidas filtradas</div><div class="brand-tag">TERMINAL HUB</div></div>
+      <!-- e5 asientos --> <div class="beat sc" id="b5"><div class="stage" id="s5" style="transform-origin:50% 42%;"><img id="s5a" src="assets/seat_entry.png"/><img id="s5b" src="assets/_dbg_mapa2.png" style="opacity:0"/></div><div class="rlabel" style="--a:#38f0ff"><b>R8</b> Mapa de asientos &middot; <b>R9</b> Bloqueo temporal</div><div class="brand-tag">TERMINAL HUB</div></div>
+      <!-- e6 pasajeros --> <div class="beat sc" id="b6"><div class="stage" id="s6" style="transform-origin:32% 56%;"><img src="assets/e6_pasajero.png"/></div><div class="rlabel" style="--a:#34d399"><b>R13</b> &middot; Registro de pasajeros</div><div class="brand-tag">TERMINAL HUB</div></div>
+      <!-- e7.1 pago --> <div class="beat sc" id="b71"><div class="stage" id="s71" style="transform-origin:50% 55%;"><img src="assets/e7_pago.png"/></div><div class="rlabel" style="--a:#fbbf24"><b>R11</b> &middot; M&eacute;todos de pago</div><div class="brand-tag">TERMINAL HUB</div></div>
+      <!-- e7.2 movil --> <div class="beat" id="b72"><div class="bg"></div><div class="grid-ov"></div><div class="mobwrap"><img src="assets/e7_movil.png"/></div><div class="rlabel" style="--a:#fbbf24"><b>R11</b> &middot; Pago &middot; vista m&oacute;vil</div><div class="brand-tag">TERMINAL HUB</div></div>
+      <!-- e8 boleto --> <div class="beat sc" id="b8"><div class="stage" id="s8" style="transform-origin:50% 52%;"><img src="assets/e8_boleto.png"/></div><div class="rlabel" style="--a:#34d399"><b>R12</b> Boleto con QR &middot; <b style="color:#fbbf24">R25</b> Descarga PDF</div><div class="brand-tag">TERMINAL HUB</div></div>
+      <!-- e9 mis viajes --> <div class="beat sc" id="b9"><div class="stage" id="s9" style="transform-origin:50% 45%;"><img id="s9a" src="assets/misviajes.png"/><img id="s9b" src="assets/misviajes_exp.png" style="opacity:0"/></div><div class="rlabel" style="--a:#38f0ff"><b>R27</b> &middot; Historial de viajes</div><div class="brand-tag">TERMINAL HUB</div></div>
+      <!-- e10 cajero --> <div class="beat sc" id="b10"><div class="stage" id="s10" style="transform-origin:40% 50%;"><img id="s10a" src="assets/e10_cajero.png"/><img id="s10b" src="assets/e10_cajero_seat.png" style="opacity:0"/></div><div class="rlabel" style="--a:#a78bfa"><b>Cajero</b> &middot; Emisi&oacute;n en ventanilla</div><div class="brand-tag">TERMINAL HUB</div></div>
+
+      <!-- e11 CIERRE -->
+      <div class="beat" id="b11">
+        <div class="bg"></div><div class="grid-ov"></div>
+        <div class="c-h">Aspectos t&eacute;cnicos</div>
+        <div class="c-tags">
+          <div class="c-tag" data-ct style="--c:#34d399"><b>Supabase</b> &middot; PostgreSQL</div>
+          <div class="c-tag" data-ct style="--c:#38f0ff"><b>RLS</b> &middot; Seguridad por fila</div>
+          <div class="c-tag" data-ct style="--c:#a78bfa"><b>Edge Functions</b></div>
+          <div class="c-tag" data-ct style="--c:#fbbf24"><b>Bloqueo</b> por concurrencia</div>
+          <div class="c-tag" data-ct style="--c:#38f0ff"><b>QR cifrado</b> y firmado</div>
+          <div class="c-tag" data-ct style="--c:#34d399"><b>Despliegue</b> en Vercel</div>
+        </div>
+        <div class="c-foot">Gracias por su atenci&oacute;n &middot; Aar&oacute;n Apaza</div>
+        <div class="brand-tag">TERMINAL HUB</div>
+      </div>
+
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused:true });
+
+      // e1
+      tl.from("#badge",{scale:0.4,opacity:0,duration:0.8,ease:"back.out(1.6)"},0.3);
+      tl.from("#ttitle",{y:40,opacity:0,duration:0.7,ease:"power3.out"},0.7);
+      tl.from("#tsub",{y:24,opacity:0,duration:0.6,ease:"power3.out"},1.1);
+      tl.from("#tstu",{y:18,opacity:0,duration:0.6,ease:"power3.out"},1.5);
+      tl.to("#beatA",{opacity:0,duration:0.5},26.1);
+      // e1.1
+      tl.to("#beatB",{opacity:1,duration:0.4},26.5);
+      tl.from("#beatB .r-h",{y:-24,opacity:0,duration:0.5,ease:"power3.out"},26.7);
+      tl.from("[data-chip]",{y:26,opacity:0,duration:0.5,stagger:1.9,ease:"power2.out"},27.3);
+      tl.to("#beatB",{opacity:0,duration:0.5},45.4);
+      // e2 login
+      tl.to("#beatC",{opacity:1,duration:0.5},45.6);
+      tl.set("#curL",{left:1650,top:920,opacity:0},45.6); tl.set("#ripL",{left:0,top:0,scale:0,opacity:0},45.6);
+      tl.set("#stageL",{scale:1},45.6); tl.set("#imgCI",{opacity:0},45.6); tl.set("#imgFull",{opacity:0},45.6);
+      tl.to("#stageL",{scale:1.18,duration:2.4,ease:"power2.inOut"},46.4);
+      tl.to("#curL",{opacity:1,duration:0.3},46.2);
+      tl.to("#curL",{left:1106,top:491,duration:1.4,ease:"power2.inOut"},46.5);
+      tl.set("#ripL",{left:1106,top:491},47.9); tl.to("#ripL",{scale:2.6,opacity:0.9,duration:0.18},47.9); tl.to("#ripL",{opacity:0,duration:0.4},48.08); tl.to("#imgCI",{opacity:1,duration:0.35},48.2);
+      tl.to("#curL",{left:1106,top:572,duration:1.1,ease:"power2.inOut"},49.0);
+      tl.set("#ripL",{left:1106,top:572},50.1); tl.to("#ripL",{scale:2.6,opacity:0.9,duration:0.18},50.1); tl.to("#ripL",{opacity:0,duration:0.4},50.28); tl.to("#imgFull",{opacity:1,duration:0.35},50.4);
+      tl.to("#curL",{left:1106,top:672,duration:1.2,ease:"power2.inOut"},51.2);
+      tl.set("#ripL",{left:1106,top:672},52.4); tl.to("#ripL",{scale:3.2,opacity:1,duration:0.2},52.4); tl.to("#ripL",{opacity:0,duration:0.5},52.6);
+      tl.to("#beatC",{opacity:0,duration:0.5},72.6);
+
+      // helper escena screenshot: fade in, ken-burns, fade out
+      function sc(beat,stage,t0,t1,scaleTo){
+        tl.to("#"+beat,{opacity:1,duration:0.5},t0-0.3);
+        tl.set("#"+stage,{scale:1},t0-0.3);
+        tl.to("#"+stage,{scale:scaleTo,duration:(t1-t0)+0.3,ease:"none"},t0-0.3);
+        tl.to("#"+beat,{opacity:0,duration:0.5},t1-0.3);
+      }
+      sc("b31","s31",73.3,91.3,1.12);
+      sc("b32","s32",91.6,98.6,1.14);
+      sc("b33","s33",98.9,115.6,1.12);
+      sc("b41","s41",116.2,132.2,1.15);
+      sc("b42","s42",132.8,160.8,1.12);
+      // e5 dos imagenes (entrada -> grilla)
+      sc("b5","s5",161.4,202.5,1.12);
+      tl.set("#s5b",{opacity:0},161.1); tl.to("#s5b",{opacity:1,duration:0.6},178);
+      sc("b6","s6",203.1,230.9,1.13);
+      sc("b71","s71",231.5,256.2,1.12);
+      // e7.2 movil (sin ken-burns de stage)
+      tl.to("#b72",{opacity:1,duration:0.5},256.5); tl.from("#b72 .mobwrap img",{scale:0.9,opacity:0,duration:0.6,ease:"power2.out"},256.8); tl.to("#b72",{opacity:0,duration:0.5},269);
+      sc("b8","s8",269.6,305.7,1.12);
+      // e9 dos imagenes
+      sc("b9","s9",306.3,335.4,1.1);
+      tl.set("#s9b",{opacity:0},306.0); tl.to("#s9b",{opacity:1,duration:0.6},320);
+      // e10 dos imagenes (crear -> mapa)
+      sc("b10","s10",336.0,363.0,1.1);
+      tl.set("#s10b",{opacity:0},335.7); tl.to("#s10b",{opacity:1,duration:0.6},349);
+      // e11 cierre (sin fade out)
+      tl.to("#b11",{opacity:1,duration:0.5},363.3);
+      tl.from("#b11 .c-h",{y:-20,opacity:0,duration:0.6,ease:"power3.out"},363.6);
+      tl.from("[data-ct]",{y:20,opacity:0,duration:0.5,stagger:0.5,ease:"power2.out"},364.4);
+      tl.from("#b11 .c-foot",{opacity:0,duration:0.8},372);
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>
