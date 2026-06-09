@@ -7,7 +7,7 @@ import PanelDisponibilidad from '../../componentes/PanelDisponibilidad';
 import FragmentoDept from '../../componentes/FragmentoDept';
 import {
     getViajesSucursalProximos, updatePrecioViaje, updatePreciosGlobal,
-    getReservasSucursal, getAsientosOcupados, crearReservaSupabase, updateReservaEstado,
+    getReservasSucursal, getAsientosOcupados, getAsientosBloqueados, crearReservaSupabase, updateReservaEstado,
     getBoletosReserva, autorizarReserva, rechazarReserva, enviarBoletosPorEmail,
     getNotificacionesCajero, marcarNotificacionLeida,
 } from '../../servicios/api';
@@ -74,6 +74,7 @@ const PanelCajero = () => {
     const [mensajeBoleto, setMensajeBoleto] = useState(null);
     const [boletoCreado, setBoletoCreado] = useState(null);
     const [asientosOcupados, setAsientosOcupados] = useState([]);
+    const [bloqueados, setBloqueados] = useState([]);
     const [notifs, setNotifs] = useState([]);
     const [aprobados, setAprobados] = useState({}); // { [reservaId]: { boletos, nombreEmpresa, email } }
     const [pdfEnProceso, setPdfEnProceso] = useState(null); // reservaId | null
@@ -113,9 +114,10 @@ const PanelCajero = () => {
 
     // Cargar asientos ocupados cuando cambia el viaje seleccionado
     useEffect(() => {
-        if (!boleto.viajeId) { setAsientosOcupados([]); return; }
+        if (!boleto.viajeId) { setAsientosOcupados([]); setBloqueados([]); return; }
         getAsientosOcupados(boleto.viajeId).then(setAsientosOcupados);
-    }, [boleto.viajeId]);
+        getAsientosBloqueados(boleto.viajeId, perfil?.id).then(setBloqueados);
+    }, [boleto.viajeId, perfil?.id]);
 
     const cargarNotifs = useCallback(async () => {
         if (!perfil?.sucursal_nombre) return;
