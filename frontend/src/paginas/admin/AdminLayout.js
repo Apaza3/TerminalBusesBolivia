@@ -40,12 +40,14 @@ const getIconoEmpresa = (nombre) => {
 const NAV = [
     { path: '/admin/dashboard', icon: '🏠', label: 'Dashboard', grupo: 'vistas' },
     { path: '/admin/analitica', icon: '📊', label: 'Analítica', grupo: 'vistas' },
+    { path: '/admin/itinerarios', icon: '🗓️', label: 'Itinerarios', grupo: 'vistas' },
     { path: '/admin/rendimiento-rutas', icon: '🛣️', label: 'Rendimiento Rutas', grupo: 'vistas' },
     { path: '/admin/ranking-empresas', icon: '🏆', label: 'Ranking Empresas', grupo: 'vistas' },
     { path: '/admin/manifiesto', icon: '📋', label: 'Manifiesto PDF', grupo: 'vistas' },
     { path: '/admin/incidentes', icon: '⚠️', label: 'Incidentes', grupo: 'operaciones' },
     { path: '/admin/pasajeros', icon: '🧑‍✈️', label: 'Pasajeros', grupo: 'operaciones' },
     { path: '/admin/bus/nuevo', icon: '🚌', label: 'Registrar Bus', grupo: 'acciones' },
+    { path: '/admin/tripulacion/nuevo', icon: '👨‍✈️', label: 'Tripulación', grupo: 'acciones' },
 ];
 
 const AdminLayout = () => {

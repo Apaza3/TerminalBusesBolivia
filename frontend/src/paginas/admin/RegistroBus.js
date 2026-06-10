@@ -59,14 +59,27 @@ const RegistroBus = () => {
     const [guardando, setGuardando] = useState(false);
     const [sucursales, setSucursales] = useState([]);
 
-    // default sucursal = la del admin
+    // default sucursal = la del admin + fetch mejorado con displayName
     useEffect(() => {
-        (async () => {
-            const { data } = await supabase.from('sucursales').select('id,nombre,departamentos(nombre)').order('nombre');
-            setSucursales(data || []);
-        })();
-    }, []);
-    useEffect(() => {
+        const fetchSucursales = async () => {
+            try {
+                const { data } = await supabase
+                    .from('sucursales')
+                    .select('id, nombre, ciudad, departamentos(nombre)')
+                    .order('nombre');
+                if (data) setSucursales(data.map(s => ({
+                    ...s,
+                    displayName: s.ciudad
+                        ? `${s.nombre} — ${s.ciudad}`
+                        : s.departamentos?.nombre
+                            ? `${s.nombre} — ${s.departamentos.nombre}`
+                            : s.nombre,
+                })));
+            } catch (err) {
+                console.error('RegistroBus - fetchSucursales error:', err);
+            }
+        };
+        fetchSucursales();
         if (perfil?.sucursal_id) setForm(prev => ({ ...prev, sucursal_id: perfil.sucursal_id }));
     }, [perfil?.sucursal_id]);
 
@@ -193,7 +206,7 @@ const RegistroBus = () => {
                             <label style={label}>Sucursal *</label>
                             <select style={input(errores.sucursal_id)} value={form.sucursal_id} onChange={e => setField('sucursal_id', e.target.value)}>
                                 <option value="">— Selecciona —</option>
-                                {sucursales.map(s => <option key={s.id} value={s.id}>{s.nombre} · {s.departamentos?.nombre || ''}</option>)}
+                                {sucursales.map(s => <option key={s.id} value={s.id}>{s.displayName || s.nombre}</option>)}
                             </select>
                             {errores.sucursal_id && <div style={errMsg}>{errores.sucursal_id}</div>}
                         </div>
