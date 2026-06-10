@@ -5,6 +5,7 @@ import {
     getBusesEmpresa, getViajesSucursal, getUsuariosEmpresa,
     getReservasSucursal, getViajesHistoricosSucursal,
     actualizarUsuario, eliminarUsuario, crearUsuario,
+    getCopilotosSucursal,
 } from '../../servicios/api';
 
 const DEPT_COLORES = {
@@ -28,6 +29,7 @@ const ROL_BADGE = {
     admin_sucursal: { bg: '#1e3a8a22', color: '#93c5fd', label: 'Admin'     },
     cajero:         { bg: '#78350f22', color: '#fde68a', label: 'Cajero'    },
     conductor:      { bg: '#064e3b22', color: '#6ee7b7', label: 'Conductor' },
+    copiloto:       { bg: '#4a044e22', color: '#e879f9', label: 'Copiloto'  },
 };
 
 const ESTADO_VIAJE = {
@@ -58,6 +60,7 @@ const AdminDashboard = () => {
     const [usuarios,   setUsuarios]   = useState([]);
     const [reservas,   setReservas]   = useState([]);
     const [historico,  setHistorico]  = useState([]);
+    const [copilotos,  setCopilotos]  = useState([]);
     const [cargando,   setCargando]   = useState(true);
     const [filtroHist, setFiltroHist] = useState('todos');
     const [busqHist,   setBusqHist]   = useState('');
@@ -67,18 +70,20 @@ const AdminDashboard = () => {
     const cargarDatos = useCallback(async () => {
         if (!perfil?.sucursal_id) return;
         setCargando(true);
-        const [b, v, u, r, h] = await Promise.all([
+        const [b, v, u, r, h, cp] = await Promise.all([
             getBusesEmpresa(perfil.sucursal_id),
             getViajesSucursal(perfil.sucursal_id),
             getUsuariosEmpresa(perfil.sucursal_id),
             getReservasSucursal(perfil.sucursal_id),
             getViajesHistoricosSucursal(perfil.sucursal_id, 30),
+            getCopilotosSucursal(perfil.sucursal_id),
         ]);
         setBuses(b);
         setViajes(v);
         setUsuarios(u);
         setReservas(r);
         setHistorico(h);
+        setCopilotos(cp);
         setCargando(false);
     }, [perfil?.sucursal_id]);
 
@@ -344,6 +349,67 @@ const AdminDashboard = () => {
                                                     <td style={{ padding: '0.7rem 0.9rem', whiteSpace: 'nowrap' }}>
                                                         <button onClick={() => setModalUsuario({ modo: 'editar', datos: { id: u.id, nombre_completo: u.nombre_completo, ci: u.ci || '', telefono: u.telefono || '', rol: u.rol, activo: u.activo } })} style={{ background: 'transparent', border: `1px solid ${tema.color}40`, color: tema.acento, borderRadius: 5, padding: '0.2rem 0.55rem', fontSize: '0.7rem', cursor: 'pointer', marginRight: '0.3rem' }}>✏️</button>
                                                         <button onClick={() => handleEliminarUsuario(u)} style={{ background: 'transparent', border: '1px solid #7f1d1d40', color: '#fca5a5', borderRadius: 5, padding: '0.2rem 0.55rem', fontSize: '0.7rem', cursor: 'pointer' }}>🗑️</button>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* ── Sub-sección: Copilotos (tabla tripulacion) ── */}
+                {!cargando && tab === 'usuarios' && (
+                    <div style={{ background: '#0d1a2e', borderRadius: '14px', border: `1px solid #e879f918`, overflow: 'hidden', marginTop: '1.25rem' }}>
+                        <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid #e879f915', fontWeight: 700, color: '#f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span>👨‍✈️ Copilotos Registrados</span>
+                            <span style={{ fontSize: '0.72rem', color: '#475569', fontWeight: 400 }}>{copilotos.length} copilotos</span>
+                        </div>
+                        {copilotos.length === 0 ? (
+                            <div style={{ padding: '3rem', textAlign: 'center', color: '#475569' }}>Sin copilotos registrados. Registra desde el menú Tripulación.</div>
+                        ) : (
+                            <div style={{ overflowX: 'auto' }}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.83rem' }}>
+                                    <thead>
+                                        <tr style={{ background: '#07111f', borderBottom: '1px solid #e879f912' }}>
+                                            {['Foto', 'Nombre', 'CI', 'Teléfono', 'Rol', 'Licencia', 'Estado'].map(h => (
+                                                <th key={h} style={{ padding: '0.75rem 0.9rem', textAlign: 'left', color: '#475569', fontWeight: 500 }}>{h}</th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {copilotos.map(cp => {
+                                            const rb = ROL_BADGE[cp.rol] || ROL_BADGE.copiloto;
+                                            return (
+                                                <tr key={cp.id} style={{ borderBottom: '1px solid #07111f20' }}
+                                                    onMouseEnter={e => e.currentTarget.style.background = '#07111f40'}
+                                                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                                                    <td style={{ padding: '0.7rem 0.9rem' }}>
+                                                        {cp.foto_url && cp.foto_url !== 'null' ? (
+                                                            <img src={cp.foto_url} alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', border: '2px solid #334155' }} />
+                                                        ) : (
+                                                            <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#1e293b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem' }}>👤</div>
+                                                        )}
+                                                    </td>
+                                                    <td style={{ padding: '0.7rem 0.9rem', fontWeight: 500, color: '#f1f5f9' }}>{cp.nombre}</td>
+                                                    <td style={{ padding: '0.7rem 0.9rem', color: '#64748b', fontFamily: 'monospace' }}>{cp.ci}</td>
+                                                    <td style={{ padding: '0.7rem 0.9rem', color: '#94a3b8' }}>{cp.celular || '—'}</td>
+                                                    <td style={{ padding: '0.7rem 0.9rem' }}>
+                                                        <span style={{ background: rb.bg, color: rb.color, padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 600, textTransform: 'capitalize' }}>{rb.label}</span>
+                                                    </td>
+                                                    <td style={{ padding: '0.7rem 0.9rem' }}>
+                                                        {cp.licencia_url && cp.licencia_url !== 'null' ? (
+                                                            <span style={{ background: '#14532d22', color: '#86efac', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.7rem' }}>📄 Subida</span>
+                                                        ) : (
+                                                            <span style={{ color: '#475569', fontSize: '0.7rem' }}>—</span>
+                                                        )}
+                                                    </td>
+                                                    <td style={{ padding: '0.7rem 0.9rem' }}>
+                                                        <span style={{ background: cp.activo !== false ? '#14532d22' : '#7f1d1d22', color: cp.activo !== false ? '#86efac' : '#fca5a5', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.7rem' }}>
+                                                            {cp.activo !== false ? 'Activo' : 'Inactivo'}
+                                                        </span>
                                                     </td>
                                                 </tr>
                                             );

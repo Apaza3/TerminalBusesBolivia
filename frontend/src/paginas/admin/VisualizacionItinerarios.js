@@ -66,9 +66,8 @@ const VisualizacionItinerarios = () => {
     }, []);
 
     const cargarDatos = useCallback(async () => {
-        if (!perfil?.sucursal_id) return;
         setCargando(true);
-        const data = await getItinerariosSucursal(perfil.sucursal_id, {
+        const data = await getItinerariosSucursal(perfil?.sucursal_id, {
             fechaDesde, fechaHasta,
         });
         setItinerarios(data);

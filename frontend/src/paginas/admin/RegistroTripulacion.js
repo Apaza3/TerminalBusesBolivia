@@ -17,14 +17,14 @@ const RegistroTripulacion = () => {
         ci: '',
         nombre: '',
         telefono: '',
-        rol: 'conductor' // conductor | copiloto | ayudante
+        rol: 'copiloto' // copiloto | ayudante
     });
 
     const [archivos, setArchivos] = useState({
         foto: null,
         licencia: null
     });
-    
+
     // UI States
     const [cargando, setCargando] = useState(false);
     const [ciDuplicado, setCiDuplicado] = useState(false);
@@ -109,7 +109,7 @@ const RegistroTripulacion = () => {
     // Submit Guardar
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
+
         if (ciDuplicado) return;
         if (!formData.ci || !formData.nombre) {
             setMensaje({ tipo: 'error', texto: 'Por favor complete todos los campos obligatorios.' });
@@ -136,12 +136,12 @@ const RegistroTripulacion = () => {
                 .from('tripulacion')
                 .insert([{
                     ci: formData.ci,
-                    nombre_completo: formData.nombre,
-                    telefono: formData.telefono,
+                    nombre: formData.nombre,
+                    celular: formData.telefono,
                     rol: formData.rol,
                     sucursal_id: null, // Asumimos que se auto-rellena con la sucursal del Admin si lo enlazamos o null
-                    foto_perfil_url: fotoUrl,
-                    foto_licencia_url: licenciaUrl
+                    foto_url: fotoUrl,
+                    licencia_url: licenciaUrl
                 }]);
 
             if (dbError && dbError.code === '42P01') {
@@ -151,11 +151,11 @@ const RegistroTripulacion = () => {
             }
 
             setMensaje({ tipo: 'exito', texto: 'Personal de tripulación registrado exitosamente.' });
-            
+
             // Limpiar form
-            setFormData({ ci: '', nombre: '', telefono: '', rol: 'conductor' });
+            setFormData({ ci: '', nombre: '', telefono: '', rol: 'copiloto' });
             setArchivos({ foto: null, licencia: null });
-            
+
         } catch (error) {
             console.error(error);
             setMensaje({ tipo: 'error', texto: error.message || 'Error al registrar.' });
@@ -186,7 +186,7 @@ const RegistroTripulacion = () => {
                         textTransform: 'uppercase', lineHeight: 1.1,
                     }}>Registro de Tripulación</div>
                     <div style={{ fontSize: '0.73rem', color: '#64748b', marginTop: '0.2rem' }}>
-                        Agregue nuevos conductores y asigne roles
+                        Agregue nuevos copilotos y asigne roles
                     </div>
                 </div>
 
@@ -242,7 +242,7 @@ const RegistroTripulacion = () => {
                             <div>
                                 <label style={labelStyle}>Rol <span style={{ color: '#f87171' }}>*</span></label>
                                 <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                    {['conductor', 'copiloto'].map(r => (
+                                    {['copiloto'].map(r => (
                                         <button key={r} type="button" onClick={() => toggleRol(r)} style={{
                                             flex: 1, padding: '0.55rem 0.5rem', borderRadius: 8, border: 'none',
                                             background: formData.rol === r ? tema.color : '#0f172a',

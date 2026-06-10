@@ -260,6 +260,20 @@ export async function getTripulacionSucursal(sucursalId) {
   return (data || []).map(u => ({ ...u, nombre: u.nombre_completo }));
 }
 
+/** Obtiene copilotos registrados desde la tabla `tripulacion` (no usuarios). */
+export async function getCopilotosSucursal(sucursalId) {
+  const { data, error } = await supabase
+    .from('tripulacion')
+    .select('*')
+    .order('ci');
+  if (error) { console.error('getCopilotosSucursal:', error.message, error); return []; }
+  return (data || []).map(t => ({
+    ...t,
+    nombre: t.nombre || t.nombre_completo || '—',
+    celular: t.celular || t.telefono || '—',
+  }));
+}
+
 export async function updateEstadoBus(id, estado) {
   const { error } = await supabase.from('buses').update({ estado }).eq('id', id);
   if (error) console.error('updateEstadoBus:', error.message);
@@ -686,26 +700,27 @@ export async function getViajesPorCiudad(ciudad, dias = 30) {
 export async function getItinerariosSucursal(sucursalId, { fechaDesde, fechaHasta } = {}) {
   const desde = fechaDesde || new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
   const hasta = fechaHasta || new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0];
-  const { data, error } = await supabase
+  let query = supabase
     .from('viajes')
     .select(`
       id,origen,destino,fecha_salida,precio,duracion_estimada,estado,anden,
       buses(id,placa,capacidad,categoria,marca,modelo),
-      conductor:tripulacion!conductor_id(nombre_completo,ci)
+      conductor:tripulacion!conductor_id(*)
     `)
-    .eq('sucursal_id', sucursalId)
     .gte('fecha_salida', `${desde}T00:00:00`)
     .lte('fecha_salida', `${hasta}T23:59:59`)
     .order('fecha_salida', { ascending: true })
     .limit(300);
-  if (error) { console.error('getItinerariosSucursal:', error.message); return []; }
+  if (sucursalId) query = query.eq('sucursal_id', sucursalId);
+  const { data, error } = await query;
+  if (error) { console.error('getItinerariosSucursal:', error.message, error); return []; }
   return (data || []).map(v => ({
     ...v,
     busPlaca:     v.buses?.placa    || '—',
     busCapacidad: v.buses?.capacidad || 0,
     busCategoria: v.buses?.categoria || '—',
     busMarca:     [v.buses?.marca, v.buses?.modelo].filter(Boolean).join(' ') || '—',
-    conductorNombre: v.conductor?.nombre_completo || '—',
+    conductorNombre: v.conductor?.nombre_completo || v.conductor?.nombre || '—',
     conductorCI:     v.conductor?.ci || '—',
   }));
 }
